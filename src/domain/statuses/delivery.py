@@ -1,6 +1,13 @@
 """Статусы процесса доставки результата пациенту."""
 
-from enum import StrEnum
+from enum import Enum
+
+try:
+    from enum import StrEnum
+except ImportError:  # pragma: no cover - Python < 3.11 compatibility
+    class StrEnum(str, Enum):
+        """Совместимость со StrEnum для окружений Python 3.10."""
+
 
 
 class DeliveryStatus(StrEnum):

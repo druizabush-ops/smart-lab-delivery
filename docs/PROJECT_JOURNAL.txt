@@ -311,3 +311,36 @@ Dependency wiring:
 - Нет scheduler/backoff и нет persistent deduplication.
 - Retry и fallback исполняются как синхронные решения внутри use cases.
 Следующий шаг: Подключить инфраструктурный runtime (очереди/планирование) и подготовить persistent модель карточек с межпроцессной дедупликацией.
+
+[Изменение]
+Дата: 2026-04-13
+Ветка: work
+Блок: Реализация тестового контура
+Файлы: pytest.ini; tests/unit/domain/test_patient.py; tests/unit/domain/test_lab_result.py; tests/unit/domain/test_delivery_attempt.py; tests/unit/domain/test_delivery_card.py; tests/unit/application/test_policies.py; tests/unit/application/test_use_cases.py; tests/integration/test_stub_adapters_and_orchestrator.py; docs/TEST_PLAN.txt; docs/SETUP_WINDOWS.txt; docs/PROJECT_JOURNAL.txt
+Причина: Зафиксировать текущее поведение domain/application/integration до следующего инфраструктурного этапа и снизить риск регрессий в delivery logic.
+Какие уровни тестов добавлены:
+- Unit-тесты domain слоя.
+- Unit-тесты application policy/use-case слоя.
+- Integration-тесты на существующих stub-адаптерах и AppContainer/DeliveryOrchestrator.
+Что покрыто unit-тестами:
+- Domain: инварианты Patient/LabResult/DeliveryAttempt/DeliveryCard, статусные переходы и queue-инварианты.
+- Policies: RetryPolicy, FallbackPolicy, DeduplicationPolicy, DeliveryPolicy (retry/fallback/manual_review/exhausted/dedup).
+- Use cases: CreateDeliveryCardUseCase, RegisterDeliveryResultUseCase, ProcessDeliveryUseCase, HandleDeliveryFailureUseCase, RetryDeliveryUseCase.
+Что покрыто integration-тестами:
+- RenovatioClient фильтрует только READY результаты.
+- MaxDeliveryProvider/EmailDeliveryProvider воспроизводят deterministic success/error сценарии.
+- AppContainer собирает контур зависимостей, DeliveryOrchestrator выполняет сквозной сценарий и retry/failure pipeline.
+Критичные сценарии:
+- Запрет невалидных доменных состояний и переходов.
+- Согласованность retry/fallback/deduplication решений.
+- Выполнение policy decision в use cases без локального дублирования логики.
+- Сквозная обработка ready-результатов и retry через stub-адаптеры.
+Пробелы покрытия, которые остаются:
+- Нет тестов реальных HTTP/SMTP/MAX интеграций.
+- Нет тестов персистентности, runtime-очередей, конкурентных сценариев и UI.
+- Нет нагрузочных/soak/chaos тестов.
+Минимальные изменения ради тестопригодности:
+- Добавлен только `pytest.ini` для стабильного локального запуска тестов.
+Новой бизнес-логики не добавлялось.
+Что следующим шагом можно делать безопасно благодаря тестам:
+- Переходить к инфраструктурному этапу (реальные интеграции, репозитории, runtime-механизмы) с быстрым регрессионным контролем текущего поведения delivery logic.
