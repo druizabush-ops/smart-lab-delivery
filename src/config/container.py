@@ -48,7 +48,6 @@ class AppContainer:
         self.register_delivery_result_use_case = RegisterDeliveryResultUseCase()
         self.handle_delivery_failure_use_case = HandleDeliveryFailureUseCase(
             delivery_policy=self.delivery_policy,
-            fallback_policy=self.fallback_policy,
         )
         self.process_delivery_use_case = ProcessDeliveryUseCase(
             max_delivery_provider=self.max_delivery_provider,
@@ -61,7 +60,6 @@ class AppContainer:
         self.retry_delivery_use_case = RetryDeliveryUseCase(
             max_delivery_provider=self.max_delivery_provider,
             email_delivery_provider=self.email_delivery_provider,
-            retry_policy=self.retry_policy,
             delivery_policy=self.delivery_policy,
             register_result_use_case=self.register_delivery_result_use_case,
             failure_use_case=self.handle_delivery_failure_use_case,

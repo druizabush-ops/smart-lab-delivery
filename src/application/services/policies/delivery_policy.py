@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from src.application.services.policies.deduplication_policy import DeduplicationPolicy
 from src.application.services.policies.fallback_policy import FallbackPolicy
 from src.application.services.policies.retry_policy import RetryPolicy
-from src.domain.entities import DeliveryCard
+from src.domain.entities import DeliveryCard, DeliveryChannel
 from src.domain.statuses import DeliveryStatus, QueueStatus
 
 
@@ -16,6 +16,7 @@ class DeliveryDecision:
     can_send: bool
     should_manual_review: bool
     should_mark_exhausted: bool
+    next_channel: DeliveryChannel | None
     reason: str
 
 
@@ -34,30 +35,30 @@ class DeliveryPolicy:
 
     def evaluate_before_send(self, card: DeliveryCard) -> DeliveryDecision:
         if not card.can_be_sent():
-            return DeliveryDecision(False, False, False, "card_can_not_be_sent_now")
+            return DeliveryDecision(False, False, False, None, "card_can_not_be_sent_now")
 
         dedup = self._deduplication_policy.evaluate(card)
         if not dedup.allow_send:
-            return DeliveryDecision(False, False, False, dedup.reason)
+            return DeliveryDecision(False, False, False, None, dedup.reason)
 
-        return DeliveryDecision(True, False, False, "send_allowed")
+        return DeliveryDecision(True, False, False, None, "send_allowed")
 
     def evaluate_after_failure(self, card: DeliveryCard) -> DeliveryDecision:
         retry_decision = self._retry_policy.evaluate(card)
         if retry_decision.should_mark_exhausted:
-            return DeliveryDecision(False, False, True, retry_decision.reason)
+            return DeliveryDecision(False, False, True, None, retry_decision.reason)
 
         fallback_decision = self._fallback_policy.decide(card)
         if fallback_decision.should_manual_review:
-            return DeliveryDecision(False, True, False, fallback_decision.reason)
+            return DeliveryDecision(False, True, False, None, fallback_decision.reason)
 
         if fallback_decision.fallback_channel is not None:
-            return DeliveryDecision(True, False, False, fallback_decision.reason)
+            return DeliveryDecision(True, False, False, fallback_decision.fallback_channel, fallback_decision.reason)
 
         if retry_decision.can_retry_now:
-            return DeliveryDecision(True, False, False, retry_decision.reason)
+            return DeliveryDecision(True, False, False, None, retry_decision.reason)
 
         if card.status is DeliveryStatus.FAILED and card.queue_status is QueueStatus.WAITING_RETRY:
-            return DeliveryDecision(False, False, False, "failed_waiting_retry_is_temporary")
+            return DeliveryDecision(False, False, False, None, "failed_waiting_retry_is_temporary")
 
-        return DeliveryDecision(False, True, False, "manual_review_by_default")
+        return DeliveryDecision(False, True, False, None, "manual_review_by_default")
