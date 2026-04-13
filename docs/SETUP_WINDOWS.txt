@@ -14,7 +14,11 @@ Set-Location .\smart-lab-delivery
 
 3. Проверка структуры инженерного каркаса
 ```powershell
-Get-ChildItem -Name
+Test-Path .\docs
+Test-Path .\src
+Test-Path .\tests
+Test-Path .\scripts
+Test-Path .\config
 Get-ChildItem .\docs -Name
 Get-ChildItem .\src -Recurse -Directory | Select-Object FullName
 Get-ChildItem .\tests -Recurse -Directory | Select-Object FullName
@@ -24,6 +28,12 @@ Get-ChildItem .\config -Name
 
 4. Проверка согласованности обязательных документов
 ```powershell
+Test-Path .\README.md
+Test-Path .\docs\ARCHITECTURE_OVERVIEW.txt
+Test-Path .\docs\PROJECT_JOURNAL.txt
+Test-Path .\docs\STATUS_RULES.txt
+Test-Path .\docs\DECISIONS.txt
+Test-Path .\docs\TECH_DEBT.txt
 Get-Content .\README.md
 Get-Content .\docs\ARCHITECTURE_OVERVIEW.txt
 Get-Content .\docs\PROJECT_JOURNAL.txt
