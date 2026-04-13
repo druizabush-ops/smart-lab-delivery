@@ -167,3 +167,23 @@ Open questions / Tech debt:
 - Нужно подтвердить максимально допустимое число попыток доставки и финальные условия перехода в exhausted.
 - Нужно согласовать единую time policy (aware datetime, часовые пояса) для всех слоев.
 Следующий шаг: Спроектировать application-слой оркестрации сценариев на основе текущих доменных сущностей и формализовать политики retry/fallback без привязки к конкретной инфраструктуре.
+
+[Багфикс]
+Дата: 2026-04-13
+Ветка: work
+Блок: Точечная доработка согласованности domain-статусов
+Файлы: src/domain/entities/delivery_card.py; src/domain/entities/delivery_attempt.py; src/domain/entities/channels.py; src/domain/statuses/attempt.py; docs/STATUS_RULES.txt; docs/PROJECT_JOURNAL.txt
+Причина: В доменном ядре были рассогласования: queue_status существовал отдельно от центральной сущности DeliveryCard, а AttemptStatus смешивал этапы жизненного цикла с терминальными исходами при поле result.
+Что сделано:
+- QueueStatus встроен в DeliveryCard как queue_status с инициализацией через create() и контролируемым методом change_queue_status().
+- Добавлена доменная синхронизация delivery_status -> queue_status и инвариант: терминальные delivery-статусы допускаются только с queue_status=DONE.
+- AttemptStatus сокращен до терминальных исходов SUCCESS/ERROR, чтобы соответствовать полю DeliveryAttempt.result.
+- DeliveryChannel явно зафиксирован как доменное перечисление (value object), а не сущность.
+- STATUS_RULES приведен к терминальной трактовке attempt_status.
+Ограничения:
+- queue_status пока описывает только доменные переходы карточки и не связан с runtime-очередями исполнения.
+- Политики лимитов retry, эскалации в manual review и условия exhausted по числу попыток остаются вне domain и требуют формализации на следующем шаге.
+Допущения:
+- Автоматическая синхронизация queue_status из delivery_status не перезаписывает MANUAL_REVIEW при возврате в NOT_STARTED.
+- DeliveryAttempt фиксирует только завершенные попытки (без промежуточных технических этапов).
+Следующий шаг: Формализовать прикладные политики retry/fallback и правила перехода в EXHAUSTED/MANUAL_REVIEW в application-слое без добавления инфраструктурных адаптеров.

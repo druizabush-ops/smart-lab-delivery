@@ -25,30 +25,27 @@
 - failed: попытка завершилась ошибкой.
 - exhausted: попытки исчерпаны, автоматическая доставка остановлена.
 
-1.4 Статус попытки отправки (attempt_status)
-- scheduled: попытка запланирована.
-- in_progress: попытка выполняется.
+1.4 Результат попытки отправки (attempt_status)
 - success: попытка успешна.
 - error: попытка завершилась ошибкой.
-- skipped: попытка пропущена (например, канал недоступен).
 
 2. Назначение статусов
 - lab_result_status отражает готовность медицинского результата к процессу доставки.
 - queue_status отражает операционный этап карточки в очереди обработки.
 - delivery_status отражает итог канала/попыток доставки для карточки.
-- attempt_status отражает жизненный цикл отдельной технической попытки отправки.
+- attempt_status отражает терминальный исход отдельной зафиксированной попытки отправки.
 
 3. Базовые разрешенные переходы
 - lab_result_status: pending -> ready | blocked; ready -> missing_pdf | blocked.
 - queue_status: active -> waiting_retry | manual_review | done; waiting_retry -> active | manual_review.
 - delivery_status: not_started -> max_sent | email_sent | failed; failed -> not_started | exhausted.
-- attempt_status: scheduled -> in_progress -> success | error | skipped.
+- attempt_status: переходов нет (фиксируется только терминальный исход новой попытки).
 
 4. Запрещенные переходы (минимальный набор)
 - queue_status: done -> active (без явного ручного reopen-сценария).
 - delivery_status: max_sent/email_sent -> failed (исторически фиксируется новой попыткой, а не откатом статуса).
-- attempt_status: success -> in_progress.
-- attempt_status: error -> in_progress (повтор — это новая попытка, а не изменение завершенной).
+- attempt_status: success -> error внутри одной попытки запрещен.
+- attempt_status: error -> success внутри одной попытки запрещен (повтор — это новая попытка).
 
 5. Правила изменения статусов
 - Изменение статусов допускается только через доменные/прикладные механизмы, где сохраняется причина перехода.
