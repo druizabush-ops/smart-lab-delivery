@@ -9,31 +9,46 @@
 2. Клонирование проекта
 ```powershell
 git clone <URL_РЕПОЗИТОРИЯ>
-cd .\smart-lab-delivery
+Set-Location .\smart-lab-delivery
 ```
 
-3. Проверка структуры каркаса
+3. Проверка структуры инженерного каркаса
 ```powershell
 Get-ChildItem -Name
 Get-ChildItem .\docs -Name
 Get-ChildItem .\src -Recurse -Directory | Select-Object FullName
+Get-ChildItem .\tests -Recurse -Directory | Select-Object FullName
+Get-ChildItem .\scripts -Name
+Get-ChildItem .\config -Name
 ```
 
-4. Проверка статуса Git
+4. Проверка согласованности обязательных документов
+```powershell
+Get-Content .\README.md
+Get-Content .\docs\ARCHITECTURE_OVERVIEW.txt
+Get-Content .\docs\PROJECT_JOURNAL.txt
+Get-Content .\docs\STATUS_RULES.txt
+Get-Content .\docs\DECISIONS.txt
+Get-Content .\docs\TECH_DEBT.txt
+```
+
+5. Проверка статуса Git
 ```powershell
 git status
+git log --oneline -n 5
 ```
 
-5. Рекомендация по кодировке для русских файлов
+6. Рекомендация по кодировке для русских файлов
 ```powershell
 # Рекомендуется сохранять .txt/.md в UTF-8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 ```
 
-6. Текущий запуск приложения
+7. Текущий запуск приложения
 На текущем этапе полноценный runtime отсутствует: проект находится в фазе инженерной и архитектурной инициализации.
 
-7. Что проверять на этом этапе
+8. Что проверять на этом этапе
 - Наличие обязательных документов в docs/.
 - Соответствие структуры каталогов архитектурным слоям.
 - Наличие записи в PROJECT_JOURNAL о произведенных изменениях.
+- Отсутствие преждевременной реализации интеграционных клиентов, БД, UI и доставки.
