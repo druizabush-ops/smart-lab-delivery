@@ -187,3 +187,25 @@ Open questions / Tech debt:
 - Автоматическая синхронизация queue_status из delivery_status не перезаписывает MANUAL_REVIEW при возврате в NOT_STARTED.
 - DeliveryAttempt фиксирует только завершенные попытки (без промежуточных технических этапов).
 Следующий шаг: Формализовать прикладные политики retry/fallback и правила перехода в EXHAUSTED/MANUAL_REVIEW в application-слое без добавления инфраструктурных адаптеров.
+
+[Изменение]
+Дата: 2026-04-13
+Ветка: work
+Блок: Реализация application слоя (оркестрация)
+Файлы: src/application/__init__.py; src/application/interfaces/__init__.py; src/application/interfaces/delivery_provider.py; src/application/interfaces/lab_result_provider.py; src/application/interfaces/notification_logger.py; src/application/use_cases/__init__.py; src/application/use_cases/create_delivery_card.py; src/application/use_cases/process_delivery.py; src/application/use_cases/register_delivery_result.py; src/application/services/__init__.py; src/application/services/delivery_orchestrator.py; docs/PROJECT_JOURNAL.txt
+Причина: Перейти к use-case оркестрации после завершения доменного слоя и зафиксировать контракты взаимодействия без инфраструктурных деталей.
+Что сделано:
+- Добавлены use cases: CreateDeliveryCardUseCase, ProcessDeliveryUseCase, RegisterDeliveryResultUseCase.
+- Введены application-контракты: DeliveryProvider, LabResultProvider и опциональный NotificationLogger.
+- Реализован сервис DeliveryOrchestrator для потока LabResult -> DeliveryCard -> Attempt -> обновление статусов.
+Как устроена orchestration логика:
+- DeliveryOrchestrator принимает входные доменные данные и вызывает use cases последовательно.
+- CreateDeliveryCardUseCase создает карточку через доменную фабрику DeliveryCard.create() и не дублирует стартовые статусы.
+- ProcessDeliveryUseCase проверяет допустимость отправки, инициирует send() через DeliveryProvider и делегирует фиксацию результата в RegisterDeliveryResultUseCase.
+- RegisterDeliveryResultUseCase добавляет DeliveryAttempt через card.add_attempt(), после чего статусы обновляются исключительно доменными методами.
+Что сознательно НЕ реализовано:
+- HTTP/API клиенты, интеграция с Renovatio/MAX/email, БД/репозитории, очереди, retry, scheduler.
+Ограничения этапа:
+- Application-слой зависит только от абстракций и не содержит адаптеров инфраструктуры.
+- Политики SLA/лимитов попыток и продвинутая маршрутизация каналов не добавлялись.
+Следующий шаг: Реализовать инфраструктурные адаптеры к application-интерфейсам и добавить unit-тесты use-case сценариев.
