@@ -258,3 +258,27 @@ Dependency wiring:
 - MAX: риск различий протокола доставки и кодов ошибок относительно stub-логики.
 - Email: риск несоответствия SMTP/API ограничений, rate limits и политики отказов.
 Следующий шаг: добавить unit-тесты integration-адаптеров и расширить container до выбора канала (MAX/EMAIL) в runtime без нарушения границ application/domain.
+
+[Изменение]
+Дата: 2026-04-13
+Ветка: work
+Блок: Реализация delivery logic (policy-слой + retry/failure use cases)
+Файлы: src/application/services/policies/__init__.py; src/application/services/policies/delivery_policy.py; src/application/services/policies/retry_policy.py; src/application/services/policies/fallback_policy.py; src/application/services/policies/deduplication_policy.py; src/application/use_cases/handle_delivery_failure.py; src/application/use_cases/retry_delivery.py; src/application/use_cases/process_delivery.py; src/application/use_cases/__init__.py; src/application/services/delivery_orchestrator.py; src/application/services/__init__.py; src/config/container.py; docs/STATUS_RULES.txt; docs/PROJECT_JOURNAL.txt; docs/DECISIONS.txt; docs/TECH_DEBT.txt
+Причина: Требовалось вынести business delivery logic в управляемый набор правил без внедрения инфраструктуры (БД, очередей, scheduler, реального транспорта).
+Что сделано:
+- В application добавлен policy-слой: DeliveryPolicy, RetryPolicy, FallbackPolicy, DeduplicationPolicy.
+- RetryPolicy формализует лимиты попыток (total/MAX/EMAIL) и фиксирует трактовку failed как временной ошибки.
+- FallbackPolicy реализует контролируемый переход MAX -> EMAIL без хаотичного переключения; после ошибки EMAIL карточка эскалируется в manual_review.
+- DeduplicationPolicy блокирует повторную отправку успешных и exhausted карточек.
+- Добавлены use cases HandleDeliveryFailureUseCase и RetryDeliveryUseCase.
+- ProcessDeliveryUseCase доработан: после error запускается policy-driven failure handling вместо «немого» оставления failed.
+- DeliveryOrchestrator расширен методом orchestrate_retry без раздувания в god-object.
+- Container обновлен: wiring двух каналов (MAX/EMAIL), policy-объектов и новых use cases.
+Как трактуются ключевые статусы:
+- failed + waiting_retry: временная неудача, повтор допустим по RetryPolicy.
+- exhausted: финальное автоматическое завершение, queue_status=done.
+- manual_review: ручная эскалация при запрете fallback/повторов.
+Ограничения:
+- Нет scheduler/backoff и нет persistent deduplication.
+- Retry и fallback исполняются как синхронные решения внутри use cases.
+Следующий шаг: Подключить инфраструктурный runtime (очереди/планирование) и подготовить persistent модель карточек с межпроцессной дедупликацией.
