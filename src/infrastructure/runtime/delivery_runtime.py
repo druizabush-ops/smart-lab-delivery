@@ -11,6 +11,7 @@ from src.application.interfaces import DeliveryCardRepository
 from src.application.services.delivery_orchestrator import DeliveryOrchestrator
 from src.domain.entities import DeliveryCard, Patient
 from src.domain.statuses import DeliveryStatus, QueueStatus
+from src.infrastructure.identity import build_operational_card_id
 from src.infrastructure.queue.in_memory_delivery_queue import InMemoryDeliveryQueue
 
 
@@ -46,13 +47,13 @@ class DeliveryRuntime:
         created_cards = self._orchestrator.orchestrate_ready_results(patients)
         card_ids: list[str] = []
         for card in created_cards:
-            card_id = self._build_card_id(card)
+            card_id = build_operational_card_id(card)
             self._repository.save(card)
             self._queue.enqueue(card_id)
             card_ids.append(card_id)
         return card_ids
 
-    def run_once(self) -> DeliveryRunSummary:
+    def run_once(self, *, created_cards_count: int = 0) -> DeliveryRunSummary:
         """Выполняет один полный прогон накопленной очереди карточек."""
 
         processed_count = 0
@@ -96,7 +97,7 @@ class DeliveryRuntime:
             failed_count=failed_count,
             manual_review_count=manual_review_count,
             exhausted_count=exhausted_count,
-            created_cards_count=0,
+            created_cards_count=created_cards_count,
             retried_count=retried_count,
         )
 
@@ -104,22 +105,7 @@ class DeliveryRuntime:
         """Выполняет цикл seed + run_once и возвращает финальную сводку."""
 
         created_ids = self.seed_ready_results(patients)
-        run_summary = self.run_once()
-        return DeliveryRunSummary(
-            processed_count=run_summary.processed_count,
-            success_count=run_summary.success_count,
-            failed_count=run_summary.failed_count,
-            manual_review_count=run_summary.manual_review_count,
-            exhausted_count=run_summary.exhausted_count,
-            created_cards_count=len(created_ids),
-            retried_count=run_summary.retried_count,
-        )
-
-    @staticmethod
-    def _build_card_id(card: DeliveryCard) -> str:
-        """Возвращает deterministic id карточки для очереди и репозитория."""
-
-        return f"{card.patient_id}:{card.lab_result_id}"
+        return self.run_once(created_cards_count=len(created_ids))
 
     def _process_card(self, card: DeliveryCard) -> DeliveryCard:
         """Маршрутизирует карточку в primary/retry use case через orchestrator."""
