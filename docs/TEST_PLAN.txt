@@ -51,3 +51,17 @@
   - сохранение и чтение attempts;
   - консистентность deterministic card id.
 - Ограничение текущего контура: repository тестируется через SQLite in-memory surrogate; отдельный PostgreSQL integration-job выделен в tech debt.
+
+8. Operator API read-only тестовый контур
+- Integration: `tests/integration/test_operator_api_read_only.py`
+  - `GET /operator/cards` возвращает список карточек;
+  - `GET /operator/cards/{card_id}` возвращает карточку по id;
+  - `GET /operator/cards/summary` возвращает агрегаты;
+  - фильтрация по `status` работает корректно;
+  - пустое хранилище обрабатывается без падений;
+  - API работает с PostgresDeliveryCardRepository (sqlite surrogate в тесте).
+
+9. Критичность для operator read access
+- API должен оставаться read-only (без write endpoint-ов).
+- Query-слой должен быть отделен от роутеров (без прямого ORM-ответа наружу).
+- Контур должен работать в обоих режимах repository: in-memory и postgres.

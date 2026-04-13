@@ -152,3 +152,42 @@ python .\scripts\run_runtime_cycle.py
 python -m pytest .\tests\unit\infrastructure\persistence
 python -m pytest
 ```
+
+21. Запуск operator API (read-only) в PowerShell
+```powershell
+# Установить зависимости (включая FastAPI/uvicorn)
+python -m pip install -r .\requirements.txt
+
+# Запуск API
+python .\scripts\run_operator_api.py
+```
+Ожидаемо: Uvicorn поднимает сервер на `http://127.0.0.1:8001`.
+
+22. Быстрая проверка endpoint-ов operator API
+```powershell
+# Список карточек
+Invoke-RestMethod -Uri "http://127.0.0.1:8001/operator/cards" -Method GET
+
+# Сводка
+Invoke-RestMethod -Uri "http://127.0.0.1:8001/operator/cards/summary" -Method GET
+
+# Карточка по id (пример)
+Invoke-RestMethod -Uri "http://127.0.0.1:8001/operator/cards/<card_id>" -Method GET
+```
+
+23. Фильтрация в операторском API
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8001/operator/cards?status=failed" -Method GET
+Invoke-RestMethod -Uri "http://127.0.0.1:8001/operator/cards?queue_status=manual_review" -Method GET
+Invoke-RestMethod -Uri "http://127.0.0.1:8001/operator/cards?only_active=true" -Method GET
+```
+
+24. API-тесты operator read-only слоя
+```powershell
+python -m pytest .\tests\integration\test_operator_api_read_only.py
+python -m pytest
+```
+
+25. Ограничение текущего этапа operator API
+- Endpoint-ы доступны только в read-only режиме.
+- Ручные retry/fallback/status-change команды отсутствуют по дизайну текущего блока.

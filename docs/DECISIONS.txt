@@ -151,3 +151,24 @@
 Последствия:
 - Появился dual-mode wiring runtime (in_memory/postgres).
 - Добавились env-конфиги БД и миграционный контур.
+
+[ADR]
+Дата: 2026-04-13
+Тема: Сначала operator API только read-only, затем command-side
+Контекст: После подключения persistence появился запрос на операторскую наблюдаемость, но write-команды преждевременны и рискованны до формирования регламента ручного вмешательства.
+Решение:
+- На текущем этапе введен только read-only operator API (список карточек, карточка по id, summary).
+- Командные endpoint-ы (retry/manual status transitions/fallback overrides) отложены на отдельный блок.
+- Query-логика вынесена в отдельный DeliveryCardReadService, а presentation не работает напрямую с ORM/repository-деталями.
+Почему выбран этот вариант:
+- Снижает риск нарушения бизнес-инвариантов доставки из-за преждевременных manual-команд.
+- Позволяет быстро дать operator visibility по данным persistence.
+- Сохраняет чистые границы слоев: presentation -> query service -> repository.
+Последствия:
+- Появился стабильный read контракт для будущей operator panel.
+- Write-side ответственность остается в текущих use case/policy до проектирования command layer.
+Ограничения:
+- Нет ручных операторских действий через API.
+- Нет аутентификации/авторизации enterprise-уровня.
+Что учесть позже:
+- Добавить command layer с явными safety-ограничениями, аудитом и idempotency для ручных действий.

@@ -2,6 +2,7 @@
 
 from src.application.services import (
     DeduplicationPolicy,
+    DeliveryCardReadService,
     DeliveryPolicy,
     FallbackPolicy,
     RetryLimits,
@@ -88,6 +89,10 @@ class AppContainer:
             queue=self.delivery_queue,
         )
 
+        # Read-only operator API stack.
+        self.delivery_card_read_service = DeliveryCardReadService(
+            repository=self.delivery_card_repository,
+        )
 
     def _build_delivery_card_repository(self):
         if self.runtime_settings.repository_mode == "postgres":
