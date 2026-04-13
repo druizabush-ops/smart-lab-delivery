@@ -259,6 +259,35 @@ Dependency wiring:
 - Email: риск несоответствия SMTP/API ограничений, rate limits и политики отказов.
 Следующий шаг: добавить unit-тесты integration-адаптеров и расширить container до выбора канала (MAX/EMAIL) в runtime без нарушения границ application/domain.
 
+[Багфикс]
+Дата: 2026-04-13
+Ветка: work
+Блок: Точечная доработка delivery logic перед блоком тестирования
+Файлы: src/application/services/policies/delivery_policy.py; src/application/use_cases/handle_delivery_failure.py; src/application/use_cases/process_delivery.py; src/application/use_cases/retry_delivery.py; src/config/container.py; docs/STATUS_RULES.txt; docs/DECISIONS.txt; docs/PROJECT_JOURNAL.txt
+Причина: Выявлены архитектурные расхождения: fallback-логика вычислялась в двух местах (DeliveryPolicy и HandleDeliveryFailureUseCase), а решение о следующем канале оставалось неявным.
+Какие расхождения были найдены:
+- Дублирование fallback-решений между policy-слоем и use case обработки failure.
+- DeliveryDecision не нес явного результата о смене канала, из-за чего use cases могли повторно вычислять маршрут.
+- Retry use case содержал собственную ветку retry-policy, что размывало границу «policy решает — use case исполняет».
+Что исправлено:
+- DeliveryDecision расширен полем next_channel, через которое policy явно сообщает переключение канала.
+- DeliveryPolicy закреплена как единая точка business-решения после failed (retry/fallback/manual_review/exhausted).
+- HandleDeliveryFailureUseCase перестал вызывать FallbackPolicy напрямую и теперь исполняет только DeliveryPolicy decision.
+- ProcessDeliveryUseCase и RetryDeliveryUseCase переведены на исполнение channel-решения из DeliveryDecision без локального повторного fallback-расчета.
+- Retry-модель «новый цикл через возврат в NOT_STARTED» сохранена и дополнительно зафиксирована в STATUS_RULES.
+Почему DeliveryPolicy стала единой точкой решения:
+- Устранены два источника истины для fallback.
+- Снижена вероятность рассинхронизации правил при дальнейшем изменении лимитов/маршрутизации.
+- Поведение retry/fallback стало наблюдаемым через единый decision-контракт.
+Что осталось неизменным:
+- Границы слоев domain/application/integration сохранены.
+- Реальные HTTP/БД/очереди/async не добавлялись.
+- Базовая retry-reset модель не менялась (только формализована и синхронизирована в документации).
+Почему после этого можно переходить к тестированию:
+- Архитектурное расхождение в delivery logic устранено до начала тестового блока.
+- Правила policy теперь единообразно исполняются use cases без скрытых обходов.
+- Документация приведена к фактической реализации и готова как нормативная база для тест-кейсов.
+
 [Изменение]
 Дата: 2026-04-13
 Ветка: work

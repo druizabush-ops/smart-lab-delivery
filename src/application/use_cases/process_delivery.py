@@ -34,7 +34,11 @@ class ProcessDeliveryUseCase:
         if not decision.can_send:
             return card
 
-        provider = self._max_delivery_provider if card.channel is DeliveryChannel.MAX else self._email_delivery_provider
+        target_channel = decision.next_channel or card.channel
+        if target_channel is not card.channel:
+            card.channel = target_channel
+
+        provider = self._max_delivery_provider if target_channel is DeliveryChannel.MAX else self._email_delivery_provider
         attempt = provider.send(card)
         updated_card = self._register_result_use_case.execute(card, attempt)
 
