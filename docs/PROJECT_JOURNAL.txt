@@ -137,3 +137,33 @@
 
 20. Примечание по непрерывности журнала
 Этот файл является главным непрерывным журналом проекта и должен обновляться при каждом существенном изменении.
+
+[Изменение]
+Дата: 2026-04-13
+Ветка: work
+Блок: Проектирование доменной модели
+Файлы: src/domain/__init__.py; src/domain/entities/__init__.py; src/domain/entities/channels.py; src/domain/entities/patient.py; src/domain/entities/lab_result.py; src/domain/entities/delivery_card.py; src/domain/entities/delivery_attempt.py; src/domain/statuses/__init__.py; src/domain/statuses/lab_result.py; src/domain/statuses/delivery.py; src/domain/statuses/attempt.py; src/domain/statuses/queue.py; docs/PROJECT_JOURNAL.txt
+Причина: Перейти от инженерного каркаса к первому функциональному слою и зафиксировать доменные инварианты до реализации application/integration.
+Что сделано:
+- Реализованы сущности Patient, LabResult, DeliveryCard, DeliveryAttempt как изолированные доменные модели.
+- Добавлен централизованный модуль src/domain/statuses с enum для групп lab_result, delivery, attempt, queue.
+- Для DeliveryCard введены контролируемые методы create(), add_attempt(), change_status() и запрещены невалидные переходы.
+- Для DeliveryAttempt введены инварианты согласованности result и error_message.
+Какие решения приняты:
+- Словарь статусов хранится только в enum доменного слоя.
+- История попыток в DeliveryCard трактуется как append-only список.
+- Прямое изменение статуса вне доменных методов считается нарушением модели.
+Ограничения:
+- Не реализованы интеграции Renovatio/MAX/email, БД, очереди, UI и любые инфраструктурные адаптеры.
+- Не реализована политика retry/лимитов попыток (будет в application-слое).
+Допущения:
+- Patient и LabResult реализованы как неизменяемые dataclass, DeliveryCard — как изменяемый агрегат с инкапсулированными методами состояния.
+- Временные метки создаются на UTC (datetime.utcnow) до выбора общей time policy проекта.
+Что не реализовано сознательно:
+- Оркестрация сценариев доставки.
+- Транспортные клиенты и технические статусы инфраструктуры.
+- Механизмы сохранения и аудита в хранилище.
+Open questions / Tech debt:
+- Нужно подтвердить максимально допустимое число попыток доставки и финальные условия перехода в exhausted.
+- Нужно согласовать единую time policy (aware datetime, часовые пояса) для всех слоев.
+Следующий шаг: Спроектировать application-слой оркестрации сценариев на основе текущих доменных сущностей и формализовать политики retry/fallback без привязки к конкретной инфраструктуре.
