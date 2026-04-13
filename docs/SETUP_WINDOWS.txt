@@ -62,3 +62,33 @@ git log --oneline -n 5
 - Соответствие структуры каталогов архитектурным слоям.
 - Наличие записи в PROJECT_JOURNAL о произведенных изменениях.
 - Отсутствие преждевременной реализации интеграционных клиентов, БД, UI и доставки.
+
+9. Установка и запуск тестов (pytest)
+```powershell
+python -m pip install --upgrade pip
+python -m pip install pytest
+```
+
+10. Запуск тестов в PowerShell
+```powershell
+# Все тесты
+python -m pytest
+
+# Только unit-тесты domain
+python -m pytest .\tests\unit\domain
+
+# Только unit-тесты application
+python -m pytest .\tests\unit\application
+
+# Только integration-тесты
+python -m pytest .\tests\integration
+```
+
+11. Как читать результат
+- `passed` — сценарий отработал по ожидаемому контракту.
+- `failed` — зафиксирован регресс или нарушение инварианта.
+- `xfailed/skipped` сейчас не используются в базовом контуре.
+- Для детального вывода используйте:
+```powershell
+python -m pytest -vv
+```

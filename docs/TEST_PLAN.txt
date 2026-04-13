@@ -1,0 +1,43 @@
+Название: План тестирования Smart Lab Delivery
+Дата актуализации: 2026-04-13
+
+1. Уровни тестирования
+- Unit / domain: инварианты сущностей, валидаторы, статусные переходы.
+- Unit / application: policy-решения retry/fallback/deduplication и use-case orchestration.
+- Integration: проверка stub-адаптеров и сквозного контура AppContainer + DeliveryOrchestrator.
+
+2. Критичные сценарии
+- Валидность Patient/LabResult/DeliveryAttempt/DeliveryCard и запрет невалидных состояний.
+- Согласованность DeliveryCard status/queue_status при add_attempt и change_status.
+- Retry limits (total/MAX/EMAIL), terminal-status блокировки и manual_review ограничения.
+- Fallback только MAX -> EMAIL; после failure в EMAIL — только manual_review.
+- Deduplication: запрет на повторную отправку при success/exhausted/terminal.
+- Use-case контур: policy решает, use case исполняет; без локального пересчета fallback.
+- Интеграционный поток: ready-results из Renovatio -> create/process/retry в orchestrator.
+
+3. Границы unit/integration
+- Unit:
+  - Тестируются pure business-правила и orchestration решения без внешних систем.
+  - Зависимости в use cases подменяются test-stub объектами.
+- Integration:
+  - Используются существующие in-memory deterministic stub-адаптеры.
+  - Реальный HTTP/БД/очереди/runtime scheduler не используются.
+
+4. Что пока не тестируется
+- Реальные сетевые интеграции Renovatio/MAX/SMTP.
+- Персистентность и миграции БД.
+- Конкурентная обработка/очереди/асинхронный runtime.
+- UI и операторская панель.
+- Нагрузочные и chaos-тесты.
+
+5. Регрессионно-опасные зоны
+- Изменение правил delivery_status/queue_status в DeliveryCard.
+- Изменение приоритетов/лимитов retry/fallback, приводящее к ping-pong маршрутизации.
+- Дублирование policy-логики в use cases.
+- Изменение deterministic-поведения stub-провайдеров без обновления тестов.
+
+6. Минимальный регрессионный набор (обязательный запуск)
+- `pytest tests/unit/domain`
+- `pytest tests/unit/application`
+- `pytest tests/integration`
+- `pytest`
