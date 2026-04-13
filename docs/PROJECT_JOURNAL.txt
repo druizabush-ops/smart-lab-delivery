@@ -344,3 +344,31 @@ Dependency wiring:
 Новой бизнес-логики не добавлялось.
 Что следующим шагом можно делать безопасно благодаря тестам:
 - Переходить к инфраструктурному этапу (реальные интеграции, репозитории, runtime-механизмы) с быстрым регрессионным контролем текущего поведения delivery logic.
+
+[Изменение]
+Дата: 2026-04-13
+Ветка: work
+Блок: Реализация runtime / infrastructure слоя
+Файлы: src/infrastructure/runtime/delivery_runtime.py; src/infrastructure/queue/in_memory_delivery_queue.py; src/infrastructure/repositories/in_memory_delivery_card_repository.py; src/application/interfaces/delivery_card_repository.py; src/application/services/delivery_orchestrator.py; src/config/container.py; scripts/run_runtime_cycle.py; tests/unit/infrastructure/test_runtime_infrastructure.py; docs/ARCHITECTURE_OVERVIEW.txt; docs/DECISIONS.txt; docs/TECH_DEBT.txt; docs/SETUP_WINDOWS.txt
+Причина: Перевести проект из состояния «архитектурный каркас + policy-логика» в управляемый исполняемый runtime-контур без перехода к production-инфраструктуре.
+Что сделано:
+- Добавлен runtime execution слой: DeliveryRuntime + DeliveryRunSummary с синхронным process_cycle(seed + run_once).
+- Добавлены in-memory infrastructure-компоненты: InMemoryDeliveryCardRepository и InMemoryDeliveryQueue.
+- В application-слой добавлен контракт DeliveryCardRepository без переноса business-логики в инфраструктуру.
+- Container расширен явным wiring runtime-контура (orchestrator + repository + queue + runtime service).
+- Добавлен CLI entrypoint scripts/run_runtime_cycle.py для локального запуска одного цикла.
+- Добавлены unit-тесты runtime/infrastructure и подтвержден зеленый прогон test contour.
+Как теперь выполняется delivery cycle:
+1) runtime вызывает provider ready результатов через orchestrator;
+2) создаются DeliveryCard и сохраняются в in-memory repository;
+3) id карточек помещаются в in-memory FIFO queue;
+4) run_once последовательно обрабатывает карточки и сохраняет обновленное состояние;
+5) runtime возвращает DeliveryRunSummary для operator-facing сводки.
+Что осталось stub-уровнем:
+- Renovatio/MAX/Email остаются stub-адаптерами integration-слоя.
+- Персистентность, брокер, scheduler, real HTTP/API не подключались.
+Ограничения текущего runtime:
+- persistence и queue ограничены процессом и теряются после рестарта;
+- отсутствует реальное отложенное планирование, backoff и фоновые worker-потоки;
+- нет межпроцессной дедупликации.
+Следующий шаг: Добавить persistent-реализацию репозитория, затем вынести queue/runner в управляемый process manager с сохранением текущих слоевых границ.

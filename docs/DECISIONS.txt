@@ -116,3 +116,22 @@
 Последствия: DeliveryPolicy закреплена как единая точка business-решений после неуспешной попытки; use cases исполняют decision и не содержат локального fallback-ветвления.
 Ограничения: Поле next_channel описывает только следующий шаг в рамках текущего sync runtime; стратегия очередей/scheduler не вводилась.
 Что учесть позже: При появлении конфигурируемой маршрутизации расширять decision-контракт, не возвращая вычисления каналов в use cases.
+
+[Решение]
+Дата: 2026-04-13
+Ветка: work
+Тема: In-memory runtime/persistence/queue как обязательный промежуточный этап
+Контекст: После стабилизации domain+application+policy слоев нужен исполняемый контур, но подключение PostgreSQL/broker/scheduler на этом шаге преждевременно.
+Варианты:
+1) Сразу перейти к production-стеку (PostgreSQL + broker + workers).
+2) Ввести синхронный in-memory runtime с явными repository/queue интерфейсами.
+Почему выбран этот вариант: Позволяет запустить полный delivery flow, сохранить границы слоев и снизить сложность изменения бизнес-правил до подключения тяжелой инфраструктуры.
+Последствия:
+- Введены DeliveryRuntime, InMemoryDeliveryCardRepository, InMemoryDeliveryQueue.
+- Execution loop зафиксирован как синхронный (seed -> run_once -> summary).
+- Контракт репозитория вынесен в application/interfaces, а реализация остается в infrastructure.
+Ограничения:
+- Нет устойчивости к рестарту процесса.
+- Нет distributed queue и межпроцессной координации.
+- Нет real scheduler/backoff.
+Что учесть позже: При переходе к real persistence сохранить сигнатуры runtime-контракта и не переносить policy-решения в инфраструктуру.

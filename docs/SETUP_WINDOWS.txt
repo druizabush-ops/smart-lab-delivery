@@ -92,3 +92,24 @@ python -m pytest .\tests\integration
 ```powershell
 python -m pytest -vv
 ```
+
+12. Запуск runtime cycle (PowerShell)
+```powershell
+# Один синхронный цикл runtime (seed + processing)
+python .\scripts\run_runtime_cycle.py
+```
+Ожидаемый результат: вывод блока `Delivery Runtime Summary` с числом созданных/обработанных карточек и финальными счетчиками.
+
+13. Проверка тестов после runtime/infrastructure изменений
+```powershell
+# Полный контур
+python -m pytest
+
+# Только runtime/infrastructure блок
+python -m pytest .\tests\unit\infrastructure
+```
+
+14. Важные ограничения текущего runtime
+- Хранилище и очередь in-memory: состояние не сохраняется после завершения процесса.
+- Execution loop синхронный: фоновый scheduler/worker не реализован.
+- Integration-клиенты остаются stub-адаптерами.
