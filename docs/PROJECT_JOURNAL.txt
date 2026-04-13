@@ -410,3 +410,24 @@ Dependency wiring:
 Что изменилось в архитектуре: Infrastructure получила persistence contour, domain/application остались изолированными от ORM-деталей.
 Ограничения: Полный integration-контур с реальным PostgreSQL в CI пока не внедрен.
 Следующий шаг: Добавить CI-job с PostgreSQL service и тесты повторных process cycle в postgres-режиме runtime.
+
+[Изменение]
+Дата: 2026-04-13
+Ветка: work
+Блок: Реализация operator API (read-only)
+Файлы: src/presentation/operator_api/app.py; src/presentation/operator_api/dependencies.py; src/presentation/operator_api/routers/cards.py; src/presentation/operator_api/schemas/delivery_cards.py; src/application/services/delivery_card_read_service.py; src/config/container.py; scripts/run_operator_api.py; tests/integration/test_operator_api_read_only.py; requirements.txt; docs/PROJECT_JOURNAL.txt; docs/ARCHITECTURE_OVERVIEW.txt; docs/DECISIONS.txt; docs/SETUP_WINDOWS.txt; docs/TEST_PLAN.txt
+Причина: После стабилизации persistence добавить операторский слой наблюдаемости без write-side вмешательства в delivery flow.
+Что сделано:
+- Добавлен FastAPI presentation-слой для read-only operator API.
+- Реализованы endpoint-ы GET /operator/cards, GET /operator/cards/{card_id}, GET /operator/cards/summary.
+- В application добавлен отдельный DeliveryCardReadService с фильтрами (status, queue_status, channel, patient_id, lab_result_id, only_active, only_done).
+- Введены явные response-схемы DeliveryAttemptResponse, DeliveryCardResponse, DeliveryCardSummaryResponse.
+- AppContainer расширен read stack wiring (repository -> DeliveryCardReadService).
+- Добавлен локальный запуск API через scripts/run_operator_api.py.
+- Добавлены базовые integration-тесты operator API для in-memory и postgres repository (sqlite surrogate).
+Что изменилось в логике: Бизнес-логика доставки, policy-решения и write-side use cases не изменялись.
+Ограничения блока:
+- API остается строго read-only; команды ручного вмешательства не добавлялись.
+- Фильтрация реализована на текущем query-слое без пагинации и без расширенной сортировки.
+- Auth/roles и operator UI не вводились на этом этапе.
+Следующий шаг: выбрать следующий функциональный блок между operator command layer, scheduler/retry manager или real transport integrations.

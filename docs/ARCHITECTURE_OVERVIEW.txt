@@ -77,3 +77,27 @@
 - Явный mapping domain <-> persistence реализован в src/infrastructure/persistence/mappers.
 - Реальный репозиторий PostgresDeliveryCardRepository подключается как альтернатива InMemoryDeliveryCardRepository по флагу SLD_REPOSITORY_MODE.
 - Runtime поддерживает dual-mode: in_memory (по умолчанию) и postgres (устойчивое состояние между запусками).
+
+13. Operator API (read-only) слой
+- Добавлен presentation-слой src/presentation/operator_api на FastAPI.
+- Текущий API-контур ограничен query-доступом и не содержит write endpoint-ов.
+- Схема зависимостей:
+  1) presentation/operator_api/routers ->
+  2) application/services/DeliveryCardReadService ->
+  3) infrastructure repository (in-memory или postgres).
+- API не использует ORM-модели напрямую: наружу возвращаются отдельные response schema (Pydantic).
+
+14. Read-only контракты operator API
+- GET /operator/cards
+  - Возвращает список карточек.
+  - Поддерживает фильтры: status, queue_status, channel, patient_id, lab_result_id, only_active, only_done.
+- GET /operator/cards/{card_id}
+  - Возвращает карточку по deterministic operational id.
+- GET /operator/cards/summary
+  - Возвращает агрегированную сводку состояния карточек.
+
+15. Границы operator API этапа
+- Не добавляются retry/fallback/manual command endpoint-ы.
+- Не добавляются edit/delete операции.
+- Не добавляются enterprise auth/roles/permissions.
+- API создан как foundation для будущей operator panel и command-side блока.
