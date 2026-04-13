@@ -209,3 +209,21 @@ Open questions / Tech debt:
 - Application-слой зависит только от абстракций и не содержит адаптеров инфраструктуры.
 - Политики SLA/лимитов попыток и продвинутая маршрутизация каналов не добавлялись.
 Следующий шаг: Реализовать инфраструктурные адаптеры к application-интерфейсам и добавить unit-тесты use-case сценариев.
+
+[Изменение]
+Дата: 2026-04-13
+Ветка: work
+Блок: Уточнение границ domain и application
+Файлы: src/domain/entities/delivery_card.py; src/application/use_cases/process_delivery.py; src/application/use_cases/create_delivery_card.py; docs/PROJECT_JOURNAL.txt
+Причина: В application-слое была размещена часть бизнес-логики, которая относится к доменным инвариантам и правилам допустимости отправки.
+Какая логика была ошибочно в application:
+- В ProcessDeliveryUseCase находилось правило can_be_sent по статусам delivery и queue.
+- В CreateDeliveryCardUseCase дублировались доменные проверки: LabResult.status == READY и совпадение patient_id.
+Как логика перенесена в domain:
+- В DeliveryCard добавлен доменный метод can_be_sent(), инкапсулирующий проверку допустимости отправки по статусам.
+- В DeliveryCard.create() перенесены и централизованы инварианты создания карточки: допустимость статуса результата и согласованность patient/result.
+- Application use cases переведены на делегирование: ProcessDeliveryUseCase вызывает card.can_be_sent(), CreateDeliveryCardUseCase вызывает доменную фабрику без бизнес-валидации.
+Какие принципы зафиксированы:
+- Domain владеет бизнес-правилами и инвариантами жизненного цикла сущностей.
+- Application координирует сценарий и вызывает доменные методы, не дублируя правила.
+- Инварианты должны быть централизованы в доменных фабриках/методах, чтобы избежать рассинхронизации.

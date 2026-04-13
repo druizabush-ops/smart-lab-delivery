@@ -3,7 +3,6 @@
 from src.application.interfaces import DeliveryProvider, NotificationLogger
 from src.application.use_cases.register_delivery_result import RegisterDeliveryResultUseCase
 from src.domain.entities import DeliveryCard
-from src.domain.statuses import DeliveryStatus, QueueStatus
 
 
 class ProcessDeliveryUseCase:
@@ -22,7 +21,7 @@ class ProcessDeliveryUseCase:
     def execute(self, card: DeliveryCard) -> DeliveryCard:
         """Обрабатывает карточку: send -> register result -> обновленный card."""
 
-        if not self._can_be_sent(card):
+        if not card.can_be_sent():
             return card
 
         attempt = self._delivery_provider.send(card)
@@ -32,10 +31,3 @@ class ProcessDeliveryUseCase:
             self._notification_logger.log_attempt(updated_card, attempt)
 
         return updated_card
-
-    @staticmethod
-    def _can_be_sent(card: DeliveryCard) -> bool:
-        if card.status in {DeliveryStatus.MAX_SENT, DeliveryStatus.EMAIL_SENT, DeliveryStatus.EXHAUSTED}:
-            return False
-
-        return card.queue_status in {QueueStatus.ACTIVE, QueueStatus.WAITING_RETRY}
