@@ -5,6 +5,9 @@ from datetime import datetime
 
 from src.domain.entities.channels import DeliveryChannel
 from src.domain.entities.delivery_attempt import DeliveryAttempt
+from src.domain.entities.lab_result import LabResult
+from src.domain.entities.patient import Patient
+from src.domain.statuses.lab_result import LabResultStatus
 from src.domain.statuses import AttemptStatus, DeliveryStatus, QueueStatus
 
 
@@ -37,17 +40,23 @@ class DeliveryCard:
     @classmethod
     def create(
         cls,
-        patient_id: str,
-        lab_result_id: str,
+        patient: Patient,
+        lab_result: LabResult,
         channel: DeliveryChannel,
         created_at: datetime | None = None,
     ) -> "DeliveryCard":
         """Фабрика создания карточки с обязательными бизнес-правилами."""
 
+        if lab_result.status is not LabResultStatus.READY:
+            raise ValueError("DeliveryCard можно создавать только для LabResult в статусе READY.")
+
+        if lab_result.patient_id != patient.id:
+            raise ValueError("patient.id должен совпадать с lab_result.patient_id.")
+
         now = created_at or datetime.utcnow()
         return cls(
-            patient_id=patient_id,
-            lab_result_id=lab_result_id,
+            patient_id=patient.id,
+            lab_result_id=lab_result.id,
             status=DeliveryStatus.NOT_STARTED,
             queue_status=QueueStatus.ACTIVE,
             channel=channel,
@@ -55,6 +64,14 @@ class DeliveryCard:
             created_at=now,
             updated_at=now,
         )
+
+    def can_be_sent(self) -> bool:
+        """Возвращает допустимость отправки карточки по доменным статусам."""
+
+        if self.status in {DeliveryStatus.MAX_SENT, DeliveryStatus.EMAIL_SENT, DeliveryStatus.EXHAUSTED}:
+            return False
+
+        return self.queue_status in {QueueStatus.ACTIVE, QueueStatus.WAITING_RETRY}
 
     def __post_init__(self) -> None:
         if not self.patient_id.strip():
