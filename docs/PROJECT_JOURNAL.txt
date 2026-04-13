@@ -227,3 +227,34 @@ Open questions / Tech debt:
 - Domain владеет бизнес-правилами и инвариантами жизненного цикла сущностей.
 - Application координирует сценарий и вызывает доменные методы, не дублируя правила.
 - Инварианты должны быть централизованы в доменных фабриках/методах, чтобы избежать рассинхронизации.
+
+[Изменение]
+Дата: 2026-04-13
+Ветка: work
+Блок: Реализация integration слоя
+Файлы: src/integration/__init__.py; src/integration/renovatio/__init__.py; src/integration/renovatio/client.py; src/integration/delivery/__init__.py; src/integration/delivery/max_provider.py; src/integration/delivery/email_provider.py; src/integration/logging/__init__.py; src/integration/logging/logger_adapter.py; src/config/__init__.py; src/config/container.py; docs/PROJECT_JOURNAL.txt
+Причина: После стабилизации domain/application необходимо подключить адаптеры внешнего мира через интерфейсы application и сохранить чистые границы слоев.
+Какие адаптеры реализованы:
+- RenovatioClient (integration/renovatio) как реализация LabResultProvider с in-memory заглушкой.
+- MaxDeliveryProvider и EmailDeliveryProvider (integration/delivery) как реализации DeliveryProvider.
+- LoggerAdapter (integration/logging) как реализация NotificationLogger.
+Какие интерфейсы покрыты:
+- LabResultProvider.get_ready_results() -> RenovatioClient.get_ready_results().
+- DeliveryProvider.send(card) -> MaxDeliveryProvider.send(card) и EmailDeliveryProvider.send(card).
+- NotificationLogger.log_attempt(card, attempt) -> LoggerAdapter.log_attempt(card, attempt).
+Какие заглушки используются:
+- RenovatioClient возвращает seed-список LabResult и фильтрует только READY.
+- Delivery providers эмулируют SUCCESS/ERROR через простую deterministic-логику без внешних вызовов.
+- LoggerAdapter пишет события отправки в stdout (print), без внешней системы логирования.
+Dependency wiring:
+- Добавлен src/config/container.py с ручной сборкой зависимостей без DI-фреймворков.
+- В контейнере создаются экземпляры адаптеров, use cases и DeliveryOrchestrator.
+Ограничения этапа:
+- Нет реального HTTP к Renovatio.
+- Нет реальной отправки в MAX/email.
+- Нет БД, retry, async, очередей и production-конфигурации.
+Риски интеграции:
+- Renovatio: риск расхождения контрактов полей/статусов при подключении реального API.
+- MAX: риск различий протокола доставки и кодов ошибок относительно stub-логики.
+- Email: риск несоответствия SMTP/API ограничений, rate limits и политики отказов.
+Следующий шаг: добавить unit-тесты integration-адаптеров и расширить container до выбора канала (MAX/EMAIL) в runtime без нарушения границ application/domain.
