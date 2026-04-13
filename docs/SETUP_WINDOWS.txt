@@ -1,0 +1,39 @@
+Название: Настройка и проверка проекта в Windows 10 (PowerShell)
+Дата актуализации: 2026-04-13
+
+1. Требования
+- Windows 10
+- PowerShell 5.1+ или PowerShell 7+
+- Git
+
+2. Клонирование проекта
+```powershell
+git clone <URL_РЕПОЗИТОРИЯ>
+cd .\smart-lab-delivery
+```
+
+3. Проверка структуры каркаса
+```powershell
+Get-ChildItem -Name
+Get-ChildItem .\docs -Name
+Get-ChildItem .\src -Recurse -Directory | Select-Object FullName
+```
+
+4. Проверка статуса Git
+```powershell
+git status
+```
+
+5. Рекомендация по кодировке для русских файлов
+```powershell
+# Рекомендуется сохранять .txt/.md в UTF-8
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+```
+
+6. Текущий запуск приложения
+На текущем этапе полноценный runtime отсутствует: проект находится в фазе инженерной и архитектурной инициализации.
+
+7. Что проверять на этом этапе
+- Наличие обязательных документов в docs/.
+- Соответствие структуры каталогов архитектурным слоям.
+- Наличие записи в PROJECT_JOURNAL о произведенных изменениях.
