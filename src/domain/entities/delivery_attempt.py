@@ -14,7 +14,7 @@ class DeliveryAttempt:
     Поля:
     - timestamp: время регистрации попытки.
     - channel: канал доставки (MAX/EMAIL).
-    - result: итог попытки (success/fail в доменных терминах через enum).
+    - result: терминальный исход попытки (SUCCESS/ERROR).
     - error_message: текст ошибки, если попытка неуспешна.
 
     Инварианты:
@@ -28,10 +28,6 @@ class DeliveryAttempt:
     error_message: str | None = None
 
     def __post_init__(self) -> None:
-        allowed_terminal = {AttemptStatus.SUCCESS, AttemptStatus.ERROR}
-        if self.result not in allowed_terminal:
-            raise ValueError("result попытки должен быть SUCCESS или ERROR.")
-
         if self.result is AttemptStatus.ERROR and not self.error_message:
             raise ValueError("Для неуспешной попытки требуется error_message.")
 

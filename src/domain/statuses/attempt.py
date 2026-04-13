@@ -1,13 +1,10 @@
-"""Статусы отдельной попытки отправки."""
+"""Статусы результата отдельной попытки отправки."""
 
 from enum import StrEnum
 
 
 class AttemptStatus(StrEnum):
-    """Единый перечень статусов жизненного цикла попытки."""
+    """Терминальные исходы единичной попытки доставки."""
 
-    SCHEDULED = "scheduled"
-    IN_PROGRESS = "in_progress"
     SUCCESS = "success"
     ERROR = "error"
-    SKIPPED = "skipped"

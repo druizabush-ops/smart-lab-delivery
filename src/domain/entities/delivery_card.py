@@ -5,7 +5,7 @@ from datetime import datetime
 
 from src.domain.entities.channels import DeliveryChannel
 from src.domain.entities.delivery_attempt import DeliveryAttempt
-from src.domain.statuses import AttemptStatus, DeliveryStatus
+from src.domain.statuses import AttemptStatus, DeliveryStatus, QueueStatus
 
 
 @dataclass(slots=True)
@@ -13,20 +13,22 @@ class DeliveryCard:
     """Карточка доставки лабораторного результата пациенту.
 
     Жизненный цикл:
-    1) Создание в статусе NOT_STARTED.
+    1) Создание в статусах NOT_STARTED/ACTIVE.
     2) Добавление попыток отправки (append-only история attempts).
-    3) Контролируемый переход статусов до финального состояния.
+    3) Контролируемый переход delivery/queue статусов до финального состояния.
 
     Инварианты:
     - patient_id и lab_result_id обязательны.
-    - status меняется только через change_status().
+    - status и queue_status меняются только через доменные методы.
     - attempts меняется только через add_attempt().
     - updated_at всегда >= created_at.
+    - При успешной или финально закрытой доставке queue_status обязан быть DONE.
     """
 
     patient_id: str
     lab_result_id: str
     status: DeliveryStatus
+    queue_status: QueueStatus
     channel: DeliveryChannel
     attempts: list[DeliveryAttempt] = field(default_factory=list)
     created_at: datetime = field(default_factory=datetime.utcnow)
@@ -47,6 +49,7 @@ class DeliveryCard:
             patient_id=patient_id,
             lab_result_id=lab_result_id,
             status=DeliveryStatus.NOT_STARTED,
+            queue_status=QueueStatus.ACTIVE,
             channel=channel,
             attempts=[],
             created_at=now,
@@ -60,6 +63,14 @@ class DeliveryCard:
             raise ValueError("lab_result_id не может быть пустым.")
         if self.updated_at < self.created_at:
             raise ValueError("updated_at не может быть раньше created_at.")
+
+        terminal_delivery = {
+            DeliveryStatus.MAX_SENT,
+            DeliveryStatus.EMAIL_SENT,
+            DeliveryStatus.EXHAUSTED,
+        }
+        if self.status in terminal_delivery and self.queue_status is not QueueStatus.DONE:
+            raise ValueError("Для терминального статуса доставки queue_status должен быть DONE.")
 
     def change_status(self, new_status: DeliveryStatus, changed_at: datetime | None = None) -> None:
         """Изменяет статус карточки только по разрешенным переходам."""
@@ -85,6 +96,39 @@ class DeliveryCard:
             )
 
         self.status = new_status
+        self._sync_queue_status_from_delivery(new_status)
+        self.updated_at = changed_at or datetime.utcnow()
+
+    def change_queue_status(self, new_status: QueueStatus, changed_at: datetime | None = None) -> None:
+        """Изменяет операционный queue_status карточки по разрешенным переходам."""
+
+        allowed_transitions: dict[QueueStatus, set[QueueStatus]] = {
+            QueueStatus.ACTIVE: {
+                QueueStatus.WAITING_RETRY,
+                QueueStatus.MANUAL_REVIEW,
+                QueueStatus.DONE,
+            },
+            QueueStatus.WAITING_RETRY: {
+                QueueStatus.ACTIVE,
+                QueueStatus.MANUAL_REVIEW,
+                QueueStatus.DONE,
+            },
+            QueueStatus.MANUAL_REVIEW: {
+                QueueStatus.ACTIVE,
+                QueueStatus.DONE,
+            },
+            QueueStatus.DONE: set(),
+        }
+
+        if new_status == self.queue_status:
+            return
+
+        if new_status not in allowed_transitions[self.queue_status]:
+            raise ValueError(
+                f"Запрещенный переход queue_status: {self.queue_status} -> {new_status}."
+            )
+
+        self.queue_status = new_status
         self.updated_at = changed_at or datetime.utcnow()
 
     def add_attempt(self, attempt: DeliveryAttempt, changed_at: datetime | None = None) -> None:
@@ -105,3 +149,17 @@ class DeliveryCard:
             self.change_status(DeliveryStatus.FAILED, changed_at=attempt.timestamp)
 
         self.updated_at = changed_at or attempt.timestamp
+
+    def _sync_queue_status_from_delivery(self, delivery_status: DeliveryStatus) -> None:
+        """Синхронизирует queue_status по доменному delivery_status."""
+
+        if delivery_status in {DeliveryStatus.MAX_SENT, DeliveryStatus.EMAIL_SENT, DeliveryStatus.EXHAUSTED}:
+            self.queue_status = QueueStatus.DONE
+            return
+
+        if delivery_status is DeliveryStatus.FAILED:
+            self.queue_status = QueueStatus.WAITING_RETRY
+            return
+
+        if delivery_status is DeliveryStatus.NOT_STARTED and self.queue_status is not QueueStatus.MANUAL_REVIEW:
+            self.queue_status = QueueStatus.ACTIVE
