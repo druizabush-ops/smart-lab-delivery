@@ -372,3 +372,23 @@ Dependency wiring:
 - отсутствует реальное отложенное планирование, backoff и фоновые worker-потоки;
 - нет межпроцессной дедупликации.
 Следующий шаг: Добавить persistent-реализацию репозитория, затем вынести queue/runner в управляемый process manager с сохранением текущих слоевых границ.
+
+[Изменение]
+Дата: 2026-04-13
+Ветка: work
+Блок: Точечная доработка runtime / infrastructure слоя
+Файлы: src/infrastructure/runtime/delivery_runtime.py; src/infrastructure/repositories/in_memory_delivery_card_repository.py; src/infrastructure/identity/delivery_card_identity.py; src/infrastructure/identity/__init__.py; docs/TECH_DEBT.txt; docs/ARCHITECTURE_OVERVIEW.txt
+Причина: Устранить найденные точечные дефекты runtime summary и дублирование вычисления card id без расширения функциональности за рамки текущего этапа.
+Какие дефекты найдены:
+- `created_cards_count` в `run_once` возвращался заглушкой `0`, что приводило к рассогласованию summary при pipeline `seed + run_once`.
+- Формирование operational card id дублировалось в runtime и repository.
+Что исправлено:
+- `DeliveryRuntime.run_once` теперь принимает `created_cards_count` и возвращает его в summary, а `process_cycle` передает фактическое количество карточек, созданных на этапе seed.
+- `process_cycle` возвращает результат `run_once` без ручной пересборки summary, чтобы исключить расхождения между методами.
+- Добавлена единая инфраструктурная точка вычисления id (`build_operational_card_id`), которую используют и runtime, и repository.
+Какие ограничения явно зафиксированы:
+- Runtime по-прежнему выполняет только один управляемый синхронный цикл и не делает автоматический re-enqueue для карточек в `waiting_retry`.
+- In-memory queue/repository остаются процесс-локальными: повторные process cycle между перезапусками не имеют устойчивого persistent-state и не гарантируют global deduplication.
+Почему не внедряется re-enqueue/persistent dedup сейчас:
+- Текущий этап ограничен точечным фиксом runtime/infrastructure без внедрения scheduler/background execution и без добавления persistent-хранилища.
+- Расширение в сторону планировщика, брокеров и БД перенесено в следующий крупный инфраструктурный блок.

@@ -51,6 +51,7 @@
   - DeliveryRuntime — синхронный execution service уровня process_cycle.
   - InMemoryDeliveryQueue — FIFO очередь id карточек.
   - InMemoryDeliveryCardRepository — операционное in-memory хранилище карточек.
+  - build_operational_card_id (infrastructure/identity) — единая точка вычисления operational card id для runtime/repository.
 - execution pipeline:
   1) seed_ready_results() получает READY результаты через orchestrator;
   2) создаёт/сохраняет карточки и ставит их id в очередь;

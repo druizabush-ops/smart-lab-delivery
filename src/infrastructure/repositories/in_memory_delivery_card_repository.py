@@ -10,6 +10,7 @@ from copy import deepcopy
 from src.application.interfaces import DeliveryCardRepository
 from src.domain.entities import DeliveryCard
 from src.domain.statuses import QueueStatus
+from src.infrastructure.identity import build_operational_card_id
 
 
 class InMemoryDeliveryCardRepository(DeliveryCardRepository):
@@ -52,4 +53,4 @@ class InMemoryDeliveryCardRepository(DeliveryCardRepository):
 
     @staticmethod
     def _build_card_id(card: DeliveryCard) -> str:
-        return f"{card.patient_id}:{card.lab_result_id}"
+        return build_operational_card_id(card)
