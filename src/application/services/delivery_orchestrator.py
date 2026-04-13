@@ -35,6 +35,11 @@ class DeliveryOrchestrator:
 
         return self._retry_delivery_use_case.execute(card)
 
+    def orchestrate_existing_card(self, card: DeliveryCard) -> DeliveryCard:
+        """Оркестрирует обработку уже созданной карточки без создания новой."""
+
+        return self._process_delivery_use_case.execute(card)
+
     def orchestrate_ready_results(self, patients: dict[str, Patient]) -> list[DeliveryCard]:
         """Обрабатывает все готовые результаты через переданную карту пациентов."""
 

@@ -15,13 +15,17 @@ from src.application.use_cases import (
     RegisterDeliveryResultUseCase,
     RetryDeliveryUseCase,
 )
+from src.domain.entities import Patient
+from src.infrastructure.queue import InMemoryDeliveryQueue
+from src.infrastructure.repositories import InMemoryDeliveryCardRepository
+from src.infrastructure.runtime import DeliveryRuntime
 from src.integration.delivery import EmailDeliveryProvider, MaxDeliveryProvider
 from src.integration.logging import LoggerAdapter
 from src.integration.renovatio import RenovatioClient
 
 
 class AppContainer:
-    """Собирает адаптеры integration-слоя и use case orchestration-слоя."""
+    """Собирает интеграции, application use cases и runtime-контур исполнения."""
 
     def __init__(self) -> None:
         self.renovatio_client = RenovatioClient()
@@ -72,3 +76,37 @@ class AppContainer:
             process_delivery_use_case=self.process_delivery_use_case,
             retry_delivery_use_case=self.retry_delivery_use_case,
         )
+
+        # Runtime / infrastructure wiring.
+        self.delivery_card_repository = InMemoryDeliveryCardRepository()
+        self.delivery_queue = InMemoryDeliveryQueue()
+        self.delivery_runtime = DeliveryRuntime(
+            orchestrator=self.delivery_orchestrator,
+            repository=self.delivery_card_repository,
+            queue=self.delivery_queue,
+        )
+
+    @staticmethod
+    def build_seed_patients() -> dict[str, Patient]:
+        """Возвращает in-memory карту пациентов для runtime-прогона."""
+
+        return {
+            "patient-001": Patient(
+                id="patient-001",
+                full_name="Иванов Иван Иванович",
+                email="ivanov@example.org",
+                phone="+79000000001",
+            ),
+            "patient-002": Patient(
+                id="patient-002",
+                full_name="Петрова Анна Сергеевна",
+                email="petrova@example.org",
+                phone="+79000000002",
+            ),
+            "patient-003": Patient(
+                id="patient-003",
+                full_name="Сидоров Пётр Алексеевич",
+                email="sidorov@example.org",
+                phone="+79000000003",
+            ),
+        }
