@@ -25,7 +25,7 @@
 
 4. Что пока не тестируется
 - Реальные сетевые интеграции Renovatio/MAX/SMTP.
-- Персистентность и миграции БД.
+- Персистентность и миграции БД (частично покрыто unit-тестами mapper/repository).
 - Конкурентная обработка/очереди/асинхронный runtime.
 - UI и операторская панель.
 - Нагрузочные и chaos-тесты.
@@ -41,3 +41,13 @@
 - `pytest tests/unit/application`
 - `pytest tests/integration`
 - `pytest`
+
+
+7. Persistence тесты (новый минимум)
+- Unit: `tests/unit/infrastructure/persistence/test_delivery_card_mapper.py`
+  - корректный mapping DeliveryCard/DeliveryAttempt в ORM-модели и обратно.
+- Repository: `tests/unit/infrastructure/persistence/test_postgres_delivery_card_repository.py`
+  - save/get/update/list_by_queue_status;
+  - сохранение и чтение attempts;
+  - консистентность deterministic card id.
+- Ограничение текущего контура: repository тестируется через SQLite in-memory surrogate; отдельный PostgreSQL integration-job выделен в tech debt.

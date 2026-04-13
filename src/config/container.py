@@ -18,6 +18,7 @@ from src.application.use_cases import (
 from src.domain.entities import Patient
 from src.infrastructure.queue import InMemoryDeliveryQueue
 from src.infrastructure.repositories import InMemoryDeliveryCardRepository
+from src.config.runtime_settings import RuntimeSettings
 from src.infrastructure.runtime import DeliveryRuntime
 from src.integration.delivery import EmailDeliveryProvider, MaxDeliveryProvider
 from src.integration.logging import LoggerAdapter
@@ -28,6 +29,7 @@ class AppContainer:
     """Собирает интеграции, application use cases и runtime-контур исполнения."""
 
     def __init__(self) -> None:
+        self.runtime_settings = RuntimeSettings.from_env()
         self.renovatio_client = RenovatioClient()
         self.max_delivery_provider = MaxDeliveryProvider()
         self.email_delivery_provider = EmailDeliveryProvider()
@@ -77,14 +79,25 @@ class AppContainer:
             retry_delivery_use_case=self.retry_delivery_use_case,
         )
 
-        # Runtime / infrastructure wiring.
-        self.delivery_card_repository = InMemoryDeliveryCardRepository()
+        # Runtime / infrastructure wiring (dual-mode repository).
+        self.delivery_card_repository = self._build_delivery_card_repository()
         self.delivery_queue = InMemoryDeliveryQueue()
         self.delivery_runtime = DeliveryRuntime(
             orchestrator=self.delivery_orchestrator,
             repository=self.delivery_card_repository,
             queue=self.delivery_queue,
         )
+
+
+    def _build_delivery_card_repository(self):
+        if self.runtime_settings.repository_mode == "postgres":
+            from src.infrastructure.persistence.db import build_session_factory
+            from src.infrastructure.persistence.repositories import PostgresDeliveryCardRepository
+            from src.infrastructure.persistence.settings import DatabaseSettings
+
+            session_factory = build_session_factory(DatabaseSettings.from_env())
+            return PostgresDeliveryCardRepository(session_factory=session_factory)
+        return InMemoryDeliveryCardRepository()
 
     @staticmethod
     def build_seed_patients() -> dict[str, Patient]:

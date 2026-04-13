@@ -69,3 +69,11 @@
 - Не подключаются PostgreSQL/Redis/Rabbit/Kafka.
 - Не вводятся async workers, cron, multiprocessing.
 - Репозиторий и очередь не принимают бизнес-решения retry/fallback/dedup.
+
+
+12. Persistence / database contour (новый блок)
+- Выбран стек SQLAlchemy + Alembic + PostgreSQL.
+- Domain и ORM разделены: domain-модели живут в src/domain, persistence-модели — в src/infrastructure/persistence/models.
+- Явный mapping domain <-> persistence реализован в src/infrastructure/persistence/mappers.
+- Реальный репозиторий PostgresDeliveryCardRepository подключается как альтернатива InMemoryDeliveryCardRepository по флагу SLD_REPOSITORY_MODE.
+- Runtime поддерживает dual-mode: in_memory (по умолчанию) и postgres (устойчивое состояние между запусками).

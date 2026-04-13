@@ -113,3 +113,42 @@ python -m pytest .\tests\unit\infrastructure
 - Хранилище и очередь in-memory: состояние не сохраняется после завершения процесса.
 - Execution loop синхронный: фоновый scheduler/worker не реализован.
 - Integration-клиенты остаются stub-адаптерами.
+
+
+15. Установка зависимостей persistence
+```powershell
+python -m pip install -r .\requirements.txt
+```
+
+16. Локальный PostgreSQL (пример через Docker Desktop)
+```powershell
+docker run --name sld-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=smart_lab_delivery -p 5432:5432 -d postgres:16
+```
+
+17. Env-переменные для postgres режима
+```powershell
+$env:SLD_REPOSITORY_MODE = "postgres"
+$env:SLD_DB_HOST = "localhost"
+$env:SLD_DB_PORT = "5432"
+$env:SLD_DB_NAME = "smart_lab_delivery"
+$env:SLD_DB_USER = "postgres"
+$env:SLD_DB_PASSWORD = "postgres"
+$env:SLD_DATABASE_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/smart_lab_delivery"
+```
+
+18. Прогон миграций Alembic
+```powershell
+python -m alembic upgrade head
+```
+
+19. Запуск runtime в postgres-режиме
+```powershell
+python .\scripts\run_runtime_cycle.py
+```
+Ожидаемый признак: в summary выводится `repository_mode=postgres`.
+
+20. Тесты после persistence изменений
+```powershell
+python -m pytest .\tests\unit\infrastructure\persistence
+python -m pytest
+```

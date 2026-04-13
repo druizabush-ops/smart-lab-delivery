@@ -392,3 +392,21 @@ Dependency wiring:
 Почему не внедряется re-enqueue/persistent dedup сейчас:
 - Текущий этап ограничен точечным фиксом runtime/infrastructure без внедрения scheduler/background execution и без добавления persistent-хранилища.
 - Расширение в сторону планировщика, брокеров и БД перенесено в следующий крупный инфраструктурный блок.
+
+
+[Изменение]
+Дата: 2026-04-13
+Ветка: work
+Блок: Реализация persistence / database слоя
+Файлы: src/infrastructure/persistence/*; src/config/container.py; src/config/runtime_settings.py; tests/unit/infrastructure/persistence/*; alembic/*; alembic.ini; requirements.txt; docs/*
+Причина: Обеспечить долговременное хранение карточек доставки и подготовить runtime к повторным process cycle.
+Что сделано:
+- Выбран и подключен стек SQLAlchemy + Alembic + PostgreSQL.
+- Добавлены ORM-модели delivery_cards и delivery_attempts, а также явные mapper'ы domain <-> persistence.
+- Реализован PostgresDeliveryCardRepository как альтернатива in-memory репозиторию по тому же контракту.
+- Введен dual-mode runtime wiring через env-флаг SLD_REPOSITORY_MODE.
+- Добавлена начальная миграция Alembic для таблиц delivery_cards/delivery_attempts.
+- Расширен тестовый контур тестами mapping и repository операций сохранения/чтения/обновления.
+Что изменилось в архитектуре: Infrastructure получила persistence contour, domain/application остались изолированными от ORM-деталей.
+Ограничения: Полный integration-контур с реальным PostgreSQL в CI пока не внедрен.
+Следующий шаг: Добавить CI-job с PostgreSQL service и тесты повторных process cycle в postgres-режиме runtime.
