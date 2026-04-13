@@ -135,3 +135,19 @@
 - Нет distributed queue и межпроцессной координации.
 - Нет real scheduler/backoff.
 Что учесть позже: При переходе к real persistence сохранить сигнатуры runtime-контракта и не переносить policy-решения в инфраструктуру.
+
+
+[ADR]
+Дата: 2026-04-13
+Тема: Persistence слой на PostgreSQL + SQLAlchemy + Alembic
+Контекст: In-memory runtime стабилизирован, но состояние теряется между process cycle.
+Решение:
+- Выбран PostgreSQL как целевое долговременное хранилище карточек доставки.
+- Доступ к БД реализуется через SQLAlchemy ORM без самописной магии.
+- Миграции schema ведутся через Alembic.
+- Domain и ORM разведены по отдельным модулям + явные mappers.
+- InMemoryRepository сохраняется как режим для тестов и быстрого локального запуска.
+Почему сейчас: Нужен устойчивый state между запусками без запуска полной production-инфраструктуры (брокер/scheduler/real transport).
+Последствия:
+- Появился dual-mode wiring runtime (in_memory/postgres).
+- Добавились env-конфиги БД и миграционный контур.

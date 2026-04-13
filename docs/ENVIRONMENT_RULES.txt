@@ -1,0 +1,31 @@
+Название: Environment rules для Smart Lab Delivery
+Дата актуализации: 2026-04-13
+
+1. Общие правила
+- Секреты не хранятся в коде, git и документах с реальными значениями.
+- Подключение к БД настраивается только через переменные окружения.
+- Для локальной разработки допускаются примеры значений-заглушек.
+
+2. Обязательные переменные (PostgreSQL)
+- SLD_REPOSITORY_MODE: режим репозитория (`in_memory` или `postgres`).
+- SLD_DB_HOST: хост PostgreSQL.
+- SLD_DB_PORT: порт PostgreSQL.
+- SLD_DB_NAME: имя базы.
+- SLD_DB_USER: пользователь.
+- SLD_DB_PASSWORD: пароль.
+- SLD_DATABASE_URL: полная строка подключения (приоритетнее набора host/port/name/user/password).
+
+3. Рекомендуемые значения для локального dev (PowerShell)
+```powershell
+$env:SLD_REPOSITORY_MODE = "postgres"
+$env:SLD_DB_HOST = "localhost"
+$env:SLD_DB_PORT = "5432"
+$env:SLD_DB_NAME = "smart_lab_delivery"
+$env:SLD_DB_USER = "postgres"
+$env:SLD_DB_PASSWORD = "postgres"
+$env:SLD_DATABASE_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/smart_lab_delivery"
+```
+
+4. Режимы
+- `in_memory`: быстрый локальный режим по умолчанию, без сохранения состояния между запусками.
+- `postgres`: состояние карточек и попыток сохраняется между process cycle.

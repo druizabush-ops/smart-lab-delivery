@@ -21,6 +21,7 @@ def main() -> None:
     summary = container.delivery_runtime.process_cycle(patients)
 
     print("=== Delivery Runtime Summary ===")
+    print(f"repository_mode={container.runtime_settings.repository_mode}")
     print(f"created_cards_count={summary.created_cards_count}")
     print(f"processed_count={summary.processed_count}")
     print(f"success_count={summary.success_count}")
