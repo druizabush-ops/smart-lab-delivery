@@ -206,3 +206,21 @@
 - Нет формального rule-trace/audit-механизма объяснения политик кроме reason-строк и action logger.
 Когда пересмотреть: На этапе production hardening operator workflow и security/rbac.
 Что будет признаком, что пора заменить решение: Требование многошаговых operator сценариев, конкурентного контроля и расширенного governance-а ручных действий.
+
+[TD-0010] MAX UI package временно заменен shim-слоем
+Дата: 2026-04-14
+Описание: `@maxhub/max-ui` недоступен из текущего окружения (403 private registry). Используется локальный alias/shim c совместимыми компонентами-обертками.
+Риск: Возможны расхождения API/стилей после подключения официального SDK.
+План закрытия: Подключить реальный пакет из разрешенного registry и прогнать UI regression smoke.
+
+[TD-0011] initData/start_param не проходят серверную криптовалидацию
+Дата: 2026-04-14
+Описание: Mini app читает `window.WebApp.initDataUnsafe` и `start_param`, но не выполняет серверную верификацию подписи.
+Риск: Нельзя доверять user/patient context на клиенте в production.
+План закрытия: Ввести backend endpoint валидации initData + signer-check и выдачу short-lived patient token.
+
+[TD-0012] Document URL в patient API пока stub/readiness
+Дата: 2026-04-14
+Описание: Patient API возвращает readiness + URL контракта `/patient/results/{id}/document`, реальная выдача файла не реализована.
+Риск: Отсутствие финального UX скачивания результатов.
+План закрытия: Реализовать secure file streaming endpoint с audit и access-check.

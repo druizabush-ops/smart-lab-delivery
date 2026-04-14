@@ -56,3 +56,11 @@ $env:SLD_DATABASE_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/s
 8. Ограничения безопасности
 - Реальные ключи Renovatio/MAX/SMTP запрещено коммитить.
 - Для локальной проверки real-режима использовать отдельные тестовые учетные данные.
+
+9. Frontend mini app env
+- VITE_PATIENT_API_BASE_URL — base URL patient API (по умолчанию `http://127.0.0.1:8001`).
+- Для локального запуска вне MAX допускается отсутствие `window.WebApp`; UI должен работать в fallback-режиме.
+
+10. MAX mini app context notes
+- `start_param` рассматривается как недоверенный входной payload до серверной валидации.
+- `initDataUnsafe.user.id` используется только как временный локальный идентификатор для read-flow.

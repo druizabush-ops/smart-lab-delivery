@@ -148,3 +148,16 @@
 - Централизованный guard: OperatorActionPolicy формализует допустимость действий по status/queue_status.
 - Минимальный audit trail реализован через OperatorActionLoggerAdapter (инфраструктурный лог команд).
 - Scheduler/process manager остается отдельным слоем: operator API не выполняет роль планировщика и не запускает циклы обработки.
+
+## Добавление patient-facing mini app слоя (2026-04-14)
+- Введен отдельный frontend слой: `frontend/miniapp` (React/TypeScript/MAX UI adapter).
+- UI слой разделен на:
+  - `max/` — интеграция c `window.WebApp`, start_param, platform/version;
+  - `api/` — HTTP-клиент к backend;
+  - `components/` — презентационные экраны (список/детали).
+- Backend расширен отдельным consumer-контуром `/patient/results*` (patient-facing read model), без переиспользования operator response-модели 1:1.
+- Граница ответственности:
+  - MAX Bridge context -> только UI входной контекст;
+  - API client -> только транспорт к backend;
+  - Patient API -> только read-контракт для пациента;
+  - Domain/Application/Policy -> остаются в backend, не переносятся в UI.
