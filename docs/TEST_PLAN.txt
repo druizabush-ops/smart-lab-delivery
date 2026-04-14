@@ -141,3 +141,24 @@
 - E2E тесты запуска внутри реального MAX клиента.
 - Скриншотные/визуальные regression тесты с реальным `@maxhub/max-ui` SDK.
 - Криптографическая валидация `initData` (покрывается будущим backend security блоком).
+
+## Production hardening / observability / security foundations (2026-04-14)
+
+Покрытие:
+- Unit:
+  - config/security validation (`RuntimeSettings`, `SecuritySettings`, integration settings validate_for_mode);
+  - security helper валидации MAX initData hash;
+  - audit persistence repository;
+  - health readiness service;
+  - unified error response schema.
+- Integration:
+  - `/health/live` и `/health/ready`;
+  - strict patient security режим (401 при небезопасном контексте);
+  - operator command flow + audit logger fields.
+- Regression:
+  - полный pytest набор должен оставаться зелёным;
+  - operator/patient/runtime/postgres контуры без регресса.
+
+Требует ручной проверки:
+- Реальный MAX initData payload из боевого клиента.
+- Поведение rate limiter под burst-нагрузкой и multi-instance развертыванием.

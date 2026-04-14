@@ -1,7 +1,8 @@
-"""ORM-модели persistence слоя."""
+"""Экспорт ORM моделей persistence слоя."""
 
-from src.infrastructure.persistence.models.base import Base
-from src.infrastructure.persistence.models.delivery_attempt_model import DeliveryAttemptModel
-from src.infrastructure.persistence.models.delivery_card_model import DeliveryCardModel
+from .base import Base
+from .delivery_attempt_model import DeliveryAttemptModel
+from .delivery_card_model import DeliveryCardModel
+from .operator_action_log_model import OperatorActionLogModel
 
-__all__ = ["Base", "DeliveryCardModel", "DeliveryAttemptModel"]
+__all__ = ["Base", "DeliveryCardModel", "DeliveryAttemptModel", "OperatorActionLogModel"]

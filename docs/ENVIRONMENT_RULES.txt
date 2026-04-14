@@ -64,3 +64,19 @@ $env:SLD_DATABASE_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/s
 10. MAX mini app context notes
 - `start_param` рассматривается как недоверенный входной payload до серверной валидации.
 - `initDataUnsafe.user.id` используется только как временный локальный идентификатор для read-flow.
+
+11. Production hardening env (обновление 2026-04-14)
+Обязательные для prod-like:
+- SLD_ENV=prod
+- SLD_PATIENT_SECURITY_MODE=strict
+- SLD_MAX_WEBAPP_SECRET (секрет проверки initData/WebAppData)
+- SLD_RATE_LIMIT_ENABLED=1
+- SLD_RATE_LIMIT_PER_MINUTE (>0)
+
+Безопасные настройки:
+- В prod запрещено оставлять пустыми real credentials (`SLD_RENOVATIO_API_KEY`, `SLD_MAX_BOT_TOKEN` при real mode).
+- В prod запрещено использовать `SLD_PATIENT_SECURITY_MODE=relaxed`.
+
+Допустимые dev-only defaults:
+- `SLD_PATIENT_SECURITY_MODE=relaxed`.
+- Заглушечные `SLD_*_TOKEN/API_KEY` в stub режиме.

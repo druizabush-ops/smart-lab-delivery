@@ -25,6 +25,12 @@ class RenovatioSettings:
             seed_patient_ids=patient_ids,
         )
 
+    def validate_for_mode(self, integration_mode: str, environment: str) -> None:
+        """Проверяет обязательные поля для real-режима в prod окружении."""
+
+        if integration_mode == "real" and environment == "prod" and not self.api_key.strip():
+            raise ValueError("SLD_RENOVATIO_API_KEY обязателен для real режима в prod")
+
 
 @dataclass(frozen=True, slots=True)
 class MaxSettings:
@@ -45,6 +51,12 @@ class MaxSettings:
             bot_name=os.getenv("SLD_MAX_BOT_NAME", ""),
             patient_recipient_map=_parse_mapping(os.getenv("SLD_MAX_PATIENT_RECIPIENT_MAP", "")),
         )
+
+    def validate_for_mode(self, integration_mode: str, environment: str) -> None:
+        """Проверяет обязательные поля для real-режима в prod окружении."""
+
+        if integration_mode == "real" and environment == "prod" and not self.bot_token.strip():
+            raise ValueError("SLD_MAX_BOT_TOKEN обязателен для real режима в prod")
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,6 +82,12 @@ class EmailSettings:
             use_tls=os.getenv("SLD_EMAIL_USE_TLS", "0") == "1",
             timeout_seconds=float(os.getenv("SLD_EMAIL_TIMEOUT_SECONDS", "10")),
         )
+
+    def validate_for_mode(self, integration_mode: str, environment: str) -> None:
+        """Проверяет обязательные поля для real-режима в prod окружении."""
+
+        if integration_mode == "real" and environment == "prod" and not self.smtp_host.strip():
+            raise ValueError("SLD_EMAIL_SMTP_HOST обязателен для real режима в prod")
 
 
 def _parse_mapping(raw_value: str) -> dict[str, str]:

@@ -14,6 +14,15 @@ class OperatorCommandError(ValueError):
 
 
 @dataclass(frozen=True, slots=True)
+class OperatorCommandAuditContext:
+    """Контекст аудита операторского действия."""
+
+    reason: str | None = None
+    actor: str | None = None
+    source: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class OperatorCommandResult:
     """Стабильный результат выполнения команды для API-ответа."""
 
@@ -45,7 +54,15 @@ class _BaseOperatorCommandUseCase:
             raise OperatorCommandError("Карточка не найдена.")
         return card
 
-    def _log(self, *, card_id: str, success: bool, message: str) -> None:
+    def _log(
+        self,
+        *,
+        card_id: str,
+        success: bool,
+        message: str,
+        context: OperatorCommandAuditContext | None,
+        error: str | None = None,
+    ) -> None:
         if self._action_logger is None:
             return
         self._action_logger.log_action(
@@ -53,6 +70,10 @@ class _BaseOperatorCommandUseCase:
             card_id=card_id,
             success=success,
             message=message,
+            reason=context.reason if context else None,
+            actor=context.actor if context else None,
+            source=context.source if context else None,
+            error=error,
         )
 
     @staticmethod
@@ -81,16 +102,16 @@ class RetryDeliveryCardCommandUseCase(_BaseOperatorCommandUseCase):
         super().__init__(repository=repository, policy=policy, action_logger=action_logger)
         self._retry_use_case = retry_use_case
 
-    def execute(self, card_id: str) -> OperatorCommandResult:
+    def execute(self, card_id: str, context: OperatorCommandAuditContext | None = None) -> OperatorCommandResult:
         card = self._load_card(card_id)
         decision = self._policy.can_retry(card.status, card.queue_status)
         if not decision.allowed:
-            self._log(card_id=card_id, success=False, message=decision.reason)
+            self._log(card_id=card_id, success=False, message=decision.reason, context=context, error=decision.reason)
             raise OperatorCommandError(decision.reason)
 
         updated = self._retry_use_case.execute(card)
         self._repository.update(updated)
-        self._log(card_id=card_id, success=True, message="Retry выполнен.")
+        self._log(card_id=card_id, success=True, message="Retry выполнен.", context=context)
         return self._result(card_id, updated, "Retry выполнен.")
 
 
@@ -99,11 +120,16 @@ class MoveToManualReviewCommandUseCase(_BaseOperatorCommandUseCase):
 
     command_name = "manual_review"
 
-    def execute(self, card_id: str, reason: str | None = None) -> OperatorCommandResult:
+    def execute(
+        self,
+        card_id: str,
+        reason: str | None = None,
+        context: OperatorCommandAuditContext | None = None,
+    ) -> OperatorCommandResult:
         card = self._load_card(card_id)
         decision = self._policy.can_move_to_manual_review(card.status, card.queue_status)
         if not decision.allowed:
-            self._log(card_id=card_id, success=False, message=decision.reason)
+            self._log(card_id=card_id, success=False, message=decision.reason, context=context, error=decision.reason)
             raise OperatorCommandError(decision.reason)
 
         card.change_queue_status(QueueStatus.MANUAL_REVIEW)
@@ -111,7 +137,7 @@ class MoveToManualReviewCommandUseCase(_BaseOperatorCommandUseCase):
         message = "Карточка переведена в manual_review."
         if reason:
             message = f"{message} Причина: {reason}"
-        self._log(card_id=card_id, success=True, message=message)
+        self._log(card_id=card_id, success=True, message=message, context=context)
         return self._result(card_id, card, message)
 
 
@@ -120,18 +146,18 @@ class RequeueDeliveryCardCommandUseCase(_BaseOperatorCommandUseCase):
 
     command_name = "requeue"
 
-    def execute(self, card_id: str, reason: str | None = None) -> OperatorCommandResult:
+    def execute(
+        self,
+        card_id: str,
+        reason: str | None = None,
+        context: OperatorCommandAuditContext | None = None,
+    ) -> OperatorCommandResult:
         card = self._load_card(card_id)
         decision = self._policy.can_requeue(card.status, card.queue_status)
         if not decision.allowed:
-            self._log(card_id=card_id, success=False, message=decision.reason)
+            self._log(card_id=card_id, success=False, message=decision.reason, context=context, error=decision.reason)
             raise OperatorCommandError(decision.reason)
 
-        # Requeue трактуется как controlled подготовка к следующему processing cycle:
-        # мы не даем оператору произвольно мутировать статусы, а выполняем минимально
-        # допустимый шаг для повторной обработки карточки.
-        # Временное упрощение текущей модели: FAILED -> NOT_STARTED допускается здесь
-        # только как техническая подготовка к повторному запуску существующего пайплайна.
         if card.status is DeliveryStatus.FAILED:
             card.change_status(DeliveryStatus.NOT_STARTED)
         if card.queue_status is not QueueStatus.ACTIVE:
@@ -140,7 +166,7 @@ class RequeueDeliveryCardCommandUseCase(_BaseOperatorCommandUseCase):
         message = "Карточка поставлена в активную очередь."
         if reason:
             message = f"{message} Причина: {reason}"
-        self._log(card_id=card_id, success=True, message=message)
+        self._log(card_id=card_id, success=True, message=message, context=context)
         return self._result(card_id, card, message)
 
 
@@ -155,6 +181,7 @@ class OverrideChannelCommandUseCase(_BaseOperatorCommandUseCase):
         *,
         channel: DeliveryChannel,
         reason: str | None = None,
+        context: OperatorCommandAuditContext | None = None,
     ) -> OperatorCommandResult:
         card = self._load_card(card_id)
         decision = self._policy.can_override_channel(
@@ -164,7 +191,7 @@ class OverrideChannelCommandUseCase(_BaseOperatorCommandUseCase):
             requested_channel=channel,
         )
         if not decision.allowed:
-            self._log(card_id=card_id, success=False, message=decision.reason)
+            self._log(card_id=card_id, success=False, message=decision.reason, context=context, error=decision.reason)
             raise OperatorCommandError(decision.reason)
 
         card.channel = channel
@@ -172,5 +199,5 @@ class OverrideChannelCommandUseCase(_BaseOperatorCommandUseCase):
         message = f"Канал доставки изменен на {channel.value}."
         if reason:
             message = f"{message} Причина: {reason}"
-        self._log(card_id=card_id, success=True, message=message)
+        self._log(card_id=card_id, success=True, message=message, context=context)
         return self._result(card_id, card, message)

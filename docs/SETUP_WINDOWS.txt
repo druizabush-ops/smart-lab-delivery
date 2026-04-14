@@ -337,3 +337,41 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8001/patient/results?patient_id=patient
 # 2) Во frontend открыть карточку кнопкой "Открыть"
 # 3) Проверить отображение documents/readiness в деталях
 ```
+
+=== Production hardening checks (2026-04-14) ===
+
+1) Запуск health-check endpoints
+```powershell
+python scripts/run_operator_api.py
+Invoke-RestMethod http://127.0.0.1:8001/health/live
+Invoke-RestMethod http://127.0.0.1:8001/health/ready
+```
+
+2) Локальная проверка audit trail
+```powershell
+# Выполнить operator команду, затем проверить таблицу audit
+curl -X POST http://127.0.0.1:8001/operator/cards/<card_id>/manual-review -H "Content-Type: application/json" -H "X-Operator-Actor: op-win" -d '{"reason":"локальная проверка"}'
+# SQL: SELECT command, card_id, success, actor, source, reason FROM operator_action_log ORDER BY id DESC;
+```
+
+3) Проверка security сценариев patient API
+```powershell
+$env:SLD_PATIENT_SECURITY_MODE = "strict"
+python scripts/run_operator_api.py
+# Без X-Max-Init-Data запрос должен получить 401
+Invoke-WebRequest "http://127.0.0.1:8001/patient/results?patient_id=patient-001"
+```
+
+4) Dev/prod-like запуск
+```powershell
+# dev
+$env:SLD_ENV = "dev"
+$env:SLD_PATIENT_SECURITY_MODE = "relaxed"
+
+# prod-like
+$env:SLD_ENV = "prod"
+$env:SLD_PATIENT_SECURITY_MODE = "strict"
+$env:SLD_MAX_WEBAPP_SECRET = "<secret>"
+$env:SLD_RATE_LIMIT_ENABLED = "1"
+$env:SLD_RATE_LIMIT_PER_MINUTE = "120"
+```

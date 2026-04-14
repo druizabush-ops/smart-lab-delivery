@@ -4,6 +4,7 @@ from .create_delivery_card import CreateDeliveryCardUseCase
 from .handle_delivery_failure import HandleDeliveryFailureUseCase
 from .operator_commands import (
     MoveToManualReviewCommandUseCase,
+    OperatorCommandAuditContext,
     OverrideChannelCommandUseCase,
     RequeueDeliveryCardCommandUseCase,
     RetryDeliveryCardCommandUseCase,
@@ -17,6 +18,7 @@ __all__ = [
     "HandleDeliveryFailureUseCase",
     "RetryDeliveryCardCommandUseCase",
     "MoveToManualReviewCommandUseCase",
+    "OperatorCommandAuditContext",
     "RequeueDeliveryCardCommandUseCase",
     "OverrideChannelCommandUseCase",
     "ProcessDeliveryUseCase",
