@@ -193,3 +193,21 @@
 - Нет distributed lock/coordination и broker-based очередей.
 Что учесть позже:
 - При переходе к real transport и command-side добавить безопасные operator-команды и наблюдаемость, не размывая policy-границы.
+
+[ADR]
+Дата: 2026-04-14
+Тема: Real transport integrations после scheduler/persistence с сохранением stub режима
+Контекст: После стабилизации domain/application/policies и появления persistence+process manager требуется подключить реальные каналы без срыва локального и тестового контура.
+Решение:
+- Подключить реальные адаптеры Renovatio/MAX/Email только после runtime/persistence слоя.
+- Сохранить dual-mode `stub|real` и переключать его через env (`SLD_INTEGRATION_MODE`).
+- Оставить MAX primary каналом, email — fallback, а policy-решения не переносить в transport.
+Почему выбран этот вариант:
+- Снижает риск архитектурной деградации: business-правила остаются в application/policy.
+- Позволяет запускать CI и локальную разработку без внешних систем через stub режим.
+- Даёт рабочий real transport контур для следующего этапа operator/patient функций.
+Последствия:
+- Контейнер собирает разные реализации адаптеров в зависимости от режима.
+- Добавлен отдельный integration error mapping и env-конфиг внешних систем.
+Ограничения:
+- Это не production hardening: отсутствуют live-операционные гарантии, мониторинг и advanced security.

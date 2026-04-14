@@ -479,3 +479,25 @@ Dependency wiring:
 - Реализация синхронная, без background scheduling.
 - Нет distributed execution и broker-based orchestration.
 Следующий шаг: После стабилизации process manager перейти к command-side operator сценариям и интеграции real transport с учетом безопасных ручных команд.
+
+[Изменение]
+Дата: 2026-04-14
+Ветка: work
+Блок: Реализация real transport integrations
+Файлы: src/config/runtime_settings.py; src/config/integration_settings.py; src/config/container.py; src/integration/errors.py; src/integration/renovatio/client.py; src/integration/delivery/max_provider.py; src/integration/delivery/email_provider.py; src/integration/design/max_mini_app_contract.txt; tests/unit/integration/*; docs/PROJECT_JOURNAL.txt; docs/ARCHITECTURE_OVERVIEW.txt; docs/DECISIONS.txt; docs/TECH_DEBT.txt; docs/ENVIRONMENT_RULES.txt; docs/SETUP_WINDOWS.txt; docs/TEST_PLAN.txt
+Причина: Перейти от stub-транспорта к рабочему real integration контуру без переноса бизнес-логики из policy/application в адаптеры.
+Что сделано:
+- Добавлены real-режимы для Renovatio/MAX/Email адаптеров при сохранении stub-режимов.
+- Введен переключатель интеграций `SLD_INTEGRATION_MODE` и env-конфиг для каждого адаптера.
+- Добавлен централизованный integration error mapping (`IntegrationFailure` + `IntegrationErrorKind`).
+- Подготовлен контракт MAX mini app/deep link в design-слое.
+- Добавлены unit-тесты на mapping/error handling/request building и dual-mode wiring контейнера.
+Что изменилось в архитектуре:
+- Появился явный dual-mode контур transport/integration без изменения границ domain/application/policy.
+Какие ограничения обнаружены:
+- patient_id -> MAX recipient_id пока задается конфигурацией (tech debt).
+- Mini app ограничен контрактом deep-link без UI-реализации.
+- Renovatio покрыт только методами, нужными текущему delivery flow.
+Что остается незавершенным:
+- production hardening (ретраи транспорта, мониторинг, rate-limit control, секрет-менеджмент).
+- живые интеграционные тесты с внешними системами.

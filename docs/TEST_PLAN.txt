@@ -79,3 +79,23 @@
 - Дублирование policy-решений внутри scheduler/process manager.
 - Неконсистентные summary-метрики при смешанном цикле (новые + существующие карточки).
 - Нарушение dual-mode repository поддержки (in-memory / postgres).
+
+12. Покрытие real integration слоя (без live-вызовов)
+- Unit / integration: `tests/unit/integration/test_renovatio_real_adapter.py`
+  - request/response mapping Renovatio;
+  - обработка `error` поля и bad-response сценариев.
+- Unit / integration: `tests/unit/integration/test_max_real_adapter.py`
+  - сборка запроса к `/messages`;
+  - заголовок `Authorization`;
+  - обработка отсутствия patient->recipient mapping.
+- Unit / integration: `tests/unit/integration/test_email_real_adapter.py`
+  - построение SMTP-сообщения;
+  - subject/body/sender поля;
+  - проверка успешного и error-потока через mock SMTP.
+- Unit / integration: `tests/unit/integration/test_container_dual_mode.py`
+  - wiring контейнера для `SLD_INTEGRATION_MODE=stub|real`.
+
+13. Что сознательно не тестируется live
+- Реальные интернет-вызовы в Renovatio/MAX/SMTP.
+- Реальные rate-limit сценарии MAX (30 rps) в CI.
+- Полный e2e mini app UI-поток.

@@ -1,23 +1,50 @@
 Название: Environment rules для Smart Lab Delivery
-Дата актуализации: 2026-04-13
+Дата актуализации: 2026-04-14
 
 1. Общие правила
 - Секреты не хранятся в коде, git и документах с реальными значениями.
-- Подключение к БД настраивается только через переменные окружения.
+- Подключение к БД и внешним интеграциям настраивается только через переменные окружения.
 - Для локальной разработки допускаются примеры значений-заглушек.
 
-2. Обязательные переменные (PostgreSQL)
-- SLD_REPOSITORY_MODE: режим репозитория (`in_memory` или `postgres`).
-- SLD_DB_HOST: хост PostgreSQL.
-- SLD_DB_PORT: порт PostgreSQL.
-- SLD_DB_NAME: имя базы.
-- SLD_DB_USER: пользователь.
-- SLD_DB_PASSWORD: пароль.
-- SLD_DATABASE_URL: полная строка подключения (приоритетнее набора host/port/name/user/password).
+2. Режимы приложения
+- SLD_REPOSITORY_MODE: `in_memory` или `postgres`.
+- SLD_INTEGRATION_MODE: `stub` или `real`.
 
-3. Рекомендуемые значения для локального dev (PowerShell)
+3. Обязательные переменные (PostgreSQL)
+- SLD_DB_HOST
+- SLD_DB_PORT
+- SLD_DB_NAME
+- SLD_DB_USER
+- SLD_DB_PASSWORD
+- SLD_DATABASE_URL (приоритетнее host/port/name/user/password)
+
+4. Renovatio env (real mode)
+- SLD_RENOVATIO_BASE_URL (обязательно для real).
+- SLD_RENOVATIO_API_KEY (обязательно для real).
+- SLD_RENOVATIO_API_VERSION (опционально, по умолчанию `1`).
+- SLD_RENOVATIO_TIMEOUT_SECONDS (опционально, по умолчанию `10`).
+- SLD_RENOVATIO_PATIENT_IDS (опционально, CSV patient_id для чтения ready flow).
+
+5. MAX env (real mode)
+- SLD_MAX_BASE_URL (опционально, по умолчанию `https://platform-api.max.ru`).
+- SLD_MAX_BOT_TOKEN (обязательно для real).
+- SLD_MAX_TIMEOUT_SECONDS (опционально, по умолчанию `5`).
+- SLD_MAX_BOT_NAME (опционально, нужен для deep link).
+- SLD_MAX_PATIENT_RECIPIENT_MAP (опционально, формат `patient-1:max-user-1,patient-2:max-user-2`).
+
+6. Email env (real mode)
+- SLD_EMAIL_SMTP_HOST (обязательно для real).
+- SLD_EMAIL_SMTP_PORT (опционально, по умолчанию `25`).
+- SLD_EMAIL_USERNAME (опционально).
+- SLD_EMAIL_PASSWORD (опционально, обязателен если используется login).
+- SLD_EMAIL_FROM (опционально, по умолчанию `no-reply@smart-lab.local`).
+- SLD_EMAIL_USE_TLS (опционально: `1`/`0`, по умолчанию `0`).
+- SLD_EMAIL_TIMEOUT_SECONDS (опционально, по умолчанию `10`).
+
+7. Рекомендуемые значения для локального dev (PowerShell)
 ```powershell
 $env:SLD_REPOSITORY_MODE = "postgres"
+$env:SLD_INTEGRATION_MODE = "stub"
 $env:SLD_DB_HOST = "localhost"
 $env:SLD_DB_PORT = "5432"
 $env:SLD_DB_NAME = "smart_lab_delivery"
@@ -26,6 +53,6 @@ $env:SLD_DB_PASSWORD = "postgres"
 $env:SLD_DATABASE_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/smart_lab_delivery"
 ```
 
-4. Режимы
-- `in_memory`: быстрый локальный режим по умолчанию, без сохранения состояния между запусками.
-- `postgres`: состояние карточек и попыток сохраняется между process cycle.
+8. Ограничения безопасности
+- Реальные ключи Renovatio/MAX/SMTP запрещено коммитить.
+- Для локальной проверки real-режима использовать отдельные тестовые учетные данные.
