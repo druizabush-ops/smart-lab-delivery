@@ -4,7 +4,7 @@ import { App } from "./App";
 describe("App", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    (global as { fetch: typeof fetch }).fetch = vi.fn();
+    (globalThis as { fetch: typeof fetch }).fetch = vi.fn();
     window.WebApp = {
       initDataUnsafe: { user: { id: "patient-001" } },
       platform: "max-mobile",
@@ -49,7 +49,6 @@ describe("App", () => {
   });
 
   it("fallback вне MAX", async () => {
-    // @ts-expect-error intentional empty context
     window.WebApp = undefined;
     render(<App />);
     expect(screen.getByText(/Режим вне MAX/)).toBeInTheDocument();

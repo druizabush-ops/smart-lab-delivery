@@ -3,7 +3,7 @@ import { ResultsApi } from "./results";
 
 describe("ResultsApi", () => {
   beforeEach(() => {
-    (global as { fetch: typeof fetch }).fetch = vi.fn();
+    (globalThis as { fetch: typeof fetch }).fetch = vi.fn();
   });
 
   it("обрабатывает успешный ответ", async () => {
