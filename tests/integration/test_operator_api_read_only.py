@@ -20,7 +20,7 @@ from src.application.use_cases import (
     MoveToManualReviewCommandUseCase,
 )
 from src.domain.entities import DeliveryAttempt, DeliveryCard, DeliveryChannel, LabResult, Patient
-from src.domain.statuses import AttemptStatus, LabResultStatus, QueueStatus
+from src.domain.statuses import AttemptStatus, DeliveryStatus, LabResultStatus, QueueStatus
 from src.infrastructure.identity import build_operational_card_id
 from src.infrastructure.persistence.models import Base
 from src.infrastructure.persistence.repositories import PostgresDeliveryCardRepository
@@ -222,3 +222,36 @@ def test_operator_command_endpoint_returns_409_for_forbidden_action() -> None:
 
     response = client.post(f"/operator/cards/{card_id}/requeue", json={"reason": "нельзя"})
     assert response.status_code == 409
+
+
+def test_operator_command_endpoints_return_4xx_for_invalid_override_and_retry() -> None:
+    repository = InMemoryDeliveryCardRepository()
+    card = _build_card("p-override", "lr-override", channel=DeliveryChannel.MAX)
+    card_id = build_operational_card_id(card)
+    repository.save(card)
+    client = _build_client(repository)
+
+    same_channel = client.post(
+        f"/operator/cards/{card_id}/override-channel",
+        json={"channel": DeliveryChannel.MAX.value, "reason": "тот же канал"},
+    )
+    assert same_channel.status_code == 409
+
+    card.add_attempt(
+        DeliveryAttempt(
+            timestamp=card.created_at,
+            channel=DeliveryChannel.MAX,
+            result=AttemptStatus.SUCCESS,
+        )
+    )
+    repository.update(card)
+    assert card.status in {DeliveryStatus.MAX_SENT, DeliveryStatus.EMAIL_SENT}
+
+    terminal_override = client.post(
+        f"/operator/cards/{card_id}/override-channel",
+        json={"channel": DeliveryChannel.EMAIL.value, "reason": "терминальный"},
+    )
+    assert terminal_override.status_code == 409
+
+    terminal_retry = client.post(f"/operator/cards/{card_id}/retry")
+    assert terminal_retry.status_code == 409

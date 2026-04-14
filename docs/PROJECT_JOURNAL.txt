@@ -547,3 +547,23 @@ Dependency wiring:
 - Произвольное редактирование карточек и универсальный PATCH статусов.
 - Distributed locking.
 Следующий шаг: усилить audit trail до persistence-уровня (таблица operator_action_log) и добавить role-aware авторизацию команд.
+
+[Багфикс]
+Дата: 2026-04-14
+Ветка: work
+Блок: Operator command layer refinement (retry/requeue/override ограничения)
+Файлы: src/application/use_cases/operator_commands.py; src/application/services/policies/operator_action_policy.py; tests/unit/application/test_operator_commands.py; tests/integration/test_operator_api_read_only.py; docs/PROJECT_JOURNAL.txt; docs/TECH_DEBT.txt
+Причина: Ужесточить operator command layer и убрать неоднозначную ручную мутацию карточек без изменения общей архитектуры.
+Что сделано:
+- Requeue зафиксирован как controlled preparation for next processing cycle, а не произвольный ручной lifecycle-edit.
+- В command use case добавлен явный комментарий на русском о временном упрощении FAILED -> NOT_STARTED как технической подготовки к следующему циклу.
+- Retry command явно документирован как thin-wrapper поверх existing RetryDeliveryUseCase без собственной retry-бизнес-логики.
+- Override channel ужесточен policy-правилами: запрет same-channel override, запрет для terminal delivery статусов, запрет для закрытого queue_status.
+- Формализация policy повышена через явные наборы terminal/closed состояний и детерминированные причины allow/deny.
+- Добавлены проверки unit/integration на запрещенные сценарии и подтверждено, что endpoints возвращают контролируемые 4xx (409), а не 500.
+Что изменилось в логике:
+- Operator requeue теперь всегда приводит карточку к queue_status=active, а при статусе failed подготавливает status=not_started перед постановкой в следующий цикл.
+- Operator override больше не допускает no-op override на текущий канал.
+Ограничения и осознанные допущения:
+- Полноценная модель operator workflow (расширенные state-machine сценарии, RBAC, конкуренция команд) остается отдельным этапом.
+Следующий шаг: При переходе к production-hardening выделить сценарный слой operator workflow и усилить аудит/конкурентный контроль.
