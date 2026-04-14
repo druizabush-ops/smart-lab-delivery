@@ -5,6 +5,7 @@ from src.application.services import (
     DeliveryCardReadService,
     DeliveryPolicy,
     FallbackPolicy,
+    OperatorActionPolicy,
     RetryLimits,
     RetryPolicy,
 )
@@ -12,8 +13,12 @@ from src.application.services.delivery_orchestrator import DeliveryOrchestrator
 from src.application.use_cases import (
     CreateDeliveryCardUseCase,
     HandleDeliveryFailureUseCase,
+    MoveToManualReviewCommandUseCase,
+    OverrideChannelCommandUseCase,
     ProcessDeliveryUseCase,
+    RequeueDeliveryCardCommandUseCase,
     RegisterDeliveryResultUseCase,
+    RetryDeliveryCardCommandUseCase,
     RetryDeliveryUseCase,
 )
 from src.config.integration_settings import EmailSettings, MaxSettings, RenovatioSettings
@@ -23,7 +28,7 @@ from src.infrastructure.queue import InMemoryDeliveryQueue
 from src.infrastructure.repositories import InMemoryDeliveryCardRepository
 from src.infrastructure.runtime import DeliveryProcessManager, DeliveryRuntime, DeliveryRuntimeSelector
 from src.integration.delivery import EmailDeliveryProvider, MaxDeliveryProvider
-from src.integration.logging import LoggerAdapter
+from src.integration.logging import LoggerAdapter, OperatorActionLoggerAdapter
 from src.integration.renovatio import RenovatioClient
 
 
@@ -47,6 +52,7 @@ class AppContainer:
             settings=EmailSettings.from_env(),
         )
         self.notification_logger = LoggerAdapter()
+        self.operator_action_logger = OperatorActionLoggerAdapter()
 
         self.retry_policy = RetryPolicy(
             RetryLimits(
@@ -62,6 +68,8 @@ class AppContainer:
             fallback_policy=self.fallback_policy,
             deduplication_policy=self.deduplication_policy,
         )
+        self.operator_action_policy = OperatorActionPolicy()
+        self.delivery_card_repository = self._build_delivery_card_repository()
 
         self.create_delivery_card_use_case = CreateDeliveryCardUseCase()
         self.register_delivery_result_use_case = RegisterDeliveryResultUseCase()
@@ -84,6 +92,27 @@ class AppContainer:
             failure_use_case=self.handle_delivery_failure_use_case,
             notification_logger=self.notification_logger,
         )
+        self.retry_delivery_card_command_use_case = RetryDeliveryCardCommandUseCase(
+            repository=self.delivery_card_repository,
+            policy=self.operator_action_policy,
+            retry_use_case=self.retry_delivery_use_case,
+            action_logger=self.operator_action_logger,
+        )
+        self.move_to_manual_review_command_use_case = MoveToManualReviewCommandUseCase(
+            repository=self.delivery_card_repository,
+            policy=self.operator_action_policy,
+            action_logger=self.operator_action_logger,
+        )
+        self.requeue_delivery_card_command_use_case = RequeueDeliveryCardCommandUseCase(
+            repository=self.delivery_card_repository,
+            policy=self.operator_action_policy,
+            action_logger=self.operator_action_logger,
+        )
+        self.override_channel_command_use_case = OverrideChannelCommandUseCase(
+            repository=self.delivery_card_repository,
+            policy=self.operator_action_policy,
+            action_logger=self.operator_action_logger,
+        )
 
         self.delivery_orchestrator = DeliveryOrchestrator(
             lab_result_provider=self.renovatio_client,
@@ -93,7 +122,6 @@ class AppContainer:
         )
 
         # Runtime / infrastructure wiring (dual-mode repository).
-        self.delivery_card_repository = self._build_delivery_card_repository()
         self.delivery_queue = InMemoryDeliveryQueue()
         self.delivery_runtime = DeliveryRuntime(
             orchestrator=self.delivery_orchestrator,

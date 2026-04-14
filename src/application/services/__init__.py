@@ -12,6 +12,7 @@ from .policies import (
     DeduplicationPolicy,
     DeliveryPolicy,
     FallbackPolicy,
+    OperatorActionPolicy,
     RetryLimits,
     RetryPolicy,
 )
@@ -26,6 +27,7 @@ __all__ = [
     "DeliveryOrchestrator",
     "DeliveryPolicy",
     "FallbackPolicy",
+    "OperatorActionPolicy",
     "RetryLimits",
     "RetryPolicy",
 ]

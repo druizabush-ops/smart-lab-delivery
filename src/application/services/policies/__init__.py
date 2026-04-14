@@ -3,6 +3,7 @@
 from .deduplication_policy import DeduplicationDecision, DeduplicationPolicy
 from .delivery_policy import DeliveryDecision, DeliveryPolicy
 from .fallback_policy import FallbackDecision, FallbackPolicy
+from .operator_action_policy import OperatorActionDecision, OperatorActionPolicy
 from .retry_policy import RetryDecision, RetryLimits, RetryPolicy
 
 __all__ = [
@@ -12,6 +13,8 @@ __all__ = [
     "DeliveryPolicy",
     "FallbackDecision",
     "FallbackPolicy",
+    "OperatorActionDecision",
+    "OperatorActionPolicy",
     "RetryDecision",
     "RetryLimits",
     "RetryPolicy",

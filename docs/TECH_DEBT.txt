@@ -185,3 +185,9 @@
 - Повышается риск регрессий между stub- и real-ветками поведения.
 Когда пересмотреть: При следующем этапе production hardening real integrations.
 Что будет признаком, что пора заменить решение: Появление отдельных реализаций/интерфейсных биндингов для stub и real адаптеров.
+
+[Operator command layer]
+- Audit trail реализован в минимальном варианте (инфраструктурный stdout-лог через OperatorActionLoggerAdapter), без отдельной таблицы operator_action_log.
+- Полноценная RBAC/ACL модель для operator command endpoint-ов не внедрена, доступ предполагается доверенным контуром.
+- Distributed locking/concurrency control для одновременных operator commands не реализован сознательно на текущем этапе.
+- Набор команд ограничен retry/manual-review/requeue/override-channel; расширение команд требует отдельного архитектурного решения.
