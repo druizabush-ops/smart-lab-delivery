@@ -65,3 +65,17 @@
 - API должен оставаться read-only (без write endpoint-ов).
 - Query-слой должен быть отделен от роутеров (без прямого ORM-ответа наружу).
 - Контур должен работать в обоих режимах repository: in-memory и postgres.
+
+10. Покрытие scheduler/process manager (новый блок)
+- Unit / infrastructure: `tests/unit/infrastructure/test_delivery_process_manager.py`
+  - process manager корректно подбирает `waiting_retry` карточки через selector;
+  - `done/manual_review/exhausted` исключаются из повторной обработки;
+  - `run_once` не ломает текущий single-cycle сценарий;
+  - summary (`ProcessManagerSummary`) отражает фактически обработанные карточки;
+  - selector совместим с postgres repository режимом (sqlite surrogate в тесте).
+
+11. Регрессионно-опасные сценарии повторной обработки
+- Ошибочное попадание terminal/manual карточек в retry-cycle.
+- Дублирование policy-решений внутри scheduler/process manager.
+- Неконсистентные summary-метрики при смешанном цикле (новые + существующие карточки).
+- Нарушение dual-mode repository поддержки (in-memory / postgres).

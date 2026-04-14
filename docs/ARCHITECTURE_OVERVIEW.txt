@@ -101,3 +101,22 @@
 - Не добавляются edit/delete операции.
 - Не добавляются enterprise auth/roles/permissions.
 - API создан как foundation для будущей operator panel и command-side блока.
+
+16. Scheduler / Process Manager слой (новый блок)
+- Добавлен синхронный lifecycle-слой поверх runtime + persistence:
+  - DeliveryRuntimeSelector (query/select логика кандидатов);
+  - DeliveryProcessManager (управление execution cycle);
+  - ProcessManagerSummary (operator/debug сводка выполнения).
+- Execution lifecycle теперь поддерживает три явных режима:
+  1) run_once(patients): только discovery READY результатов и один цикл обработки;
+  2) run_retry_cycle(): только повторная обработка retry-кандидатов из persistence;
+  3) run_all_pending(patients): discovery новых карточек + обработка всех pending-кандидатов.
+- Граница ответственности:
+  - selector выбирает карточки по status/queue_status и не принимает business-решений;
+  - process manager управляет последовательностью циклов и агрегирует summary;
+  - retry/fallback/deduplication остаются в policy/use-case слое (application).
+- Persistence выступает источником операционного состояния между циклами, а не scheduler-policy движком.
+- Ограничения этапа:
+  - нет async/background workers, cron и broker-оркестрации;
+  - нет distributed scheduling и time-based backoff;
+  - execution остается локальным, синхронным и воспроизводимым.

@@ -194,3 +194,28 @@ python -m pytest
 25. Ограничение текущего этапа operator API
 - Endpoint-ы доступны только в read-only режиме.
 - Ручные retry/fallback/status-change команды отсутствуют по дизайну текущего блока.
+
+26. Запуск process manager (scheduler lifecycle) в PowerShell
+```powershell
+# Полный pending lifecycle: новые READY + retry/pending карточки
+python .\scripts\run_process_manager.py
+```
+Ожидаемо: вывод блока `Delivery Process Manager Summary` с полями:
+`new_cards_discovered`, `existing_cards_reprocessed`, `retry_candidates_count`, `processed_count` и финальными счетчиками исходов.
+
+27. Локальная проверка retry lifecycle
+```powershell
+# 1) Первый цикл создает карточки и фиксирует начальные статусы
+python .\scripts\run_process_manager.py
+
+# 2) Повторный цикл переобрабатывает pending/retry-кандидатов из persistence
+python .\scripts\run_process_manager.py
+
+# 3) Прогон scheduler/process manager тестов
+python -m pytest .\tests\unit\infrastructure\test_delivery_process_manager.py
+```
+
+28. Ограничения process manager текущего этапа
+- Режим синхронный, без background thread/async worker.
+- Нет cron и нет broker-based orchestration.
+- Process manager не принимает бизнес-решения retry/fallback/deduplication; решения остаются в application policy/use-case слое.
