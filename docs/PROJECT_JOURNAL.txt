@@ -567,3 +567,20 @@ Dependency wiring:
 Ограничения и осознанные допущения:
 - Полноценная модель operator workflow (расширенные state-machine сценарии, RBAC, конкуренция команд) остается отдельным этапом.
 Следующий шаг: При переходе к production-hardening выделить сценарный слой operator workflow и усилить аудит/конкурентный контроль.
+
+[Изменение]
+Дата: 2026-04-14
+Ветка: work
+Блок: Реализация patient mini app / MAX UI layer
+Файлы: src/application/services/patient_result_read_service.py; src/application/services/__init__.py; src/presentation/patient_api/*; src/presentation/operator_api/app.py; tests/integration/test_patient_api_read_only.py; frontend/miniapp/*; docs/PROJECT_JOURNAL.txt; docs/ARCHITECTURE_OVERVIEW.txt; docs/DECISIONS.txt; docs/TECH_DEBT.txt; docs/SETUP_WINDOWS.txt; docs/ENVIRONMENT_RULES.txt; docs/TEST_PLAN.txt
+Причина: Добавить первый patient-facing контур внутри MAX с изоляцией UI, MAX context и patient read API.
+Что сделано:
+- Добавлен отдельный frontend-контур `frontend/miniapp` (React + TypeScript) с базовым flow список -> детали.
+- Добавлен MAX context adapter (`window.WebApp`, `start_param`, platform/version) с fallback-режимом вне MAX.
+- Добавлен frontend API client слой (`api/client.ts`, `api/results.ts`) с централизованной обработкой ошибок.
+- Добавлен patient-facing read API (`/patient/results`, `/patient/results/{id}`) с отдельным контрактом относительно operator API.
+- Добавлены frontend unit/API tests и backend integration tests для patient consumer.
+Ограничения:
+- max-ui пакет из приватного реестра недоступен в текущем окружении; используется совместимый shim-слой и зафиксирован tech debt.
+- Документ результата (`/patient/results/{id}/document`) пока как readiness contract/stub без реальной выдачи файла.
+Следующий шаг: реализовать серверную валидацию initData/start_param и включить реальный MAX UI package при доступе к приватному registry.

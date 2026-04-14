@@ -8,6 +8,11 @@ from .delivery_card_read_service import (
     DeliveryCardReadService,
     DeliveryCardSummaryReadModel,
 )
+from .patient_result_read_service import (
+    PatientResultDocumentReadModel,
+    PatientResultReadModel,
+    PatientResultReadService,
+)
 from .policies import (
     DeduplicationPolicy,
     DeliveryPolicy,
@@ -28,6 +33,9 @@ __all__ = [
     "DeliveryPolicy",
     "FallbackPolicy",
     "OperatorActionPolicy",
+    "PatientResultDocumentReadModel",
+    "PatientResultReadModel",
+    "PatientResultReadService",
     "RetryLimits",
     "RetryPolicy",
 ]

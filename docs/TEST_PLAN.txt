@@ -120,3 +120,24 @@
 - Неконтролируемый requeue карточек из terminal/done состояний.
 - Override канала после terminal success/exhausted.
 - Расхождение read модели и фактического состояния карточки после command-вызова.
+
+16. Покрытие patient mini app / MAX UI layer
+- Frontend unit:
+  - рендер списка результатов;
+  - рендер empty/no-results;
+  - рендер backend error state;
+  - чтение `start_param` и переход к details;
+  - fallback поведение вне MAX (`window.WebApp` отсутствует).
+- Frontend API client:
+  - успешный ответ;
+  - ошибка backend;
+  - пустой результат.
+- Backend integration:
+  - `GET /patient/results` фильтрует данные по `patient_id`;
+  - `GET /patient/results/{id}` возвращает только patient-owned карточку;
+  - patient response-контракт не равен operator response-контракту (без полного attempts history).
+
+17. Что пока не автоматизировано в mini app блоке
+- E2E тесты запуска внутри реального MAX клиента.
+- Скриншотные/визуальные regression тесты с реальным `@maxhub/max-ui` SDK.
+- Криптографическая валидация `initData` (покрывается будущим backend security блоком).

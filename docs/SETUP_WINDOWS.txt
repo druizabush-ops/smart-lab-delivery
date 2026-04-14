@@ -298,3 +298,42 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8001/operator/cards/summary" -Method GE
 python -m pytest .\tests\unit\application\test_operator_commands.py
 python -m pytest .\tests\integration\test_operator_api_read_only.py
 ```
+
+32. Запуск patient mini app локально (PowerShell)
+```powershell
+# Backend (единый API с /operator/* и /patient/*)
+python .\scripts\run_operator_api.py
+
+# Frontend mini app
+cd .\frontend\miniapp
+npm install
+npm run dev
+```
+Ожидаемо: Vite поднимается на `http://127.0.0.1:5173`, backend на `http://127.0.0.1:8001`.
+
+33. Эмуляция запуска вне MAX
+```powershell
+# Открыть mini app в браузере без WebApp-контекста
+start http://127.0.0.1:5173
+```
+Ожидаемо: показывается fallback-сообщение "Режим вне MAX" и сообщение о невозможности определить patient_id.
+
+34. Эмуляция start_param в локальном dev
+```powershell
+# В DevTools Console перед перезагрузкой:
+window.WebApp = {
+  initDataUnsafe: { user: { id: "patient-001" }, start_param: "result:<card_id>" },
+  platform: "max-mobile",
+  version: "1.0"
+}
+```
+Ожидаемо: mini app показывает экран деталей для результата из payload `result:<card_id>`.
+
+35. Проверка базового сценария список -> детали
+```powershell
+# 1) Убедиться что backend содержит карточки для patient_id
+Invoke-RestMethod -Uri "http://127.0.0.1:8001/patient/results?patient_id=patient-001" -Method GET
+
+# 2) Во frontend открыть карточку кнопкой "Открыть"
+# 3) Проверить отображение documents/readiness в деталях
+```

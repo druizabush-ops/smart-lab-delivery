@@ -2,10 +2,11 @@
 
 from fastapi import FastAPI
 
-from src.application.services import DeliveryCardReadService
+from src.application.services import DeliveryCardReadService, PatientResultReadService
 from src.config.container import AppContainer
 from src.presentation.operator_api.routers.cards import router as cards_router
 from src.presentation.operator_api.routers.commands import router as commands_router
+from src.presentation.patient_api.routers.results import router as patient_results_router
 
 
 def create_operator_api_app(container: AppContainer | None = None) -> FastAPI:
@@ -20,6 +21,10 @@ def create_operator_api_app(container: AppContainer | None = None) -> FastAPI:
     app.state.move_to_manual_review_command_use_case = app_container.move_to_manual_review_command_use_case
     app.state.requeue_delivery_card_command_use_case = app_container.requeue_delivery_card_command_use_case
     app.state.override_channel_command_use_case = app_container.override_channel_command_use_case
+    app.state.patient_result_read_service = PatientResultReadService(
+        repository=app_container.delivery_card_repository
+    )
     app.include_router(cards_router)
     app.include_router(commands_router)
+    app.include_router(patient_results_router)
     return app
