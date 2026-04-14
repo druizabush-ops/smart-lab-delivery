@@ -518,3 +518,32 @@ Dependency wiring:
 - В real transport контуре не допускается искусственная симуляция ошибок внутри адаптера.
 - Ошибки real-режима ограничены transport/config/внешним контрактом интеграции.
 - Renovatio/MAX/Email все еще работают в dual-mode реализациях в рамках одного класса (tech debt).
+
+[Изменение]
+Дата: 2026-04-14
+Ветка: work
+Блок: Реализация operator command layer
+Файлы: src/application/services/policies/operator_action_policy.py; src/application/use_cases/operator_commands.py; src/presentation/operator_api/routers/commands.py; src/presentation/operator_api/schemas/commands.py; src/presentation/operator_api/app.py; src/config/container.py; src/integration/logging/operator_action_logger_adapter.py; tests/unit/application/test_operator_commands.py; tests/integration/test_operator_api_read_only.py; docs/ARCHITECTURE_OVERVIEW.txt; docs/DECISIONS.txt; docs/TECH_DEBT.txt; docs/SETUP_WINDOWS.txt; docs/TEST_PLAN.txt; docs/PROJECT_JOURNAL.txt
+Причина: Требовалось добавить управляемый command-side для оператора после стабилизации read-only API и scheduler/process manager.
+Какие команды добавлены:
+- RetryDeliveryCardCommandUseCase и endpoint POST /operator/cards/{card_id}/retry.
+- MoveToManualReviewCommandUseCase и endpoint POST /operator/cards/{card_id}/manual-review.
+- RequeueDeliveryCardCommandUseCase и endpoint POST /operator/cards/{card_id}/requeue.
+- OverrideChannelCommandUseCase и endpoint POST /operator/cards/{card_id}/override-channel.
+Какие действия разрешены:
+- Retry для нетерминальных карточек вне manual_review/done.
+- Перевод в manual_review для обрабатываемых карточек.
+- Requeue только из manual_review/waiting_retry.
+- Override канала только для нетерминальных карточек.
+Какие ограничения введены:
+- Нет произвольной команды "поставить любой статус".
+- Все проверки допустимости централизованы в OperatorActionPolicy.
+- Роутеры не пишут в repository напрямую, команды проходят через use case слой.
+Связь с process manager:
+- Operator commands изменяют состояние карточки и/или запускают существующий retry use case.
+- Scheduler/process manager остается отдельным механизмом циклической обработки.
+Что сознательно не поддерживается:
+- RBAC/ACL enterprise-уровня.
+- Произвольное редактирование карточек и универсальный PATCH статусов.
+- Distributed locking.
+Следующий шаг: усилить audit trail до persistence-уровня (таблица operator_action_log) и добавить role-aware авторизацию команд.

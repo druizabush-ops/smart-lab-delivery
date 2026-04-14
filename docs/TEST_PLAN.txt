@@ -99,3 +99,24 @@
 - Реальные интернет-вызовы в Renovatio/MAX/SMTP.
 - Реальные rate-limit сценарии MAX (30 rps) в CI.
 - Полный e2e mini app UI-поток.
+
+14. Покрытие operator command layer
+- Unit: `tests/unit/application/test_operator_commands.py`
+  - policy/guard допустимости OperatorActionPolicy;
+  - retry в допустимом состоянии;
+  - retry в недопустимом состоянии (manual_review);
+  - manual_review command;
+  - requeue command;
+  - override channel command;
+  - запрет операторских действий для terminal статусов.
+- Integration: `tests/integration/test_operator_api_read_only.py`
+  - command endpoint-ы возвращают корректные HTTP-коды;
+  - допустимые команды меняют состояние карточки;
+  - недопустимая команда возвращает 409, без 500;
+  - read-only endpoint-ы остаются согласованными после command-вызовов.
+
+15. Регрессионно-опасные сценарии operator commands
+- Случайный обход OperatorActionPolicy через роутер или инфраструктуру.
+- Неконтролируемый requeue карточек из terminal/done состояний.
+- Override канала после terminal success/exhausted.
+- Расхождение read модели и фактического состояния карточки после command-вызова.

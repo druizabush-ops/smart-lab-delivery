@@ -265,3 +265,36 @@ Remove-Item Env:SLD_EMAIL_PASSWORD -ErrorAction SilentlyContinue
 - Реальные live-вызовы в тестах CI не выполняются.
 - MAX identity mapping пока конфигурируется вручную через env-карту.
 - Mini app UI не реализован, зафиксирован только deep-link контракт.
+
+30. Проверка operator command API локально
+```powershell
+# Перезапустить API
+python .\scripts\run_operator_api.py
+
+# Retry карточки
+Invoke-RestMethod -Uri "http://127.0.0.1:8001/operator/cards/<card_id>/retry" -Method POST
+
+# Перевод в manual_review
+Invoke-RestMethod -Uri "http://127.0.0.1:8001/operator/cards/<card_id>/manual-review" -Method POST -ContentType "application/json" -Body '{"reason":"ручная проверка"}'
+
+# Возврат в очередь
+Invoke-RestMethod -Uri "http://127.0.0.1:8001/operator/cards/<card_id>/requeue" -Method POST -ContentType "application/json" -Body '{"reason":"повторная обработка"}'
+
+# Override канала
+Invoke-RestMethod -Uri "http://127.0.0.1:8001/operator/cards/<card_id>/override-channel" -Method POST -ContentType "application/json" -Body '{"channel":"EMAIL","reason":"MAX недоступен"}'
+```
+
+31. Проверка состояния карточки после command-вызова
+```powershell
+# Проверить карточку по id
+Invoke-RestMethod -Uri "http://127.0.0.1:8001/operator/cards/<card_id>" -Method GET
+
+# Проверить агрегированную сводку
+Invoke-RestMethod -Uri "http://127.0.0.1:8001/operator/cards/summary" -Method GET
+```
+
+32. Тесты command-side контура
+```powershell
+python -m pytest .\tests\unit\application\test_operator_commands.py
+python -m pytest .\tests\integration\test_operator_api_read_only.py
+```

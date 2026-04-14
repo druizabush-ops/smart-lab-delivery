@@ -1,4 +1,4 @@
-"""Presentation-слой operator API (read-only)."""
+"""Presentation-слой operator API (read + command)."""
 
 from .app import create_operator_api_app
 

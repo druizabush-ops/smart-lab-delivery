@@ -131,3 +131,20 @@
 - Граница policy/transport сохранена:
   - policy/use-case решают retry/fallback/deduplication;
   - transport adapter только выполняет внешнюю отправку и возвращает delivery attempt.
+
+18. Operator command layer (новый блок)
+- Добавлен отдельный command-side контур operator API, отделенный от read-only роутера.
+- Архитектурная цепочка для команд:
+  1) presentation/operator_api/routers/commands.py;
+  2) application/use_cases/operator_commands.py;
+  3) application/services/policies/operator_action_policy.py;
+  4) repository + retry pipeline/use cases.
+- Прямые мутации из роутера в repository запрещены: каждый endpoint вызывает соответствующий use case.
+- Разрешенные команды:
+  - POST /operator/cards/{card_id}/retry;
+  - POST /operator/cards/{card_id}/manual-review;
+  - POST /operator/cards/{card_id}/requeue;
+  - POST /operator/cards/{card_id}/override-channel.
+- Централизованный guard: OperatorActionPolicy формализует допустимость действий по status/queue_status.
+- Минимальный audit trail реализован через OperatorActionLoggerAdapter (инфраструктурный лог команд).
+- Scheduler/process manager остается отдельным слоем: operator API не выполняет роль планировщика и не запускает циклы обработки.
