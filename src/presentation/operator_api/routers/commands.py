@@ -2,11 +2,12 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 
 from src.application.use_cases.operator_commands import OperatorCommandError
 from src.application.use_cases import (
     MoveToManualReviewCommandUseCase,
+    OperatorCommandAuditContext,
     OverrideChannelCommandUseCase,
     RequeueDeliveryCardCommandUseCase,
     RetryDeliveryCardCommandUseCase,
@@ -31,15 +32,27 @@ from src.presentation.operator_api.schemas.commands import (
 router = APIRouter(prefix="/operator/cards", tags=["operator-card-commands"])
 
 
+def _build_audit_context(
+    reason: str | None,
+    actor: Annotated[str | None, Header(alias="X-Operator-Actor")] = None,
+    source: Annotated[str | None, Header(alias="X-Operator-Source")] = None,
+) -> OperatorCommandAuditContext:
+    """Собирает контекст аудит-трассировки для операторской команды."""
+
+    return OperatorCommandAuditContext(reason=reason, actor=actor, source=source)
+
+
 @router.post("/{card_id}/retry", response_model=RetryCardCommandResponse)
 def retry_card(
     card_id: str,
     use_case: Annotated[RetryDeliveryCardCommandUseCase, Depends(get_retry_command_use_case)],
+    actor: Annotated[str | None, Header(alias="X-Operator-Actor")] = None,
+    source: Annotated[str | None, Header(alias="X-Operator-Source")] = None,
 ) -> RetryCardCommandResponse:
     """Операторский retry карточки доставки."""
 
     try:
-        result = use_case.execute(card_id)
+        result = use_case.execute(card_id, context=OperatorCommandAuditContext(actor=actor, source=source))
     except OperatorCommandError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return RetryCardCommandResponse.model_validate(result, from_attributes=True)
@@ -50,11 +63,17 @@ def move_to_manual_review(
     card_id: str,
     request: MoveToManualReviewRequest,
     use_case: Annotated[MoveToManualReviewCommandUseCase, Depends(get_manual_review_command_use_case)],
+    actor: Annotated[str | None, Header(alias="X-Operator-Actor")] = None,
+    source: Annotated[str | None, Header(alias="X-Operator-Source")] = None,
 ) -> MoveToManualReviewResponse:
     """Операторский перевод карточки в manual_review."""
 
     try:
-        result = use_case.execute(card_id=card_id, reason=request.reason)
+        result = use_case.execute(
+            card_id=card_id,
+            reason=request.reason,
+            context=_build_audit_context(request.reason, actor=actor, source=source),
+        )
     except OperatorCommandError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return MoveToManualReviewResponse.model_validate(result, from_attributes=True)
@@ -65,11 +84,17 @@ def requeue_card(
     card_id: str,
     request: RequeueCardRequest,
     use_case: Annotated[RequeueDeliveryCardCommandUseCase, Depends(get_requeue_command_use_case)],
+    actor: Annotated[str | None, Header(alias="X-Operator-Actor")] = None,
+    source: Annotated[str | None, Header(alias="X-Operator-Source")] = None,
 ) -> RequeueCardResponse:
     """Операторский возврат карточки в активную очередь обработки."""
 
     try:
-        result = use_case.execute(card_id=card_id, reason=request.reason)
+        result = use_case.execute(
+            card_id=card_id,
+            reason=request.reason,
+            context=_build_audit_context(request.reason, actor=actor, source=source),
+        )
     except OperatorCommandError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return RequeueCardResponse.model_validate(result, from_attributes=True)
@@ -80,6 +105,8 @@ def override_channel(
     card_id: str,
     request: OverrideChannelRequest,
     use_case: Annotated[OverrideChannelCommandUseCase, Depends(get_override_channel_command_use_case)],
+    actor: Annotated[str | None, Header(alias="X-Operator-Actor")] = None,
+    source: Annotated[str | None, Header(alias="X-Operator-Source")] = None,
 ) -> OverrideChannelResponse:
     """Операторская смена канала доставки карточки."""
 
@@ -89,7 +116,12 @@ def override_channel(
         raise HTTPException(status_code=422, detail="Недопустимый канал доставки.") from exc
 
     try:
-        result = use_case.execute(card_id=card_id, channel=channel, reason=request.reason)
+        result = use_case.execute(
+            card_id=card_id,
+            channel=channel,
+            reason=request.reason,
+            context=_build_audit_context(request.reason, actor=actor, source=source),
+        )
     except OperatorCommandError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return OverrideChannelResponse.model_validate(result, from_attributes=True)

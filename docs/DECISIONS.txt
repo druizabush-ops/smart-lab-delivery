@@ -245,3 +245,31 @@
 Контекст: Operator API раскрывает внутренние поля (attempt history), не все данные уместны для patient UI.
 Решение: Добавлен отдельный patient read API с отдельной pydantic-моделью и ограниченным полем данных.
 Последствия: Ниже риск утечки внутренних операционных полей; больше явных контрактов для разных consumer-ролей.
+
+[ADR-0013] Production hardening после реализации operator/patient контуров
+Дата: 2026-04-14
+Контекст:
+- До этого этапа уже были готовы domain/application/runtime/postgres/operator/patient слои.
+Решение:
+- Выполнить hardening после стабилизации базовых workflow, чтобы усиливать реальные operational surfaces, а не проектировать абстрактный enterprise-каркас.
+
+[ADR-0014] Server-side валидация MAX initData/WebAppData
+Дата: 2026-04-14
+Контекст:
+- `start_param` и клиентский `patient_id` не являются доверенными без серверной проверки подписи.
+Решение:
+- Вся проверка подлинности контекста mini app выполняется на backend через hash-проверку `initData`; фронтенд не считается security-boundary.
+
+[ADR-0015] Обязательный audit trail для operator commands
+Дата: 2026-04-14
+Контекст:
+- Операторские команды изменяют жизненный цикл карточек и должны быть трассируемы.
+Решение:
+- Введён устойчивый audit в persistence (`operator_action_log`) с полями command/card_id/time/result/reason/actor/source/error.
+
+[ADR-0016] Минимальная, но системная observability
+Дата: 2026-04-14
+Контекст:
+- Полная observability-платформа преждевременна, но эксплуатационная диагностика уже необходима.
+Решение:
+- Добавлены structured logs, health/readiness и unified errors без подключения тяжёлого внешнего стека.

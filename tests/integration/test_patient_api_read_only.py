@@ -9,6 +9,7 @@ from src.domain.statuses import AttemptStatus, LabResultStatus
 from src.infrastructure.identity import build_operational_card_id
 from src.infrastructure.repositories import InMemoryDeliveryCardRepository
 from src.presentation.operator_api import create_operator_api_app
+from src.config.security_settings import SecuritySettings
 
 
 def _build_card(patient_id: str, lab_result_id: str) -> DeliveryCard:
@@ -25,6 +26,7 @@ def _build_client(repository) -> TestClient:
             self.move_to_manual_review_command_use_case = None
             self.requeue_delivery_card_command_use_case = None
             self.override_channel_command_use_case = None
+            self.security_settings = SecuritySettings.from_env()
 
     return TestClient(create_operator_api_app(container=_Container()))
 

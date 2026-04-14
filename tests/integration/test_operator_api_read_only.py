@@ -26,6 +26,7 @@ from src.infrastructure.persistence.models import Base
 from src.infrastructure.persistence.repositories import PostgresDeliveryCardRepository
 from src.infrastructure.repositories import InMemoryDeliveryCardRepository
 from src.presentation.operator_api import create_operator_api_app
+from src.config.security_settings import SecuritySettings
 
 
 class _AlwaysSuccessProvider:
@@ -85,6 +86,7 @@ def _build_client(repository) -> TestClient:
                 repository=repository,
                 policy=OperatorActionPolicy(),
             )
+            self.security_settings = SecuritySettings.from_env()
 
     app = create_operator_api_app(container=_Container())
     return TestClient(app)

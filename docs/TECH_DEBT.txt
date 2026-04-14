@@ -251,3 +251,18 @@
 Когда пересмотреть: На этапе расширения patient-facing UI и e2e контура mini app.
 Что будет признаком, что пора заменить решение: Появление обязательных e2e/contract требований для frontend слоя.
 
+
+[TD-0012] Частичная модель security в patient контуре (relaxed fallback)
+Описание: В `SLD_PATIENT_SECURITY_MODE=relaxed` сохранен dev/test fallback на query `patient_id` без обязательного initData.
+Риск: Ошибочная эксплуатация relaxed-режима в prod может ослабить защиту.
+План закрытия: Сделать strict-режим дефолтным для prod-like и добавить выдачу short-lived server token после валидации initData.
+
+[TD-0013] Rate limiting реализован in-memory middleware
+Описание: Лимитирование частоты сейчас локальное и не синхронизируется между инстансами.
+Риск: При масштабировании API ограничение может работать непоследовательно.
+План закрытия: Вынести лимитирование в централизованный backend (gateway/redis).
+
+[TD-0014] Observability без внешней платформы
+Описание: Structured logging и health/readiness внедрены, но нет централизованного log/metric/tracing backend.
+Риск: Ограниченная глубина расследований в multi-node среде.
+План закрытия: Подключить внешнюю платформу observability после стабилизации runtime нагрузочного профиля.

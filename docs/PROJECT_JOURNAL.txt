@@ -608,3 +608,18 @@ Dependency wiring:
 - Реальные MAX UI компоненты по-прежнему не подключены напрямую в runtime; используется shim до отдельного интеграционного шага.
 Связанные блоки: patient-facing mini app, frontend test infra, technical debt registry.
 
+
+=== 2026-04-14 — Production hardening / observability / security foundations ===
+
+Что сделано:
+- Добавлен server-side security foundation для patient/MAX контура: введена проверка `X-Max-Init-Data` по hash-контракту WebAppData, запрет безусловного доверия query `patient_id` в strict-режиме и сверка `start_param` с подписанным контекстом.
+- Реализован audit trail operator commands: добавлена persistence-таблица `operator_action_log`, ORM-модель и repository; operator command use cases расширены audit-контекстом (`reason/actor/source/error`) и пишут устойчивый аудит через adapter.
+- Введён structured logging bootstrap: единая JSON-like настройка логов, structured поля для integration failures/operator audit/process manager/api ошибок.
+- Добавлены operational endpoints `/health/live` и `/health/ready`; readiness проверяет app/db/config/integration-mode без запуска бизнес-логики.
+- Усилена config discipline: добавлен `SLD_ENV`, валидация режимов `repository/integration/security`, prod-like проверка обязательных интеграционных секретов.
+- Добавлен базовый rate/misuse protection middleware для `/patient/results` и `/operator/cards`.
+- Унифицирован API error contract (code/message/correlation_id/timestamp), исключены неконтролируемые traceback-ответы.
+
+Ограничения:
+- MAX initData верифицируется сервером при наличии `SLD_MAX_WEBAPP_SECRET`; в relaxed-режиме допускается fallback query patient_id для dev/test.
+- Rate limiter реализован как in-memory middleware и не предназначен для горизонтального масштабирования.

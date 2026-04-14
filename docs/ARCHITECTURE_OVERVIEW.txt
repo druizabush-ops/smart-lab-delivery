@@ -161,3 +161,12 @@
   - API client -> только транспорт к backend;
   - Patient API -> только read-контракт для пациента;
   - Domain/Application/Policy -> остаются в backend, не переносятся в UI.
+
+## Production hardening / observability / security foundations (2026-04-14)
+
+Добавлены новые контуры:
+- Security contract (patient API): server-side helper в `src/application/security/max_webapp_validation.py` + dependency `get_patient_access_context` валидации MAX initData/WebAppData.
+- Audit persistence: таблица `operator_action_log` + ORM `OperatorActionLogModel` + `OperatorActionAuditRepository`; запись выполняется через `OperatorActionLoggerAdapter` из operator command use cases.
+- Health/readiness слой: `HealthService` и роутер `/health/live`, `/health/ready` в обоих API приложениях.
+- Structured logging: единый bootstrap `configure_logging()` + JSON formatter, корреляция через middleware `CorrelationIdMiddleware`.
+- Operational hardening middleware: `SimpleRateLimitMiddleware` для чувствительных endpoint-префиксов.

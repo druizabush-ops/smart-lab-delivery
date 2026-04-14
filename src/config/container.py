@@ -23,7 +23,9 @@ from src.application.use_cases import (
 )
 from src.config.integration_settings import EmailSettings, MaxSettings, RenovatioSettings
 from src.config.runtime_settings import RuntimeSettings
+from src.config.security_settings import SecuritySettings
 from src.domain.entities import Patient
+from src.infrastructure.logging import configure_logging
 from src.infrastructure.queue import InMemoryDeliveryQueue
 from src.infrastructure.repositories import InMemoryDeliveryCardRepository
 from src.infrastructure.runtime import DeliveryProcessManager, DeliveryRuntime, DeliveryRuntimeSelector
@@ -36,23 +38,34 @@ class AppContainer:
     """Собирает интеграции, application use cases и runtime-контур исполнения."""
 
     def __init__(self) -> None:
+        configure_logging()
         self.runtime_settings = RuntimeSettings.from_env()
+        self.security_settings = SecuritySettings.from_env()
+
+        self.renovatio_settings = RenovatioSettings.from_env()
+        self.max_settings = MaxSettings.from_env()
+        self.email_settings = EmailSettings.from_env()
+        self.renovatio_settings.validate_for_mode(self.runtime_settings.integration_mode, self.runtime_settings.environment)
+        self.max_settings.validate_for_mode(self.runtime_settings.integration_mode, self.runtime_settings.environment)
+        self.email_settings.validate_for_mode(self.runtime_settings.integration_mode, self.runtime_settings.environment)
+
         integration_mode = self.runtime_settings.integration_mode
 
         self.renovatio_client = RenovatioClient(
             mode=integration_mode,
-            settings=RenovatioSettings.from_env(),
+            settings=self.renovatio_settings,
         )
         self.max_delivery_provider = MaxDeliveryProvider(
             mode=integration_mode,
-            settings=MaxSettings.from_env(),
+            settings=self.max_settings,
         )
         self.email_delivery_provider = EmailDeliveryProvider(
             mode=integration_mode,
-            settings=EmailSettings.from_env(),
+            settings=self.email_settings,
         )
         self.notification_logger = LoggerAdapter()
-        self.operator_action_logger = OperatorActionLoggerAdapter()
+        self.delivery_card_repository = self._build_delivery_card_repository()
+        self.operator_action_logger = OperatorActionLoggerAdapter(audit_repository=self._build_operator_audit_repository())
 
         self.retry_policy = RetryPolicy(
             RetryLimits(
@@ -69,7 +82,6 @@ class AppContainer:
             deduplication_policy=self.deduplication_policy,
         )
         self.operator_action_policy = OperatorActionPolicy()
-        self.delivery_card_repository = self._build_delivery_card_repository()
 
         self.create_delivery_card_use_case = CreateDeliveryCardUseCase()
         self.register_delivery_result_use_case = RegisterDeliveryResultUseCase()
@@ -121,7 +133,6 @@ class AppContainer:
             retry_delivery_use_case=self.retry_delivery_use_case,
         )
 
-        # Runtime / infrastructure wiring (dual-mode repository).
         self.delivery_queue = InMemoryDeliveryQueue()
         self.delivery_runtime = DeliveryRuntime(
             orchestrator=self.delivery_orchestrator,
@@ -137,7 +148,6 @@ class AppContainer:
             selector=self.delivery_runtime_selector,
         )
 
-        # Read-only operator API stack.
         self.delivery_card_read_service = DeliveryCardReadService(
             repository=self.delivery_card_repository,
         )
@@ -148,9 +158,17 @@ class AppContainer:
             from src.infrastructure.persistence.repositories import PostgresDeliveryCardRepository
             from src.infrastructure.persistence.settings import DatabaseSettings
 
-            session_factory = build_session_factory(DatabaseSettings.from_env())
-            return PostgresDeliveryCardRepository(session_factory=session_factory)
+            self._session_factory = build_session_factory(DatabaseSettings.from_env())
+            return PostgresDeliveryCardRepository(session_factory=self._session_factory)
+        self._session_factory = None
         return InMemoryDeliveryCardRepository()
+
+    def _build_operator_audit_repository(self):
+        if self._session_factory is None:
+            return None
+        from src.infrastructure.persistence.repositories import OperatorActionAuditRepository
+
+        return OperatorActionAuditRepository(session_factory=self._session_factory)
 
     @staticmethod
     def build_seed_patients() -> dict[str, Patient]:

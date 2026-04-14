@@ -4,6 +4,9 @@ from fastapi import FastAPI
 
 from src.application.services import DeliveryCardReadService, PatientResultReadService
 from src.config.container import AppContainer
+from src.presentation.common.errors import register_error_handlers
+from src.presentation.common.health import HealthService, build_health_router
+from src.presentation.common.middleware import CorrelationIdMiddleware, SimpleRateLimitMiddleware
 from src.presentation.operator_api.routers.cards import router as cards_router
 from src.presentation.operator_api.routers.commands import router as commands_router
 from src.presentation.patient_api.routers.results import router as patient_results_router
@@ -14,6 +17,7 @@ def create_operator_api_app(container: AppContainer | None = None) -> FastAPI:
 
     app_container = container or AppContainer()
     app = FastAPI(title="Smart Lab Delivery Operator API", version="0.1.0")
+    app.state.security_settings = app_container.security_settings
     app.state.delivery_card_read_service = DeliveryCardReadService(
         repository=app_container.delivery_card_repository
     )
@@ -24,6 +28,14 @@ def create_operator_api_app(container: AppContainer | None = None) -> FastAPI:
     app.state.patient_result_read_service = PatientResultReadService(
         repository=app_container.delivery_card_repository
     )
+    app.add_middleware(CorrelationIdMiddleware)
+    app.add_middleware(
+        SimpleRateLimitMiddleware,
+        enabled=app_container.security_settings.rate_limit_enabled,
+        limit_per_minute=app_container.security_settings.rate_limit_per_minute,
+    )
+    register_error_handlers(app)
+    app.include_router(build_health_router(HealthService(app_container)))
     app.include_router(cards_router)
     app.include_router(commands_router)
     app.include_router(patient_results_router)
