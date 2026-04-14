@@ -219,3 +219,49 @@ python -m pytest .\tests\unit\infrastructure\test_delivery_process_manager.py
 - Режим синхронный, без background thread/async worker.
 - Нет cron и нет broker-based orchestration.
 - Process manager не принимает бизнес-решения retry/fallback/deduplication; решения остаются в application policy/use-case слое.
+
+29. Переключение real integration mode (PowerShell)
+```powershell
+# Включить реальные интеграции
+$env:SLD_INTEGRATION_MODE = "real"
+
+# Renovatio
+$env:SLD_RENOVATIO_BASE_URL = "https://<renovatio-endpoint>"
+$env:SLD_RENOVATIO_API_KEY = "<secret>"
+$env:SLD_RENOVATIO_API_VERSION = "1"
+$env:SLD_RENOVATIO_PATIENT_IDS = "patient-001,patient-002"
+
+# MAX
+$env:SLD_MAX_BASE_URL = "https://platform-api.max.ru"
+$env:SLD_MAX_BOT_TOKEN = "<secret>"
+$env:SLD_MAX_BOT_NAME = "<botName>"
+$env:SLD_MAX_PATIENT_RECIPIENT_MAP = "patient-001:max-user-1,patient-002:max-user-2"
+
+# Email SMTP
+$env:SLD_EMAIL_SMTP_HOST = "smtp.example.org"
+$env:SLD_EMAIL_SMTP_PORT = "587"
+$env:SLD_EMAIL_USERNAME = "<user>"
+$env:SLD_EMAIL_PASSWORD = "<secret>"
+$env:SLD_EMAIL_USE_TLS = "1"
+$env:SLD_EMAIL_FROM = "no-reply@example.org"
+```
+
+30. Безопасная локальная проверка real-режима
+```powershell
+# Рекомендуется запускать только на тестовых аккаунтах и тестовых patient_id
+python -m pytest .\tests\unit\integration
+python .\scripts\run_runtime_cycle.py
+```
+
+31. Откат на stub-режим
+```powershell
+$env:SLD_INTEGRATION_MODE = "stub"
+Remove-Item Env:SLD_RENOVATIO_API_KEY -ErrorAction SilentlyContinue
+Remove-Item Env:SLD_MAX_BOT_TOKEN -ErrorAction SilentlyContinue
+Remove-Item Env:SLD_EMAIL_PASSWORD -ErrorAction SilentlyContinue
+```
+
+32. Ограничения текущего блока real integrations
+- Реальные live-вызовы в тестах CI не выполняются.
+- MAX identity mapping пока конфигурируется вручную через env-карту.
+- Mini app UI не реализован, зафиксирован только deep-link контракт.

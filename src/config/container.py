@@ -16,10 +16,11 @@ from src.application.use_cases import (
     RegisterDeliveryResultUseCase,
     RetryDeliveryUseCase,
 )
+from src.config.integration_settings import EmailSettings, MaxSettings, RenovatioSettings
+from src.config.runtime_settings import RuntimeSettings
 from src.domain.entities import Patient
 from src.infrastructure.queue import InMemoryDeliveryQueue
 from src.infrastructure.repositories import InMemoryDeliveryCardRepository
-from src.config.runtime_settings import RuntimeSettings
 from src.infrastructure.runtime import DeliveryProcessManager, DeliveryRuntime, DeliveryRuntimeSelector
 from src.integration.delivery import EmailDeliveryProvider, MaxDeliveryProvider
 from src.integration.logging import LoggerAdapter
@@ -31,9 +32,20 @@ class AppContainer:
 
     def __init__(self) -> None:
         self.runtime_settings = RuntimeSettings.from_env()
-        self.renovatio_client = RenovatioClient()
-        self.max_delivery_provider = MaxDeliveryProvider()
-        self.email_delivery_provider = EmailDeliveryProvider()
+        integration_mode = self.runtime_settings.integration_mode
+
+        self.renovatio_client = RenovatioClient(
+            mode=integration_mode,
+            settings=RenovatioSettings.from_env(),
+        )
+        self.max_delivery_provider = MaxDeliveryProvider(
+            mode=integration_mode,
+            settings=MaxSettings.from_env(),
+        )
+        self.email_delivery_provider = EmailDeliveryProvider(
+            mode=integration_mode,
+            settings=EmailSettings.from_env(),
+        )
         self.notification_logger = LoggerAdapter()
 
         self.retry_policy = RetryPolicy(

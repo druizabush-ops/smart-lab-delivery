@@ -120,3 +120,14 @@
   - нет async/background workers, cron и broker-оркестрации;
   - нет distributed scheduling и time-based backoff;
   - execution остается локальным, синхронным и воспроизводимым.
+
+17. Real transport integrations contour (новый блок)
+- Добавлен dual-mode интеграций через `SLD_INTEGRATION_MODE=stub|real`.
+- В режиме `real` container собирает:
+  - RenovatioClient c HTTP form-urlencoded запросами и централизованной обработкой `{error,data}`;
+  - MaxDeliveryProvider c реальным POST в `platform-api.max.ru/messages` и токеном в `Authorization`;
+  - EmailDeliveryProvider c SMTP-отправкой.
+- В режиме `stub` сохраняются deterministic заглушки без внешней сети.
+- Граница policy/transport сохранена:
+  - policy/use-case решают retry/fallback/deduplication;
+  - transport adapter только выполняет внешнюю отправку и возвращает delivery attempt.
