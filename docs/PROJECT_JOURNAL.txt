@@ -431,3 +431,24 @@ Dependency wiring:
 - Фильтрация реализована на текущем query-слое без пагинации и без расширенной сортировки.
 - Auth/roles и operator UI не вводились на этом этапе.
 Следующий шаг: выбрать следующий функциональный блок между operator command layer, scheduler/retry manager или real transport integrations.
+
+[Багфикс]
+Дата: 2026-04-13
+Ветка: work
+Блок: Точечный фикс operator API testing и локального запуска
+Файлы: tests/integration/test_operator_api_read_only.py; scripts/run_operator_api.py; docs/SETUP_WINDOWS.txt; docs/PROJECT_JOURNAL.txt
+Причина: Интеграционный тест operator API с SQLAlchemy/SQLite был нестабилен из-за разных connection для in-memory БД, а прямой запуск скрипта operator API из корня падал с ModuleNotFoundError по пакету src.
+Что сделано:
+- В integration-тесте test_operator_api_works_with_postgres_repository изменена конфигурация sqlite in-memory на единый connection pool через StaticPool и connect_args check_same_thread=False.
+- Зафиксирован запуск scripts/run_operator_api.py напрямую из корня проекта через минимальный bootstrap sys.path до импорта src.
+- Модульный запуск python -m scripts.run_operator_api сохранен без изменений.
+Почему падал integration test:
+- Таблицы создавались в одном connection, а repository/API могли открывать другой connection, из-за чего in-memory sqlite не видела таблицу delivery_cards.
+Как исправлена конфигурация sqlite:
+- Для теста используется общий in-memory engine c StaticPool, что гарантирует единое подключение и видимость схемы во всех сессиях теста.
+Почему прямой запуск run_operator_api.py не работал:
+- При запуске файла как скрипта Python формировал sys.path относительно каталога scripts, поэтому пакет src из корня проекта не резолвился.
+Как это исправлено:
+- Добавлен точечный bootstrap: при прямом запуске в sys.path добавляется корень проекта (родитель scripts), после чего импорт src.presentation.operator_api становится доступен.
+Что изменилось в архитектуре:
+- Архитектура API и границы слоев не менялись; исправлены только тестовая конфигурация и способ локального старта скрипта.
