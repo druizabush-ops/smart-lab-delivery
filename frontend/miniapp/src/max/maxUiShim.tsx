@@ -11,7 +11,3 @@ export function Button(props: PropsWithChildren<{ onClick?: () => void; disabled
     </button>
   );
 }
-
-export function Card({ children }: PropsWithChildren): JSX.Element {
-  return <section>{children}</section>;
-}
