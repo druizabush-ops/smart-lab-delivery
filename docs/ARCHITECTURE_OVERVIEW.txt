@@ -170,3 +170,20 @@
 - Health/readiness слой: `HealthService` и роутер `/health/live`, `/health/ready` в обоих API приложениях.
 - Structured logging: единый bootstrap `configure_logging()` + JSON formatter, корреляция через middleware `CorrelationIdMiddleware`.
 - Operational hardening middleware: `SimpleRateLimitMiddleware` для чувствительных endpoint-префиксов.
+
+## Final launch readiness / go-live слой (2026-04-14)
+- Добавлен отдельный операционный слой проверки готовности запуска:
+  - `src/config/launch_mode_validation.py` — контракт release/dev/test профилей и проверка unsafe defaults.
+  - `scripts/run_launch_readiness_checks.py` — единый smoke запуск проверок перед go-live.
+- Контур проверок не добавляет новую бизнес-логику доставки; он валидирует эксплуатационные зависимости:
+  - env readiness;
+  - миграции и доступность БД;
+  - health/live + health/ready;
+  - запуск process manager/runtime;
+  - доступность operator/patient API тестовых контуров;
+  - наличие audit проверки;
+  - сборку mini app.
+- Финальная форма системы:
+  1) Domain/Application/Runtime продолжают выполнять delivery логику.
+  2) Launch readiness слой подтверждает возможность безопасного старта.
+  3) Runbook/checklist/known limitations задают операционный контур handoff.

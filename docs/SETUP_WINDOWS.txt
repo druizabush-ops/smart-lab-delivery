@@ -375,3 +375,47 @@ $env:SLD_MAX_WEBAPP_SECRET = "<secret>"
 $env:SLD_RATE_LIMIT_ENABLED = "1"
 $env:SLD_RATE_LIMIT_PER_MINUTE = "120"
 ```
+
+32. Финальный launch-readiness прогон (PowerShell)
+```powershell
+# Рекомендуемый профиль перед запуском
+$env:SLD_ENV = "staging"
+$env:SLD_REPOSITORY_MODE = "postgres"
+$env:SLD_INTEGRATION_MODE = "real"
+$env:SLD_PATIENT_SECURITY_MODE = "strict"
+
+# Критичные секреты/настройки
+$env:SLD_DATABASE_URL = "postgresql+psycopg://<user>:<password>@<host>:5432/<db>"
+$env:SLD_RENOVATIO_API_KEY = "<secret>"
+$env:SLD_MAX_BOT_TOKEN = "<secret>"
+$env:SLD_MAX_BOT_NAME = "<bot_name>"
+$env:SLD_EMAIL_SMTP_HOST = "smtp.example.org"
+$env:SLD_EMAIL_FROM = "no-reply@example.org"
+$env:SLD_MAX_WEBAPP_SECRET = "<secret>"
+
+# Единый smoke launch check
+python .\scripts\run_launch_readiness_checks.py
+```
+
+33. Раздельный запуск API контуров
+```powershell
+# Окно 1
+python .\scripts\run_operator_api.py
+
+# Окно 2
+python .\scripts\run_patient_api.py
+```
+
+34. Ручная валидация перед go-live
+```powershell
+# Health
+Invoke-RestMethod -Uri "http://127.0.0.1:8001/health/live" -Method GET
+Invoke-RestMethod -Uri "http://127.0.0.1:8001/health/ready" -Method GET
+Invoke-RestMethod -Uri "http://127.0.0.1:8002/health/live" -Method GET
+Invoke-RestMethod -Uri "http://127.0.0.1:8002/health/ready" -Method GET
+
+# Mini app build
+Set-Location .\frontend\miniapp
+npm run build
+Set-Location ..\..
+```

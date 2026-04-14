@@ -623,3 +623,23 @@ Dependency wiring:
 Ограничения:
 - MAX initData верифицируется сервером при наличии `SLD_MAX_WEBAPP_SECRET`; в relaxed-режиме допускается fallback query patient_id для dev/test.
 - Rate limiter реализован как in-memory middleware и не предназначен для горизонтального масштабирования.
+
+[Изменение]
+Дата: 2026-04-14
+Ветка: work
+Блок: Final launch readiness / go-live preparation
+Файлы: src/config/runtime_settings.py; src/config/launch_mode_validation.py; src/presentation/common/health.py; scripts/run_launch_readiness_checks.py; scripts/run_patient_api.py; tests/unit/config/test_launch_mode_validation.py; tests/smoke/test_launch_readiness_smoke.py; docs/GO_LIVE_CHECKLIST.txt; docs/RUNBOOK.txt; docs/KNOWN_LIMITATIONS.txt; docs/ARCHITECTURE_OVERVIEW.txt; docs/DECISIONS.txt; docs/TECH_DEBT.txt; docs/ENVIRONMENT_RULES.txt; docs/SETUP_WINDOWS.txt; docs/TEST_PLAN.txt
+Причина: Провести финальную системную подготовку к запуску без расширения бизнес-функциональности.
+Что сделано:
+- Добавлен формальный launch env-контракт с профилями dev/test/staging/prod и проверкой unsafe defaults.
+- Добавлен единый smoke-скрипт `run_launch_readiness_checks.py` для миграций, health, runtime/process manager, API/audit и mini app build.
+- Подготовлены обязательные go-live документы: checklist, runbook, known limitations.
+- Усилен тестовый контур launch-ready unit/smoke проверками.
+Что подтверждено перед запуском:
+- Система может быть проверена единым launch smoke сценарием.
+- Критичные release-like конфиги формально валидируются и блокируют небезопасный запуск.
+- Есть явный recovery/rollback минимум и операционная инструкция.
+Оставшиеся ограничения:
+- Часть проверок остается manual (реальные внешние транспорты, mini app в целевой среде).
+- Rate limit и часть операционных механизмов остаются in-memory уровнем.
+Текущий статус готовности проекта: Ready for controlled go-live rehearsal / handoff с явным перечнем ограничений.

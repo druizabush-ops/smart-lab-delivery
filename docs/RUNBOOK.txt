@@ -1,0 +1,75 @@
+Название: Runbook эксплуатации Smart Lab Delivery
+Дата актуализации: 2026-04-14
+
+1. Система не стартует
+Шаги:
+1) Проверить env-контракт: `python scripts/run_launch_readiness_checks.py`.
+2) Проверить traceback старта API/скрипта.
+3) Проверить обязательные env: `SLD_DATABASE_URL`, `SLD_MAX_BOT_TOKEN`, `SLD_RENOVATIO_API_KEY`.
+4) Для быстрой стабилизации в non-prod допускается переключение в safe-mode:
+   - `SLD_INTEGRATION_MODE=stub`
+   - `SLD_REPOSITORY_MODE=in_memory` (только если допустима потеря state)
+
+2. БД недоступна
+Симптом: `/health/ready` -> `checks.db=false`.
+Шаги:
+1) Проверить доступность PostgreSQL хоста/порта.
+2) Проверить `SLD_DATABASE_URL` и креды.
+3) Выполнить `python -m alembic current`.
+4) После восстановления БД повторить `python scripts/run_launch_readiness_checks.py`.
+
+3. health/ready red
+Симптом: `status=not_ready`.
+Шаги:
+1) Проверить `checks` в payload (`db`, `config`, `integration_mode`).
+2) Если `config=false` — проверить `SLD_ENV`, `SLD_REPOSITORY_MODE`, `SLD_INTEGRATION_MODE`.
+3) Если `integration_mode=false` — восстановить допустимое значение `stub|real`.
+4) Если `db=false` — следовать сценарию из раздела 2.
+
+4. MAX transport упал
+Шаги:
+1) Проверить `SLD_MAX_BOT_TOKEN`, `SLD_MAX_BOT_NAME`, `SLD_MAX_BASE_URL`.
+2) Проверить `SLD_MAX_PATIENT_RECIPIENT_MAP`.
+3) Временная деградация: оставить email fallback активным.
+4) Если канал нестабилен длительно — временно `SLD_INTEGRATION_MODE=stub` (только по решению ответственного релиза).
+
+5. Email transport недоступен
+Шаги:
+1) Проверить SMTP host/port/TLS.
+2) Проверить логины/пароли и from-адрес.
+3) Подтвердить, что MAX канал работает как primary.
+4) При длительной аварии зафиксировать ограничение в KNOWN_LIMITATIONS и журнале смены.
+
+6. Patient API отдаёт ошибки
+Шаги:
+1) Проверить `SLD_PATIENT_SECURITY_MODE` и корректность initData context.
+2) Проверить `/health/ready`.
+3) Проверить, что patient_id не подменяется клиентом без проверки подписи.
+4) Временно ограничить выдачу через strict policy + диагностика логов correlation-id.
+
+7. Operator command не проходит
+Шаги:
+1) Проверить, что состояние карточки допускает команду по OperatorActionPolicy.
+2) Проверить код ответа: 409 ожидаем при policy reject.
+3) Проверить наличие записи в audit trail.
+4) При массовом reject — проверить корректность операционных инструкций.
+
+8. Audit trail не пишет
+Шаги:
+1) Проверить режим repository (`postgres` обязателен для persistence audit).
+2) Проверить наличие таблицы `operator_action_log`.
+3) Проверить, что operator command use case получает action_logger.
+4) До восстановления запретить ручные командные действия вне runbook.
+
+9. Миграция не прошла
+Шаги:
+1) Остановить rollout новых процессов.
+2) Зафиксировать ошибку миграции и ревизию.
+3) Откатить последнюю миграцию: `python -m alembic downgrade -1`.
+4) Восстановить предыдущую стабильную ревизию и повторить smoke.
+
+10. Возврат на safe mode (минимальный rollback)
+Допустимо только по решению ответственного релиза и вне prod:
+- `SLD_INTEGRATION_MODE=stub`
+- `SLD_PATIENT_SECURITY_MODE=strict` сохраняется
+- Перезапуск API + `python scripts/run_launch_readiness_checks.py`

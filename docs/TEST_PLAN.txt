@@ -162,3 +162,26 @@
 Требует ручной проверки:
 - Реальный MAX initData payload из боевого клиента.
 - Поведение rate limiter под burst-нагрузкой и multi-instance развертыванием.
+
+## Final launch readiness coverage (2026-04-14)
+
+Автоматизировано:
+- Unit: `tests/unit/config/test_launch_mode_validation.py`
+  - launch profile validation;
+  - required env для prod-like;
+  - unsafe defaults detection.
+- Smoke: `tests/smoke/test_launch_readiness_smoke.py`
+  - совместный старт operator/patient приложений;
+  - корректный вызов launch validator для текущего окружения.
+- Процедура: `scripts/run_launch_readiness_checks.py`
+  - миграции;
+  - health/readiness тесты;
+  - runtime/process manager smoke;
+  - audit test;
+  - mini app build (если доступен npm).
+
+Ручная проверка перед релизом (обязательно):
+- Mini app build в целевом CI/CD контуре.
+- MAX context handling с реальным initData.
+- Real transport mode readiness (Renovatio/MAX/SMTP).
+- DB migration readiness на целевой БД и rollback rehearsal.

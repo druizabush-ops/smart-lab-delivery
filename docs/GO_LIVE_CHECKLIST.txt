@@ -1,0 +1,61 @@
+Название: Final Launch Readiness / Go-Live Checklist
+Дата актуализации: 2026-04-14
+
+0. Цель
+Этот checklist фиксирует минимально необходимую проверку перед запуском Smart Lab Delivery в staging/prod-like режиме.
+
+1. Backend startup checklist
+- [ ] Установлены зависимости: `python -m pip install -r requirements.txt`.
+- [ ] Установлены frontend зависимости mini app: `npm ci` в `frontend/miniapp`.
+- [ ] Валидирован launch env-контракт: `python scripts/run_launch_readiness_checks.py`.
+- [ ] Operator API стартует: `python scripts/run_operator_api.py`.
+- [ ] Patient API стартует: `python scripts/run_patient_api.py`.
+
+2. DB readiness checklist
+- [ ] Доступен PostgreSQL endpoint из `SLD_DATABASE_URL`.
+- [ ] `SLD_REPOSITORY_MODE=postgres` в release-like окружении.
+- [ ] `python -m alembic current` возвращает ожидаемую ревизию.
+
+3. Migration checklist
+- [ ] `python -m alembic upgrade head` проходит без ошибок.
+- [ ] В случае ошибки подготовлен откат по RUNBOOK (раздел "Миграция не прошла").
+- [ ] После миграции `GET /health/ready` возвращает `status=ready`.
+
+4. Scheduler / process manager readiness
+- [ ] `python scripts/run_process_manager.py` выполняется до summary.
+- [ ] Нет необработанных исключений runtime/process manager.
+- [ ] Счётчики summary соответствуют ожидаемому профилю запуска.
+
+5. Operator API readiness
+- [ ] `GET /health/live` отвечает 200.
+- [ ] `GET /health/ready` отвечает 200 и checks без critical-false.
+- [ ] `GET /operator/cards` и `GET /operator/cards/summary` отвечают корректно.
+- [ ] Command endpoint-ы отвечают 2xx/4xx по policy, без 500.
+
+6. Patient API readiness
+- [ ] `GET /health/live` и `GET /health/ready` работают.
+- [ ] `GET /patient/results` требует корректный patient context (strict mode).
+- [ ] Patient API не раскрывает operator-only fields.
+
+7. Mini app build readiness
+- [ ] `cd frontend/miniapp && npm run build` выполняется без ошибок.
+- [ ] `VITE_PATIENT_API_BASE_URL` указывает на целевой patient API.
+- [ ] Build артефакты доступны для выкладки.
+
+8. Integrations readiness
+- [ ] `SLD_INTEGRATION_MODE=real` для staging/prod-like запуска.
+- [ ] Заполнены: `SLD_RENOVATIO_API_KEY`, `SLD_MAX_BOT_TOKEN`, `SLD_MAX_BOT_NAME`.
+- [ ] Заполнены SMTP env: `SLD_EMAIL_SMTP_HOST`, `SLD_EMAIL_FROM`.
+- [ ] Подготовлен fallback-план при недоступности MAX/email (RUNBOOK).
+
+9. Security / hardening readiness
+- [ ] `SLD_PATIENT_SECURITY_MODE=strict` в release-like окружении.
+- [ ] `SLD_MAX_WEBAPP_SECRET` задан и не пуст.
+- [ ] Rate limiting включен (`SLD_RATE_LIMIT_ENABLED=1`).
+- [ ] Нет unsafe defaults (`postgres:postgres`, SMTP localhost).
+
+10. Rollback / recovery minimum checklist
+- [ ] Известен порядок отката env на stub/safe mode.
+- [ ] Известен порядок rollback миграции (`alembic downgrade -1`) при частичном фейле.
+- [ ] Подготовлен контакт/ответственный оператор на окно запуска.
+- [ ] После rollback повторно пройден health/readiness smoke.
