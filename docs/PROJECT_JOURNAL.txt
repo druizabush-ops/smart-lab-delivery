@@ -584,3 +584,27 @@ Dependency wiring:
 - max-ui пакет из приватного реестра недоступен в текущем окружении; используется совместимый shim-слой и зафиксирован tech debt.
 - Документ результата (`/patient/results/{id}/document`) пока как readiness contract/stub без реальной выдачи файла.
 Следующий шаг: реализовать серверную валидацию initData/start_param и включить реальный MAX UI package при доступе к приватному registry.
+
+[Изменение]
+Дата: 2026-04-14
+Ветка: work
+Блок: Stabilization frontend layer (mini app)
+Файлы: frontend/miniapp/package.json; frontend/miniapp/vitest.config.ts; frontend/miniapp/tsconfig.json; frontend/miniapp/vite-env.d.ts; frontend/miniapp/src/App.test.tsx; frontend/miniapp/src/api/results.test.ts; docs/TECH_DEBT.txt; docs/PROJECT_JOURNAL.txt
+Причина: Mini app frontend должен стабильно собираться и запускать тесты без изменения текущей архитектуры слоев.
+Что сделано:
+- Добавлена optional dependency `@maxhub/max-ui` в `package.json` с сохранением текущего shim-подхода через alias.
+- Vitest конфигурация дополнена `globals: true`, окружение `jsdom` сохранено.
+- TypeScript конфигурация обновлена (`types: ["vitest/globals", "node"]`, `lib: ["ESNext", "DOM"]`) и добавлен `vite-env.d.ts`.
+- В тестах замена `global` на `globalThis` для корректной типизации и совместимости.
+- Удален неиспользуемый `@ts-expect-error` в App тесте.
+Что НЕ изменялось сознательно:
+- Бизнес-логика domain/application/integration.
+- Backend API, runtime/process manager и transport-адаптеры.
+- Архитектурные границы проекта.
+Проверки:
+- `npm run build`.
+- `npx vitest run`.
+Риски/ограничения:
+- Реальные MAX UI компоненты по-прежнему не подключены напрямую в runtime; используется shim до отдельного интеграционного шага.
+Связанные блоки: patient-facing mini app, frontend test infra, technical debt registry.
+
