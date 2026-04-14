@@ -5,6 +5,7 @@ pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from src.application.services import DeliveryCardReadService
 from src.domain.entities import DeliveryAttempt, DeliveryCard, DeliveryChannel, LabResult, Patient
@@ -103,7 +104,12 @@ def test_operator_api_handles_empty_storage() -> None:
 
 
 def test_operator_api_works_with_postgres_repository() -> None:
-    engine = create_engine("sqlite+pysqlite:///:memory:", future=True)
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+        future=True,
+    )
     Base.metadata.create_all(engine)
     factory = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False, future=True)
     repository = PostgresDeliveryCardRepository(session_factory=factory)

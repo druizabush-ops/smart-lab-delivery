@@ -158,10 +158,13 @@ python -m pytest
 # Установить зависимости (включая FastAPI/uvicorn)
 python -m pip install -r .\requirements.txt
 
-# Запуск API
+# Вариант 1: прямой запуск скрипта из корня проекта
 python .\scripts\run_operator_api.py
+
+# Вариант 2: модульный запуск (альтернативно)
+python -m scripts.run_operator_api
 ```
-Ожидаемо: Uvicorn поднимает сервер на `http://127.0.0.1:8001`.
+Ожидаемо: оба способа поднимают Uvicorn на `http://127.0.0.1:8001`.
 
 22. Быстрая проверка endpoint-ов operator API
 ```powershell
