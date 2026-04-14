@@ -191,3 +191,18 @@
 - Полноценная RBAC/ACL модель для operator command endpoint-ов не внедрена, доступ предполагается доверенным контуром.
 - Distributed locking/concurrency control для одновременных operator commands не реализован сознательно на текущем этапе.
 - Набор команд ограничен retry/manual-review/requeue/override-channel; расширение команд требует отдельного архитектурного решения.
+
+[Технический долг]
+Дата: 2026-04-14
+Ветка: work
+Блок: Operator workflow model пока ограничен command-layer policy
+Что временно:
+- Requeue в operator layer реализован как controlled preparation (FAILED -> NOT_STARTED -> ACTIVE) внутри command use case без выделенного сценарного workflow-сервиса.
+- Override channel разрешен только в безопасных состояниях (не terminal delivery, не queue DONE, не same-channel), но без расширенной контекстной валидации (роль оператора, причино-следственные ограничения, lock-конкуренция).
+- Retry command остается thin-wrapper над existing RetryDeliveryUseCase без отдельного operator retry pipeline.
+Почему это временно: Текущий блок целенаправленно ограничен точечным hardening operator command layer без расширения архитектуры domain/application.
+Какие ограничения:
+- Нет полноценной state-machine модели operator workflow с отдельными сценарными переходами.
+- Нет формального rule-trace/audit-механизма объяснения политик кроме reason-строк и action logger.
+Когда пересмотреть: На этапе production hardening operator workflow и security/rbac.
+Что будет признаком, что пора заменить решение: Требование многошаговых operator сценариев, конкурентного контроля и расширенного governance-а ручных действий.

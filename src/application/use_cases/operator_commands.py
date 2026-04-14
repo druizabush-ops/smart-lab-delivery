@@ -67,7 +67,7 @@ class _BaseOperatorCommandUseCase:
 
 
 class RetryDeliveryCardCommandUseCase(_BaseOperatorCommandUseCase):
-    """Операторский retry, который использует уже существующий retry-пайплайн."""
+    """Операторский retry без отдельной бизнес-логики: только existing RetryDeliveryUseCase."""
 
     command_name = "retry"
 
@@ -116,7 +116,7 @@ class MoveToManualReviewCommandUseCase(_BaseOperatorCommandUseCase):
 
 
 class RequeueDeliveryCardCommandUseCase(_BaseOperatorCommandUseCase):
-    """Возвращает карточку из manual_review/waiting_retry в активную обработку."""
+    """Подготавливает карточку к следующему processing cycle (controlled requeue)."""
 
     command_name = "requeue"
 
@@ -127,9 +127,14 @@ class RequeueDeliveryCardCommandUseCase(_BaseOperatorCommandUseCase):
             self._log(card_id=card_id, success=False, message=decision.reason)
             raise OperatorCommandError(decision.reason)
 
+        # Requeue трактуется как controlled подготовка к следующему processing cycle:
+        # мы не даем оператору произвольно мутировать статусы, а выполняем минимально
+        # допустимый шаг для повторной обработки карточки.
+        # Временное упрощение текущей модели: FAILED -> NOT_STARTED допускается здесь
+        # только как техническая подготовка к повторному запуску существующего пайплайна.
         if card.status is DeliveryStatus.FAILED:
             card.change_status(DeliveryStatus.NOT_STARTED)
-        else:
+        if card.queue_status is not QueueStatus.ACTIVE:
             card.change_queue_status(QueueStatus.ACTIVE)
         self._repository.update(card)
         message = "Карточка поставлена в активную очередь."
@@ -152,7 +157,12 @@ class OverrideChannelCommandUseCase(_BaseOperatorCommandUseCase):
         reason: str | None = None,
     ) -> OperatorCommandResult:
         card = self._load_card(card_id)
-        decision = self._policy.can_override_channel(card.status, card.queue_status)
+        decision = self._policy.can_override_channel(
+            card.status,
+            card.queue_status,
+            current_channel=card.channel,
+            requested_channel=channel,
+        )
         if not decision.allowed:
             self._log(card_id=card_id, success=False, message=decision.reason)
             raise OperatorCommandError(decision.reason)

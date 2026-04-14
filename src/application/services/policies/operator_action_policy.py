@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+from src.domain.entities import DeliveryChannel
 from src.domain.statuses import DeliveryStatus, QueueStatus
 
 
@@ -21,15 +22,25 @@ class OperatorActionPolicy:
         DeliveryStatus.EMAIL_SENT,
         DeliveryStatus.EXHAUSTED,
     }
+    _closed_queue_statuses = {QueueStatus.DONE}
+    _requeue_entry_points = {QueueStatus.MANUAL_REVIEW, QueueStatus.WAITING_RETRY}
+
+    @classmethod
+    def _is_terminal_delivery(cls, status: DeliveryStatus) -> bool:
+        return status in cls._terminal_delivery_statuses
+
+    @classmethod
+    def _is_closed_queue(cls, queue_status: QueueStatus) -> bool:
+        return queue_status in cls._closed_queue_statuses
 
     def can_retry(self, status: DeliveryStatus, queue_status: QueueStatus) -> OperatorActionDecision:
         """Retry допустим только для не-терминальных карточек и без manual review."""
 
-        if status in self._terminal_delivery_statuses:
+        if self._is_terminal_delivery(status):
             return OperatorActionDecision(False, "Retry запрещен для терминальной карточки.")
         if queue_status is QueueStatus.MANUAL_REVIEW:
             return OperatorActionDecision(False, "Retry запрещен в режиме manual_review.")
-        if queue_status is QueueStatus.DONE:
+        if self._is_closed_queue(queue_status):
             return OperatorActionDecision(False, "Retry запрещен для завершенной карточки.")
         return OperatorActionDecision(True, "Retry разрешен.")
 
@@ -38,20 +49,20 @@ class OperatorActionPolicy:
     ) -> OperatorActionDecision:
         """В manual_review можно переводить только обрабатываемые карточки."""
 
-        if status in self._terminal_delivery_statuses:
+        if self._is_terminal_delivery(status):
             return OperatorActionDecision(False, "manual_review запрещен для терминальной карточки.")
         if queue_status is QueueStatus.MANUAL_REVIEW:
             return OperatorActionDecision(False, "Карточка уже находится в manual_review.")
-        if queue_status is QueueStatus.DONE:
+        if self._is_closed_queue(queue_status):
             return OperatorActionDecision(False, "manual_review запрещен для завершенной карточки.")
         return OperatorActionDecision(True, "Перевод в manual_review разрешен.")
 
     def can_requeue(self, status: DeliveryStatus, queue_status: QueueStatus) -> OperatorActionDecision:
         """Requeue допустим только для manual_review или waiting_retry карточек."""
 
-        if status in self._terminal_delivery_statuses:
+        if self._is_terminal_delivery(status):
             return OperatorActionDecision(False, "Requeue запрещен для терминальной карточки.")
-        if queue_status not in {QueueStatus.MANUAL_REVIEW, QueueStatus.WAITING_RETRY}:
+        if queue_status not in self._requeue_entry_points:
             return OperatorActionDecision(False, "Requeue разрешен только из manual_review/waiting_retry.")
         return OperatorActionDecision(True, "Requeue разрешен.")
 
@@ -59,11 +70,16 @@ class OperatorActionPolicy:
         self,
         status: DeliveryStatus,
         queue_status: QueueStatus,
+        *,
+        current_channel: DeliveryChannel,
+        requested_channel: DeliveryChannel,
     ) -> OperatorActionDecision:
         """Override канала безопасен только до финального успеха/исчерпания."""
 
-        if status in self._terminal_delivery_statuses:
+        if current_channel == requested_channel:
+            return OperatorActionDecision(False, "Override канала на тот же канал запрещен.")
+        if self._is_terminal_delivery(status):
             return OperatorActionDecision(False, "Override канала запрещен для терминальной карточки.")
-        if queue_status is QueueStatus.DONE:
+        if self._is_closed_queue(queue_status):
             return OperatorActionDecision(False, "Override канала запрещен для завершенной карточки.")
         return OperatorActionDecision(True, "Override канала разрешен.")
