@@ -25,7 +25,11 @@ def test_max_and_email_providers_are_deterministic_and_return_attempts() -> None
     ready = LabResult(id="lr-1", patient_id="patient-001", status=LabResultStatus.READY)
 
     max_success_card = DeliveryCard.create(patient, ready, DeliveryChannel.MAX)
-    max_error_card = DeliveryCard.create(patient, LabResult(id="lr-2", patient_id="patient-001", status=LabResultStatus.READY), DeliveryChannel.MAX)
+    max_error_card = DeliveryCard.create(
+        patient,
+        LabResult(id="lr-ready-002", patient_id="patient-001", status=LabResultStatus.READY),
+        DeliveryChannel.MAX,
+    )
 
     max_provider = MaxDeliveryProvider()
     success_attempt = max_provider.send(max_success_card)

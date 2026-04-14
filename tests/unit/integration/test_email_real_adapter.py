@@ -6,9 +6,9 @@ from src.domain.statuses import AttemptStatus, LabResultStatus
 from src.integration.delivery import EmailDeliveryProvider
 
 
-def _build_card() -> DeliveryCard:
-    patient = Patient(id="patient-010", full_name="Анна")
-    lab_result = LabResult(id="lr-010", patient_id="patient-010", status=LabResultStatus.READY)
+def _build_card(*, patient_id: str = "patient-010", lab_result_id: str = "lr-010") -> DeliveryCard:
+    patient = Patient(id=patient_id, full_name="Анна")
+    lab_result = LabResult(id=lab_result_id, patient_id=patient_id, status=LabResultStatus.READY)
     return DeliveryCard.create(patient, lab_result, DeliveryChannel.EMAIL)
 
 
@@ -51,7 +51,7 @@ def test_email_real_provider_builds_subject_and_sender(monkeypatch) -> None:
     )
     provider = EmailDeliveryProvider(mode="real", settings=settings)
 
-    attempt = provider.send(_build_card())
+    attempt = provider.send(_build_card(patient_id="patient-003"))
 
     assert attempt.result is AttemptStatus.SUCCESS
     assert sent["host"] == "smtp.local"

@@ -14,6 +14,8 @@ from src.integration.errors import IntegrationErrorKind, IntegrationFailure
 class MaxDeliveryProvider(DeliveryProvider):
     """Провайдер доставки в MAX с dual-mode и базовой обработкой ошибок."""
 
+    _STUB_FAILURE_RESULT_IDS = frozenset({"lr-ready-002"})
+
     def __init__(
         self,
         *,
@@ -30,8 +32,7 @@ class MaxDeliveryProvider(DeliveryProvider):
             return self._error_attempt("MAX provider получил карточку с неподдерживаемым каналом.")
 
         if self._mode != "real":
-            is_error = card.lab_result_id.endswith("2")
-            if is_error:
+            if card.lab_result_id in self._STUB_FAILURE_RESULT_IDS:
                 return self._error_attempt("MAX stub: имитация временной ошибки отправки.")
             return DeliveryAttempt(timestamp=datetime.utcnow(), channel=DeliveryChannel.MAX, result=AttemptStatus.SUCCESS)
 
@@ -52,6 +53,12 @@ class MaxDeliveryProvider(DeliveryProvider):
         return f"https://max.ru/{self._settings.bot_name}?startapp={payload}"
 
     def _resolve_recipient_id(self, card: DeliveryCard) -> str:
+        """Возвращает MAX recipient_id для пациента в real-режиме отправки.
+
+        # TEMP: identity mapping (patient_id → MAX user_id)
+        # В реальной системе должен быть вынесен в отдельный identity/service слой.
+        """
+
         recipient_id = self._settings.patient_recipient_map.get(card.patient_id, "")
         if recipient_id:
             return recipient_id
