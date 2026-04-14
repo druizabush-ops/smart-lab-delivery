@@ -30,7 +30,7 @@ class HealthService:
 
     def get_readiness(self) -> ReadinessStatus:
         runtime = self._container.runtime_settings
-        config_ok = runtime.environment in {"dev", "test", "prod"}
+        config_ok = runtime.environment in {"dev", "test", "staging", "prod"}
         integration_mode_ok = runtime.integration_mode in {"stub", "real"}
         db_ok = self._check_db()
         return ReadinessStatus(app_ok=True, db_ok=db_ok, config_ok=config_ok, integration_mode_ok=integration_mode_ok)

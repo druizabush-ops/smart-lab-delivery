@@ -1,0 +1,16 @@
+Название: Known limitations перед go-live
+Дата актуализации: 2026-04-14
+
+1. Launch blockers (должны быть закрыты перед prod go-live)
+- В release-like режиме запуск блокируется, если не заполнены критичные секреты и env (валидатор launch mode).
+- Mini app build проверяется отдельной процедурой и не включен в стандартный `pytest`.
+
+2. Допустимые ограничения на момент handoff
+- MAX identity mapping (patient_id -> recipient_id) остается env-based и требует операционной поддержки.
+- Rate limiter in-memory и не распределенный (multi-instance нуждается во внешнем лимитере).
+- Нет enterprise DR-платформы; реализован только минимальный rollback/recovery план.
+
+3. Явно не делалось в данном блоке
+- Не добавлялись новые бизнес-фичи и новая delivery policy.
+- Не внедрялись Kubernetes/Terraform/Ansible deployment подсистемы.
+- Не переписывался mini app/UI beyond launch readiness checks.

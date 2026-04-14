@@ -31,5 +31,5 @@ class RuntimeSettings:
             raise ValueError("SLD_REPOSITORY_MODE должен быть in_memory или postgres")
         if self.integration_mode not in {"stub", "real"}:
             raise ValueError("SLD_INTEGRATION_MODE должен быть stub или real")
-        if self.environment not in {"dev", "test", "prod"}:
-            raise ValueError("SLD_ENV должен быть dev, test или prod")
+        if self.environment not in {"dev", "test", "staging", "prod"}:
+            raise ValueError("SLD_ENV должен быть dev, test, staging или prod")

@@ -266,3 +266,13 @@
 Описание: Structured logging и health/readiness внедрены, но нет централизованного log/metric/tracing backend.
 Риск: Ограниченная глубина расследований в multi-node среде.
 План закрытия: Подключить внешнюю платформу observability после стабилизации runtime нагрузочного профиля.
+
+[Launch blockers]
+Дата: 2026-04-14
+- До prod-like запуска должны быть заданы все критичные env/секреты; иначе launch validator блокирует старт.
+- Требуется подтвержденный рабочий канал MAX recipient mapping для целевой patient базы.
+
+[Post-launch improvements]
+Дата: 2026-04-14
+- Перевести rate limiting/audit buffering на внешние распределенные компоненты.
+- Расширить recovery-план до инфраструктурного DR уровня (вне текущего блока).
