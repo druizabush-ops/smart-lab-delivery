@@ -172,3 +172,24 @@
 - Нет аутентификации/авторизации enterprise-уровня.
 Что учесть позже:
 - Добавить command layer с явными safety-ограничениями, аудитом и idempotency для ручных действий.
+
+[ADR]
+Дата: 2026-04-14
+Тема: Введение синхронного Scheduler/Process Manager после подключения persistence
+Контекст: После появления PostgreSQL-персистентности runtime перестал быть строго одноразовым, но отсутствовал управляемый lifecycle для повторной обработки `waiting_retry` карточек.
+Решение:
+- Ввести отдельный инфраструктурный слой process manager (DeliveryProcessManager) поверх DeliveryRuntime.
+- Вынести выбор кандидатов в отдельный selection/query компонент DeliveryRuntimeSelector.
+- Оставить retry/fallback/deduplication решения в существующих policy/use-case модулях application-слоя.
+Почему выбран этот вариант:
+- Закрывает операционный разрыв между «есть сохраненное состояние» и «нет повторного исполнения».
+- Сохраняет слоевые границы: scheduler не принимает бизнес-решения.
+- Избегает преждевременной production-сложности (broker/workers/distributed orchestration).
+Последствия:
+- Runtime lifecycle поддерживает run_once, run_retry_cycle, run_all_pending.
+- Появилась единая ProcessManagerSummary для локального контроля execution.
+Ограничения:
+- Нет time-based расписания и background исполнения.
+- Нет distributed lock/coordination и broker-based очередей.
+Что учесть позже:
+- При переходе к real transport и command-side добавить безопасные operator-команды и наблюдаемость, не размывая policy-границы.

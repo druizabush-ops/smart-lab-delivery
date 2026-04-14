@@ -452,3 +452,30 @@ Dependency wiring:
 - Добавлен точечный bootstrap: при прямом запуске в sys.path добавляется корень проекта (родитель scripts), после чего импорт src.presentation.operator_api становится доступен.
 Что изменилось в архитектуре:
 - Архитектура API и границы слоев не менялись; исправлены только тестовая конфигурация и способ локального старта скрипта.
+
+[Изменение]
+Дата: 2026-04-14
+Ветка: work
+Блок: Реализация scheduler / process manager слоя
+Файлы: src/infrastructure/runtime/delivery_runtime.py; src/infrastructure/runtime/delivery_runtime_selector.py; src/infrastructure/runtime/delivery_process_manager.py; src/infrastructure/runtime/__init__.py; src/config/container.py; scripts/run_process_manager.py; tests/unit/infrastructure/test_delivery_process_manager.py; docs/ARCHITECTURE_OVERVIEW.txt; docs/DECISIONS.txt; docs/TECH_DEBT.txt; docs/SETUP_WINDOWS.txt; docs/TEST_PLAN.txt; docs/PROJECT_JOURNAL.txt
+Причина: После подключения persistence системе требовался управляемый execution lifecycle между циклами, включая повторную обработку карточек в waiting_retry.
+Что сделано:
+- Добавлен DeliveryRuntimeSelector как отдельный selection/query слой для runtime-кандидатов.
+- Добавлен DeliveryProcessManager с lifecycle API: run_once, run_retry_cycle, run_all_pending.
+- Введен ProcessManagerSummary с метриками цикла (new/reprocessed/retry/processed/outcome counters).
+- DeliveryRuntime расширен методом enqueue_cards для повторной постановки существующих карточек в очередь.
+- Container wiring расширен компонентами selector + process manager.
+- Добавлен CLI-скрипт scripts/run_process_manager.py для прозрачного локального запуска lifecycle цикла.
+Какие правила сохранены:
+- Scheduler/process manager не принимает retry/fallback/deduplication решений.
+- Business-решения остались в policy/use-case слое application.
+- Persistence используется как источник состояния между циклами.
+Что покрыто тестами:
+- Подбор waiting_retry карточек.
+- Исключение done/manual_review/exhausted из pending-переобработки.
+- Проверка run_once-сценария process manager.
+- Проверка summary-метрик и postgres-совместимости selector (sqlite surrogate).
+Ограничения этапа:
+- Реализация синхронная, без background scheduling.
+- Нет distributed execution и broker-based orchestration.
+Следующий шаг: После стабилизации process manager перейти к command-side operator сценариям и интеграции real transport с учетом безопасных ручных команд.

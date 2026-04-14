@@ -53,6 +53,12 @@ class DeliveryRuntime:
             card_ids.append(card_id)
         return card_ids
 
+    def enqueue_cards(self, card_ids: list[str]) -> None:
+        """Добавляет существующие карточки в runtime-очередь для следующего цикла."""
+
+        for card_id in card_ids:
+            self._queue.enqueue(card_id)
+
     def run_once(self, *, created_cards_count: int = 0) -> DeliveryRunSummary:
         """Выполняет один полный прогон накопленной очереди карточек."""
 

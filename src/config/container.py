@@ -20,7 +20,7 @@ from src.domain.entities import Patient
 from src.infrastructure.queue import InMemoryDeliveryQueue
 from src.infrastructure.repositories import InMemoryDeliveryCardRepository
 from src.config.runtime_settings import RuntimeSettings
-from src.infrastructure.runtime import DeliveryRuntime
+from src.infrastructure.runtime import DeliveryProcessManager, DeliveryRuntime, DeliveryRuntimeSelector
 from src.integration.delivery import EmailDeliveryProvider, MaxDeliveryProvider
 from src.integration.logging import LoggerAdapter
 from src.integration.renovatio import RenovatioClient
@@ -87,6 +87,14 @@ class AppContainer:
             orchestrator=self.delivery_orchestrator,
             repository=self.delivery_card_repository,
             queue=self.delivery_queue,
+        )
+
+        self.delivery_runtime_selector = DeliveryRuntimeSelector(
+            repository=self.delivery_card_repository,
+        )
+        self.delivery_process_manager = DeliveryProcessManager(
+            runtime=self.delivery_runtime,
+            selector=self.delivery_runtime_selector,
         )
 
         # Read-only operator API stack.
