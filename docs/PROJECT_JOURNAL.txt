@@ -501,3 +501,20 @@ Dependency wiring:
 Что остается незавершенным:
 - production hardening (ретраи транспорта, мониторинг, rate-limit control, секрет-менеджмент).
 - живые интеграционные тесты с внешними системами.
+
+[Изменение]
+Дата: 2026-04-14
+Ветка: work
+Блок: Очистка real integration adapters от stub-эвристик
+Файлы: src/integration/delivery/max_provider.py; src/integration/delivery/email_provider.py; src/integration/renovatio/client.py; tests/unit/integration/test_max_real_adapter.py; tests/unit/integration/test_email_real_adapter.py; tests/unit/integration/test_stub_mode_adapters.py; docs/TECH_DEBT.txt; docs/PROJECT_JOURNAL.txt
+Причина: Убрать тестовые эвристики из real-контура интеграций и зафиксировать разделение ответственности между real/stub режимами.
+Что сделано:
+- Удалены эвристики `endswith(...)` из адаптеров MAX и Email; deterministic stub-логика оставлена только в `mode="stub"` через явные наборы идентификаторов.
+- В real-режиме MAX/Email адаптеры больше не симулируют ошибки и возвращают ошибку только при проблемах transport/config/mapping.
+- Для MAX-доставки добавлен docstring-комментарий о временном identity mapping (`patient_id -> MAX user_id`) и необходимости выделения в отдельный service слой.
+- В Renovatio adapter оставлен dual-mode с явным комментарием о временности совмещенной реализации (stub via `seed_results`, real via HTTP).
+- Добавлены unit-тесты, отдельно проверяющие deterministic stub-поведение адаптеров, и обновлены real-тесты, чтобы они не опирались на суффиксы id.
+Какие ограничения real integration зафиксированы:
+- В real transport контуре не допускается искусственная симуляция ошибок внутри адаптера.
+- Ошибки real-режима ограничены transport/config/внешним контрактом интеграции.
+- Renovatio/MAX/Email все еще работают в dual-mode реализациях в рамках одного класса (tech debt).

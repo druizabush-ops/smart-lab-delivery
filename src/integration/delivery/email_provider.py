@@ -14,6 +14,8 @@ from src.integration.errors import IntegrationErrorKind, IntegrationFailure
 class EmailDeliveryProvider(DeliveryProvider):
     """Провайдер email-отправки с dual-mode и централизованным mapping ошибок."""
 
+    _STUB_FAILURE_PATIENT_IDS = frozenset({"patient-003"})
+
     def __init__(self, *, mode: str = "stub", settings: EmailSettings | None = None) -> None:
         self._mode = mode
         self._settings = settings or EmailSettings.from_env()
@@ -23,7 +25,7 @@ class EmailDeliveryProvider(DeliveryProvider):
             return self._error_attempt("Email provider получил карточку с неподдерживаемым каналом.")
 
         if self._mode != "real":
-            if card.patient_id.endswith("3"):
+            if card.patient_id in self._STUB_FAILURE_PATIENT_IDS:
                 return self._error_attempt("EMAIL stub: имитация недоступности SMTP-провайдера.")
             return DeliveryAttempt(timestamp=datetime.utcnow(), channel=DeliveryChannel.EMAIL, result=AttemptStatus.SUCCESS)
 

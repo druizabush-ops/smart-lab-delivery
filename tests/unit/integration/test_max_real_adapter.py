@@ -8,9 +8,9 @@ from src.domain.statuses import AttemptStatus, LabResultStatus
 from src.integration.delivery import MaxDeliveryProvider
 
 
-def _build_card() -> DeliveryCard:
-    patient = Patient(id="patient-001", full_name="Иван")
-    lab_result = LabResult(id="lr-001", patient_id="patient-001", status=LabResultStatus.READY)
+def _build_card(*, patient_id: str = "patient-001", lab_result_id: str = "lr-001") -> DeliveryCard:
+    patient = Patient(id=patient_id, full_name="Иван")
+    lab_result = LabResult(id=lab_result_id, patient_id=patient_id, status=LabResultStatus.READY)
     return DeliveryCard.create(patient, lab_result, DeliveryChannel.MAX)
 
 
@@ -36,7 +36,7 @@ def test_max_real_provider_builds_request_with_authorization_header() -> None:
         http_client=httpx.Client(transport=httpx.MockTransport(handler)),
     )
 
-    attempt = provider.send(_build_card())
+    attempt = provider.send(_build_card(lab_result_id="lr-002"))
 
     assert attempt.result is AttemptStatus.SUCCESS
     assert captured["url"].endswith("/messages")

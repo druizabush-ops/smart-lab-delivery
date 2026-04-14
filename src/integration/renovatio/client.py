@@ -14,6 +14,8 @@ from src.integration.errors import IntegrationErrorKind, IntegrationFailure
 
 class RenovatioClient(LabResultProvider):
     """Адаптер к Renovatio c поддержкой dual-mode (stub/real)."""
+    # Временное решение: один адаптер поддерживает stub и real режим.
+    # В будущем может быть разделено на отдельные реализации.
 
     def __init__(
         self,
