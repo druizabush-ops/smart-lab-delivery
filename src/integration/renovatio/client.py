@@ -81,7 +81,11 @@ class RenovatioClient(LabResultProvider):
         return data[0] if isinstance(data, list) else data
 
     def _call_api(self, method_name: str, payload: dict[str, Any]) -> Any:
-        """Выполняет form-urlencoded запрос в Renovatio и извлекает поле data."""
+        """Выполняет form-urlencoded запрос в Renovatio и извлекает поле data.
+
+        Для real режима используется фактический HTTP-контракт Renovatio:
+        POST <base_url>/<api_version>/<method> или POST <base_url>/<method>.
+        """
 
         if not self._settings.api_key:
             raise IntegrationFailure(
@@ -91,13 +95,12 @@ class RenovatioClient(LabResultProvider):
 
         body: dict[str, Any] = {
             "api_key": self._settings.api_key,
-            "method": method_name,
-            "api_version": self._settings.api_version,
             **payload,
         }
+        method_url = self._build_method_url(method_name)
 
         try:
-            response = self._http_client.post(self._settings.base_url, data=body)
+            response = self._http_client.post(method_url, data=body)
             response.raise_for_status()
         except httpx.TimeoutException as exc:
             raise IntegrationFailure(IntegrationErrorKind.TIMEOUT, "Renovatio timeout.") from exc
@@ -124,6 +127,15 @@ class RenovatioClient(LabResultProvider):
             raise IntegrationFailure(IntegrationErrorKind.BAD_RESPONSE, f"Renovatio error: {error}")
 
         return parsed.get("data")
+
+    def _build_method_url(self, method_name: str) -> str:
+        """Строит URL метода Renovatio по real HTTP-контракту."""
+
+        base_url = self._settings.base_url.rstrip("/")
+        api_version = self._settings.api_version.strip()
+        if api_version:
+            return f"{base_url}/{api_version}/{method_name}"
+        return f"{base_url}/{method_name}"
 
     @staticmethod
     def _to_lab_result(patient_id: str, raw_result: dict[str, Any]) -> LabResult:

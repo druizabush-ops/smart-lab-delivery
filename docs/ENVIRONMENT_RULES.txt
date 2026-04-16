@@ -19,9 +19,9 @@
 - SLD_DATABASE_URL (приоритетнее host/port/name/user/password)
 
 4. Renovatio env (real mode)
-- SLD_RENOVATIO_BASE_URL (обязательно для real).
+- SLD_RENOVATIO_BASE_URL (обязательно для real; общий endpoint API без имени метода, пример: `https://app.rnova.org/api/public`).
 - SLD_RENOVATIO_API_KEY (обязательно для real).
-- SLD_RENOVATIO_API_VERSION (опционально, по умолчанию `1`).
+- SLD_RENOVATIO_API_VERSION (опционально, по умолчанию `1`; если пусто, метод вызывается как `<base_url>/<method>`).
 - SLD_RENOVATIO_TIMEOUT_SECONDS (опционально, по умолчанию `10`).
 - SLD_RENOVATIO_PATIENT_IDS (опционально, CSV patient_id для чтения ready flow).
 

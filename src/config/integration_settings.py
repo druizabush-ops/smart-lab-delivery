@@ -16,9 +16,15 @@ class RenovatioSettings:
 
     @classmethod
     def from_env(cls) -> "RenovatioSettings":
+        """Читает настройки Renovatio из переменных окружения.
+
+        SLD_RENOVATIO_BASE_URL должен указывать на общий API endpoint
+        без имени метода, например: https://app.rnova.org/api/public.
+        """
+
         patient_ids = tuple(filter(None, [item.strip() for item in os.getenv("SLD_RENOVATIO_PATIENT_IDS", "").split(",")]))
         return cls(
-            base_url=os.getenv("SLD_RENOVATIO_BASE_URL", "https://api.renovatio.example.org"),
+            base_url=os.getenv("SLD_RENOVATIO_BASE_URL", "https://app.rnova.org/api/public"),
             api_key=os.getenv("SLD_RENOVATIO_API_KEY", ""),
             api_version=os.getenv("SLD_RENOVATIO_API_VERSION", "1"),
             timeout_seconds=float(os.getenv("SLD_RENOVATIO_TIMEOUT_SECONDS", "10")),
