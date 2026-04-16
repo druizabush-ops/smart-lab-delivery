@@ -448,3 +448,30 @@ Invoke-WebRequest "https://<ваш-домен>/api/patient/docs"
 Invoke-WebRequest "https://<ваш-домен>/api/patient/openapi.json"
 ```
 Ожидаемо: docs и openapi.json доступны по обоим prefix, без ручных правок на сервере.
+
+32. Локальная диагностика real Renovatio client
+```powershell
+# Включить real integration mode
+$env:SLD_INTEGRATION_MODE = "real"
+
+# Renovatio real API (без коммита секретов в git)
+$env:SLD_RENOVATIO_BASE_URL = "https://app.rnova.org/api/public"
+$env:SLD_RENOVATIO_API_KEY = "<secret>"
+$env:SLD_RENOVATIO_API_VERSION = "1"
+$env:SLD_RENOVATIO_TIMEOUT_SECONDS = "10"
+
+# Опционально для getReadyResults (CSV patient_id)
+$env:SLD_RENOVATIO_PATIENT_IDS = "1"
+
+# Диагностический запуск
+python .\scripts\test_renovatio_real.py
+```
+Ожидаемо:
+- Скрипт последовательно проверяет `getPatient("1")`, `getPatientLabResults("1")`, `getReadyResults()`.
+- При успешном ответе печатается блок `[УСПЕХ]`.
+- При проблеме auth/контракта/данных печатается контролируемая ошибка без падения runtime-потока проекта.
+
+33. Важное ограничение диагностики Renovatio
+- `scripts/test_renovatio_real.py` — только локальный диагностический entrypoint.
+- Скрипт не заменяет production patient identification/auth flow.
+- `patient_id=1` используется как диагностическая точка и не является production-контрактом.

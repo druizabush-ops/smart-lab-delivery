@@ -669,3 +669,26 @@ Dependency wiring:
 - Dev-only диагностические поля в UI нужно удалить после стабилизации.
 - Клиентский MAX context по-прежнему требует server-side валидации подписи для полного security-контура.
 Связанные блоки: Staging hardening, Nginx reverse proxy, MAX mini app.
+
+[Багфикс]
+Дата: 2026-04-16
+Ветка: codex/consolidate-staging-fixes-into-codebase
+Блок: Исправление real HTTP-контракта Renovatio и добавление локальной диагностической проверки
+Файлы: src/integration/renovatio/client.py; tests/unit/integration/test_renovatio_real_adapter.py; scripts/test_renovatio_real.py; src/config/integration_settings.py; docs/ENVIRONMENT_RULES.txt; docs/SETUP_WINDOWS.txt; docs/TECH_DEBT.txt; docs/PROJECT_JOURNAL.txt
+Причина: Real-режим Renovatio использовал неверный HTTP-контракт (method/api_version в form body и POST на base_url без method path), из-за чего невозможно корректно проверить живой API.
+Что было неверно в контракте:
+- method передавался в body вместо URL path;
+- вызов выполнялся на base_url без добавления имени метода;
+- фактический контракт Renovatio требует POST на `<base_url>/<version>/<method>` или `<base_url>/<method>`.
+Что сделано:
+- В `RenovatioClient._call_api` method перенесен в URL path, а в form body оставлены только `api_key` и payload параметров метода.
+- Добавлена сборка URL с учетом опционального `SLD_RENOVATIO_API_VERSION`.
+- Добавлен локальный диагностический скрипт `python scripts/test_renovatio_real.py` для безопасной проверки `getPatient`, `getPatientLabResults`, `getReadyResults`.
+- Обновлены unit-тесты real adapter на проверку URL/body-контракта и сохранения обработки ошибок.
+- Уточнен дефолтный `SLD_RENOVATIO_BASE_URL` и документация env/локальной проверки.
+Что изменилось в архитектуре:
+- Dual-mode сохранен в существующем integration adapter (`stub`/`real`) без добавления новых слоев и дублирующих клиентов.
+Ограничения:
+- Это диагностический шаг и подготовка к live API, а не полноценный patient identification/auth flow.
+- Скрипт не гарантирует, что patient_id=1 существует в конкретной инсталляции Renovatio.
+Следующий шаг: реализовать реальный patient identification/auth flow поверх уже корректного real HTTP-контракта Renovatio.
