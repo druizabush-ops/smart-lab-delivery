@@ -310,3 +310,18 @@
 - Отсутствие `patient_id=1` в целевой системе не является дефектом контракта само по себе.
 Когда пересмотреть: При реализации полноценного patient identification/auth flow и связывания MAX ↔ patient.
 Что будет признаком, что пора заменить решение: Появление production-safe сценария идентификации пациента и авторизации без ручного ввода диагностических идентификаторов.
+
+[Технический долг]
+Дата: 2026-04-16
+Ветка: work
+Блок: Renovatio patient auth flow пока диагностический
+Что временно:
+- Patient-facing auth методы (`authPatient/checkAuthCode/refreshPatientKey/getPatientInfo/getPatientLabResults/getPatientLabResultDetails`) добавлены в интеграционный адаптер как foundation, но используются только диагностическим script.
+- Runtime lifecycle `patient_key` не встроен в production backend flow.
+- Production session, identity binding и MAX ↔ patient linking не реализованы.
+Почему это временно: Текущий блок ограничен подготовкой корректного контракта и локальной проверкой без изменения patient API/mini app.
+Какие ограничения:
+- Нет серверного хранения/обновления patient_key.
+- Нет полноценного production login flow пациента.
+Когда пересмотреть: На следующем этапе интеграции patient-facing backend контура.
+Что будет признаком, что пора заменить решение: Переход к production patient auth/session management и secure identity-linking между MAX и пациентом.

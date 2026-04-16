@@ -111,3 +111,17 @@ Unsafe defaults (запрещены в release-like):
   - operator API: `root_path=/api/operator`
   - patient API: `root_path=/api/patient`
 - Swagger/OpenAPI должны открываться за соответствующим prefix без ручного rewriting путей.
+
+14. Renovatio patient auth diagnostics env (обновление 2026-04-16)
+Для локальной проверки `scripts/test_renovatio_patient_auth_flow.py`:
+- Обязательные env:
+  - `SLD_RENOVATIO_BASE_URL`
+  - `SLD_RENOVATIO_API_KEY`
+- Опциональные env:
+  - `SLD_RENOVATIO_API_VERSION`
+  - `SLD_RENOVATIO_TIMEOUT_SECONDS`
+
+Уточнения по контракту:
+- API key остается общим ключом интеграции (system-side + patient-facing вызовы).
+- `patient_key` — runtime-результат методов `authPatient/checkAuthCode`, не задается через env.
+- `patient_key` запрещено хранить в `.env` и в репозитории.

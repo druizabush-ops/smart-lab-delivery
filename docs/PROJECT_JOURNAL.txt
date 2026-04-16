@@ -692,3 +692,24 @@ Dependency wiring:
 - Это диагностический шаг и подготовка к live API, а не полноценный patient identification/auth flow.
 - Скрипт не гарантирует, что patient_id=1 существует в конкретной инсталляции Renovatio.
 Следующий шаг: реализовать реальный patient identification/auth flow поверх уже корректного real HTTP-контракта Renovatio.
+
+[Изменение]
+Дата: 2026-04-16
+Ветка: work
+Блок: Подготовка patient auth flow для Renovatio
+Файлы: src/integration/renovatio/client.py; tests/unit/integration/test_renovatio_real_adapter.py; scripts/test_renovatio_patient_auth_flow.py; docs/PROJECT_JOURNAL.txt; docs/ENVIRONMENT_RULES.txt; docs/SETUP_WINDOWS.txt; docs/TECH_DEBT.txt
+Причина: По результатам практической проверки контракта выяснено, что patient-facing методы Renovatio требуют patient_key (получаемый через authPatient/checkAuthCode), и этот foundation нужно заложить до интеграции в mini app и patient API.
+Что сделано:
+- В существующем Renovatio adapter явно разделены system-side методы и patient-facing методы без дублирования клиента.
+- Исправлен системный вызов getPatient: теперь передается параметр id (вместо patient_id).
+- Добавлены patient-facing методы: authPatient/checkAuthCode/refreshPatientKey/getPatientInfo/getPatientLabResults/getPatientLabResultDetails.
+- Добавлен локальный диагностический entrypoint scripts/test_renovatio_patient_auth_flow.py для ручного прохождения auth + 2FA + проверок patient_key сценария.
+- Обновлены unit-тесты real adapter на новый contract и payload-и.
+Что изменилось в архитектуре:
+- Dual-mode сохранен: runtime flow get_ready_results не изменялся, patient-facing методы доступны только в real режиме как контролируемое ограничение.
+- Patient auth diagnostics вынесен в отдельный script и не встроен в production business flow.
+Риски / ограничения:
+- Foundation не реализует production session lifecycle и identity binding.
+- Не реализована интеграция patient_key в backend runtime и mini app контур.
+Следующий шаг:
+- Встроить auth flow в backend/patient-facing контур с безопасным управлением lifecycle patient_key и последующим MAX↔patient linking.
