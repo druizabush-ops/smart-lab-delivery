@@ -1,0 +1,18 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Env
+.env
+
+# Node
+node_modules/
+dist/
+package-lock.json
+
+# Build artifacts
+*.tsbuildinfo
+
+# Frontend compiled JS (если используешь TS)
+frontend/miniapp/src/**/*.js
