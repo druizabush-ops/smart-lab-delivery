@@ -643,3 +643,29 @@ Dependency wiring:
 - Часть проверок остается manual (реальные внешние транспорты, mini app в целевой среде).
 - Rate limit и часть операционных механизмов остаются in-memory уровнем.
 Текущий статус готовности проекта: Ready for controlled go-live rehearsal / handoff с явным перечнем ограничений.
+
+[Багфикс]
+Дата: 2026-04-16
+Ветка: work
+Блок: Фиксация staging-исправлений (MAX + nginx + mini app)
+Файлы: src/presentation/operator_api/app.py; src/presentation/patient_api/app.py; tests/integration/test_hardening_endpoints.py; frontend/miniapp/index.html; frontend/miniapp/src/max/context.ts; frontend/miniapp/src/max/context.test.ts; frontend/miniapp/src/App.tsx; frontend/miniapp/src/App.test.tsx; docs/ENVIRONMENT_RULES.txt; docs/SETUP_WINDOWS.txt; docs/TECH_DEBT.txt; docs/PROJECT_JOURNAL.txt
+Причина: На staging исправления были сделаны вручную на VPS, но не зафиксированы в Git, что создавало риск расхождения окружений.
+Что сделано:
+- Для FastAPI приложений зафиксированы `root_path` значения `/api/operator` и `/api/patient` для корректной работы за nginx prefix.
+- Добавлены интеграционные проверки Swagger/OpenAPI за prefix и доступности health endpoint-ов.
+- В mini app подключен официальный MAX WebApp bridge (`https://st.max.ru/js/max-web-app.js`) до старта React.
+- MAX context слой расширен: чтение `initData`, `initDataUnsafe`, `start_param`, `user.id`, `platform`, `version`, а также флаги `isInsideMax`, `hasInitData`, `hasUser`, `hasStartParam`.
+- Убран localhost fallback для API: теперь base URL берется из `VITE_PATIENT_API_BASE_URL`, иначе используется relative `/api/patient`.
+- Добавлена временная dev-only UI диагностика (`insideMax`, `hasInitData`, `patientId`) и unit-тесты context/base URL smoke.
+- Обновлены ENV/SETUP/TECH_DEBT документы для воспроизводимости staging-поведения через Git.
+Что изменилось в архитектуре:
+- Префиксная reverse-proxy совместимость закреплена на уровне приложения и тестов.
+- MAX bridge (transport/runtime) остается изолированным от API-клиента; логика base URL централизована в frontend слое конфигурации.
+Что нужно проверить:
+- Доступность `/api/operator/docs`, `/api/operator/openapi.json`, `/api/patient/docs`, `/api/patient/openapi.json` за nginx.
+- Корректность mini app контекста как внутри MAX, так и вне MAX.
+- Отсутствие localhost URL в сетевых запросах mini app.
+Риски / ограничения:
+- Dev-only диагностические поля в UI нужно удалить после стабилизации.
+- Клиентский MAX context по-прежнему требует server-side валидации подписи для полного security-контура.
+Связанные блоки: Staging hardening, Nginx reverse proxy, MAX mini app.

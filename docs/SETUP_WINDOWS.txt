@@ -419,3 +419,32 @@ Set-Location .\frontend\miniapp
 npm run build
 Set-Location ..\..
 ```
+
+33. Проверка mini app + MAX context (staging fix consolidation)
+```powershell
+# Перейти в mini app
+Set-Location .\frontend\miniapp
+
+# Опционально: явный base URL (если не задан, используется /api/patient)
+$env:VITE_PATIENT_API_BASE_URL = "https://<ваш-домен>/api/patient"
+
+# Запуск dev-сервера
+npm install
+npm run dev
+```
+Проверить в браузере:
+- вне MAX отображается fallback-режим;
+- при mock `window.WebApp` корректно читаются `initData`, `initDataUnsafe`, `start_param`, `user.id`;
+- API-запросы не используют localhost fallback.
+
+34. Проверка Swagger/OpenAPI за nginx prefix
+```powershell
+# Operator API docs/openapi за prefix
+Invoke-WebRequest "https://<ваш-домен>/api/operator/docs"
+Invoke-WebRequest "https://<ваш-домен>/api/operator/openapi.json"
+
+# Patient API docs/openapi за prefix
+Invoke-WebRequest "https://<ваш-домен>/api/patient/docs"
+Invoke-WebRequest "https://<ваш-домен>/api/patient/openapi.json"
+```
+Ожидаемо: docs и openapi.json доступны по обоим prefix, без ручных правок на сервере.

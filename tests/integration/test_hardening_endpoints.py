@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from src.config.security_settings import SecuritySettings
 from src.infrastructure.repositories import InMemoryDeliveryCardRepository
 from src.presentation.operator_api import create_operator_api_app
+from src.presentation.patient_api import create_patient_api_app
 
 
 class _Container:
@@ -33,6 +34,26 @@ def test_health_endpoints_available() -> None:
     assert live.status_code == 200
     assert ready.status_code == 200
     assert ready.json()["status"] in {"ready", "not_ready"}
+
+
+def test_root_path_docs_and_openapi_available_for_nginx_prefixes() -> None:
+    operator_client = TestClient(create_operator_api_app(container=_Container()))
+    patient_client = TestClient(create_patient_api_app(container=_Container()))
+
+    operator_docs = operator_client.get("/docs")
+    patient_docs = patient_client.get("/docs")
+    operator_openapi = operator_client.get("/openapi.json")
+    patient_openapi = patient_client.get("/openapi.json")
+
+    assert operator_docs.status_code == 200
+    assert "/api/operator/openapi.json" in operator_docs.text
+    assert patient_docs.status_code == 200
+    assert "/api/patient/openapi.json" in patient_docs.text
+
+    assert operator_openapi.status_code == 200
+    assert patient_openapi.status_code == 200
+    assert operator_openapi.json()["servers"][0]["url"] == "/api/operator"
+    assert patient_openapi.json()["servers"][0]["url"] == "/api/patient"
 
 
 def test_patient_endpoint_rejects_unsafe_context_in_strict_mode(monkeypatch) -> None:

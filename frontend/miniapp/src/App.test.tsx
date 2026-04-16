@@ -20,6 +20,7 @@ describe("App", () => {
     render(<App />);
     await waitFor(() => expect(screen.getByText("Доступные результаты")).toBeInTheDocument());
     expect(screen.getByText(/card-1/)).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith("/api/patient/patient/results?patient_id=patient-001");
   });
 
   it("рендерит no-results state", async () => {
