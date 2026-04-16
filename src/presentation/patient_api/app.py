@@ -12,7 +12,11 @@ from src.presentation.patient_api.routers.results import router as results_route
 
 def create_patient_api_app(container: AppContainer | None = None) -> FastAPI:
     app_container = container or AppContainer()
-    app = FastAPI(title="Smart Lab Delivery Patient API", version="0.1.0")
+    app = FastAPI(
+        title="Smart Lab Delivery Patient API",
+        version="0.1.0",
+        root_path="/api/patient",
+    )
     app.state.security_settings = app_container.security_settings
     app.state.patient_result_read_service = PatientResultReadService(
         repository=app_container.delivery_card_repository,

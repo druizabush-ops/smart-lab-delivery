@@ -6,11 +6,19 @@ import { ResultDetails } from "./components/ResultDetails";
 import { ResultList } from "./components/ResultList";
 import { getMaxContext, parseStartParam } from "./max/context";
 
-const baseUrl = import.meta.env.VITE_PATIENT_API_BASE_URL ?? "http://127.0.0.1:8001";
+export function resolvePatientApiBaseUrl(): string {
+  const configuredBaseUrl = import.meta.env.VITE_PATIENT_API_BASE_URL;
+  if (configuredBaseUrl && configuredBaseUrl.trim().length > 0) {
+    return configuredBaseUrl;
+  }
+  return "/api/patient";
+}
 
 export function App(): JSX.Element {
   const context = getMaxContext();
   const start = parseStartParam(context.startParam);
+  const showDebugInfo = import.meta.env.DEV;
+  const baseUrl = resolvePatientApiBaseUrl();
   const api = useMemo(() => new ResultsApi(new ApiClient({ baseUrl })), []);
   const [results, setResults] = useState<PatientResult[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(start.mode === "result" ? start.resultId ?? null : null);
@@ -42,6 +50,11 @@ export function App(): JSX.Element {
         {!context.isInsideMax ? <p>Режим вне MAX: используется fallback-контекст.</p> : null}
         <p>Platform: {context.platform} / version: {context.version}</p>
         {context.startParam ? <p>start_param: {context.startParam}</p> : null}
+        {showDebugInfo ? (
+          <p>
+            insideMax: {String(context.isInsideMax)} / hasInitData: {String(context.hasInitData)} / patientId: {context.patientId ?? "n/a"}
+          </p>
+        ) : null}
 
         {loading ? <p>Загрузка...</p> : null}
         {!loading && !context.patientId ? <p>Не удалось определить patient_id из MAX контекста.</p> : null}

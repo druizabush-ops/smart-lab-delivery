@@ -102,3 +102,12 @@ Unsafe defaults (запрещены в release-like):
 - SLD_DATABASE_URL с `postgres:postgres`.
 - SLD_EMAIL_SMTP_HOST=localhost.
 - Заглушечные example URL для внешних интеграций.
+
+13. Staging fix consolidation (обновление 2026-04-16)
+- `VITE_PATIENT_API_BASE_URL` теперь опционален; при отсутствии frontend mini app использует relative base URL `/api/patient`.
+- Relative base URL обязателен для reverse-proxy (nginx) и HTTPS-терминации без localhost fallback.
+- Для prod/staging запрещено использовать localhost значения во frontend API base URL.
+- FastAPI приложения публикуются за nginx prefix:
+  - operator API: `root_path=/api/operator`
+  - patient API: `root_path=/api/patient`
+- Swagger/OpenAPI должны открываться за соответствующим prefix без ручного rewriting путей.
