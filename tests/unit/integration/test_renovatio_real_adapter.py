@@ -70,6 +70,7 @@ def test_real_renovatio_builds_url_without_version_when_version_is_empty() -> No
 
     assert captured_url == "https://renovatio.local/api/getPatient"
     assert captured_body["api_key"] == "key"
+    assert captured_body["id"] == "patient-1"
     assert "method" not in captured_body
 
 
@@ -85,3 +86,160 @@ def test_real_renovatio_raises_on_api_error_field() -> None:
 
     with pytest.raises(IntegrationFailure):
         adapter.get_patient("patient-1")
+
+
+def test_real_renovatio_auth_patient_uses_login_password_payload() -> None:
+    captured_body: dict[str, str] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal captured_body
+        captured_body = dict(parse_qsl(request.content.decode()))
+        return httpx.Response(200, json={"error": None, "data": {"patient_id": "p-1"}})
+
+    adapter = RenovatioClient(
+        mode="real",
+        settings=RenovatioSettings("https://renovatio.local/api", "key", "1", 2, ("patient-1",)),
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    response = adapter.auth_patient(login="demo", password="secret")
+
+    assert response["patient_id"] == "p-1"
+    assert captured_body["login"] == "demo"
+    assert captured_body["password"] == "secret"
+    assert "phone" not in captured_body
+
+
+def test_real_renovatio_auth_patient_uses_phone_payload() -> None:
+    captured_body: dict[str, str] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal captured_body
+        captured_body = dict(parse_qsl(request.content.decode()))
+        return httpx.Response(200, json={"error": None, "data": {"need_auth_key": 1}})
+
+    adapter = RenovatioClient(
+        mode="real",
+        settings=RenovatioSettings("https://renovatio.local/api", "key", "1", 2, ("patient-1",)),
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    response = adapter.auth_patient(phone="+70000000000")
+
+    assert response["need_auth_key"] == 1
+    assert captured_body["phone"] == "+70000000000"
+    assert "login" not in captured_body
+    assert "password" not in captured_body
+
+
+def test_real_renovatio_check_auth_code_uses_patient_id_and_auth_code() -> None:
+    captured_body: dict[str, str] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal captured_body
+        captured_body = dict(parse_qsl(request.content.decode()))
+        return httpx.Response(200, json={"error": None, "data": {"patient_key": "pk-1"}})
+
+    adapter = RenovatioClient(
+        mode="real",
+        settings=RenovatioSettings("https://renovatio.local/api", "key", "1", 2, ("patient-1",)),
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    response = adapter.check_auth_code(patient_id="patient-1", auth_code="1234")
+
+    assert response["patient_key"] == "pk-1"
+    assert captured_body["patient_id"] == "patient-1"
+    assert captured_body["auth_code"] == "1234"
+
+
+def test_real_renovatio_get_patient_info_uses_patient_key() -> None:
+    captured_body: dict[str, str] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal captured_body
+        captured_body = dict(parse_qsl(request.content.decode()))
+        return httpx.Response(200, json={"error": None, "data": {"id": "patient-1", "name": "P"}})
+
+    adapter = RenovatioClient(
+        mode="real",
+        settings=RenovatioSettings("https://renovatio.local/api", "key", "1", 2, ("patient-1",)),
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    response = adapter.get_patient_info("pk-1")
+
+    assert response["id"] == "patient-1"
+    assert captured_body["patient_key"] == "pk-1"
+
+
+def test_real_renovatio_get_patient_lab_results_by_key_uses_patient_key() -> None:
+    captured_body: dict[str, str] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal captured_body
+        captured_body = dict(parse_qsl(request.content.decode()))
+        return httpx.Response(200, json={"error": None, "data": [{"id": "lr-1"}]})
+
+    adapter = RenovatioClient(
+        mode="real",
+        settings=RenovatioSettings("https://renovatio.local/api", "key", "1", 2, ("patient-1",)),
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    response = adapter.get_patient_lab_results_by_key(
+        "pk-1",
+        date_from="2026-01-01",
+        date_to="2026-01-31",
+        lab_id="lab-1",
+        clinic_id="clinic-1",
+    )
+
+    assert response[0]["id"] == "lr-1"
+    assert captured_body["patient_key"] == "pk-1"
+    assert captured_body["date_from"] == "2026-01-01"
+    assert captured_body["date_to"] == "2026-01-31"
+    assert captured_body["lab_id"] == "lab-1"
+    assert captured_body["clinic_id"] == "clinic-1"
+
+
+def test_real_renovatio_get_patient_lab_result_details_by_key_uses_result_id_and_patient_key() -> None:
+    captured_body: dict[str, str] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal captured_body
+        captured_body = dict(parse_qsl(request.content.decode()))
+        return httpx.Response(200, json={"error": None, "data": {"id": "lr-1", "status": "ready"}})
+
+    adapter = RenovatioClient(
+        mode="real",
+        settings=RenovatioSettings("https://renovatio.local/api", "key", "1", 2, ("patient-1",)),
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    response = adapter.get_patient_lab_result_details_by_key(
+        "pk-1",
+        "result-1",
+        patient_id="patient-1",
+        lab_id="lab-1",
+        clinic_id="clinic-1",
+    )
+
+    assert response["id"] == "lr-1"
+    assert captured_body["patient_key"] == "pk-1"
+    assert captured_body["result_id"] == "result-1"
+    assert captured_body["patient_id"] == "patient-1"
+    assert captured_body["lab_id"] == "lab-1"
+    assert captured_body["clinic_id"] == "clinic-1"
+
+
+def test_patient_facing_methods_raise_controlled_error_in_stub_mode() -> None:
+    adapter = RenovatioClient(
+        mode="stub",
+        settings=RenovatioSettings("https://renovatio.local/api", "key", "1", 2, ("patient-1",)),
+    )
+
+    with pytest.raises(IntegrationFailure) as exc_info:
+        adapter.get_patient_info("pk-1")
+
+    assert "только в real режиме" in str(exc_info.value)

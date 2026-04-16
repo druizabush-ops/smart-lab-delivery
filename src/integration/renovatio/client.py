@@ -49,7 +49,7 @@ class RenovatioClient(LabResultProvider):
     def get_patient(self, patient_id: str) -> dict[str, Any]:
         """Возвращает нормализованную карточку пациента из Renovatio."""
 
-        data = self._call_api("getPatient", {"patient_id": patient_id})
+        data = self._call_api("getPatient", {"id": patient_id})
         if not data:
             raise IntegrationFailure(IntegrationErrorKind.EMPTY_RESULT, "Renovatio: пациент не найден.")
         patient = data[0] if isinstance(data, list) else data
@@ -79,6 +79,140 @@ class RenovatioClient(LabResultProvider):
                 "Renovatio: детали лабораторного результата отсутствуют.",
             )
         return data[0] if isinstance(data, list) else data
+
+    def auth_patient(
+        self,
+        *,
+        login: str | None = None,
+        password: str | None = None,
+        phone: str | None = None,
+    ) -> dict[str, Any]:
+        """Выполняет patient-facing авторизацию через authPatient."""
+
+        self._ensure_patient_real_mode("authPatient")
+        payload: dict[str, Any] = {}
+
+        if phone:
+            payload["phone"] = phone
+        elif login and password:
+            payload["login"] = login
+            payload["password"] = password
+        else:
+            raise ValueError("Для auth_patient требуется либо phone, либо пара login/password.")
+
+        data = self._call_api("authPatient", payload)
+        if not isinstance(data, dict):
+            raise IntegrationFailure(
+                IntegrationErrorKind.BAD_RESPONSE,
+                "Renovatio: authPatient вернул неожиданный формат.",
+            )
+        return data
+
+    def check_auth_code(self, patient_id: str, auth_code: str) -> dict[str, Any]:
+        """Проверяет 2FA код и возвращает данные patient-facing авторизации."""
+
+        self._ensure_patient_real_mode("checkAuthCode")
+        data = self._call_api("checkAuthCode", {"patient_id": patient_id, "auth_code": auth_code})
+        if not isinstance(data, dict):
+            raise IntegrationFailure(
+                IntegrationErrorKind.BAD_RESPONSE,
+                "Renovatio: checkAuthCode вернул неожиданный формат.",
+            )
+        return data
+
+    def refresh_patient_key(self, patient_key: str) -> dict[str, Any]:
+        """Продлевает patient_key через refreshPatientKey."""
+
+        self._ensure_patient_real_mode("refreshPatientKey")
+        data = self._call_api("refreshPatientKey", {"patient_key": patient_key})
+        if not isinstance(data, dict):
+            raise IntegrationFailure(
+                IntegrationErrorKind.BAD_RESPONSE,
+                "Renovatio: refreshPatientKey вернул неожиданный формат.",
+            )
+        return data
+
+    def get_patient_info(self, patient_key: str) -> dict[str, Any]:
+        """Возвращает профиль пациента по patient_key."""
+
+        self._ensure_patient_real_mode("getPatientInfo")
+        data = self._call_api("getPatientInfo", {"patient_key": patient_key})
+        if not data:
+            raise IntegrationFailure(
+                IntegrationErrorKind.EMPTY_RESULT,
+                "Renovatio: данные профиля пациента отсутствуют.",
+            )
+        return data[0] if isinstance(data, list) else data
+
+    def get_patient_lab_results_by_key(
+        self,
+        patient_key: str,
+        *,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        lab_id: str | None = None,
+        clinic_id: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Возвращает patient-facing список результатов по patient_key."""
+
+        self._ensure_patient_real_mode("getPatientLabResults")
+        payload: dict[str, Any] = {"patient_key": patient_key}
+        if date_from:
+            payload["date_from"] = date_from
+        if date_to:
+            payload["date_to"] = date_to
+        if lab_id:
+            payload["lab_id"] = lab_id
+        if clinic_id:
+            payload["clinic_id"] = clinic_id
+
+        data = self._call_api("getPatientLabResults", payload)
+        if not isinstance(data, list):
+            raise IntegrationFailure(
+                IntegrationErrorKind.BAD_RESPONSE,
+                "Renovatio: список результатов должен быть массивом.",
+            )
+        return data
+
+    def get_patient_lab_result_details_by_key(
+        self,
+        patient_key: str,
+        result_id: str,
+        *,
+        patient_id: str | None = None,
+        lab_id: str | None = None,
+        clinic_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Возвращает patient-facing детали результата по patient_key."""
+
+        self._ensure_patient_real_mode("getPatientLabResultDetails")
+        payload: dict[str, Any] = {
+            "patient_key": patient_key,
+            "result_id": result_id,
+        }
+        if patient_id:
+            payload["patient_id"] = patient_id
+        if lab_id:
+            payload["lab_id"] = lab_id
+        if clinic_id:
+            payload["clinic_id"] = clinic_id
+
+        data = self._call_api("getPatientLabResultDetails", payload)
+        if not data:
+            raise IntegrationFailure(
+                IntegrationErrorKind.EMPTY_RESULT,
+                "Renovatio: детали лабораторного результата отсутствуют.",
+            )
+        return data[0] if isinstance(data, list) else data
+
+    def _ensure_patient_real_mode(self, method_name: str) -> None:
+        """Ограничивает patient-facing методы real режимом как контролируемое допущение."""
+
+        if self._mode != "real":
+            raise IntegrationFailure(
+                IntegrationErrorKind.CONFIG,
+                f"Renovatio: метод {method_name} доступен только в real режиме.",
+            )
 
     def _call_api(self, method_name: str, payload: dict[str, Any]) -> Any:
         """Выполняет form-urlencoded запрос в Renovatio и извлекает поле data.

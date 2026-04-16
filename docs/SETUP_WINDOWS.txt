@@ -475,3 +475,27 @@ python .\scripts\test_renovatio_real.py
 - `scripts/test_renovatio_real.py` — только локальный диагностический entrypoint.
 - Скрипт не заменяет production patient identification/auth flow.
 - `patient_id=1` используется как диагностическая точка и не является production-контрактом.
+
+32. Локальная диагностика Renovatio patient auth flow (PowerShell)
+```powershell
+# Включить real контур интеграции Renovatio
+$env:SLD_INTEGRATION_MODE = "real"
+$env:SLD_RENOVATIO_BASE_URL = "https://app.rnova.org/api/public"
+$env:SLD_RENOVATIO_API_KEY = "<secret>"
+$env:SLD_RENOVATIO_API_VERSION = "1"
+
+# Запустить диагностический сценарий patient auth
+python .\scripts\test_renovatio_patient_auth_flow.py
+```
+
+Ручной сценарий:
+- На шаге authPatient выбрать вариант входа:
+  - телефон;
+  - или login/password.
+- Если API вернул `patient_key` сразу, скрипт перейдет к `getPatientInfo/getPatientLabResults`.
+- Если API вернул `need_auth_key` и `patient_id`, скрипт запросит `auth_code` вручную и выполнит `checkAuthCode`.
+- После получения `patient_key` скрипт выполнит `getPatientInfo`, `getPatientLabResults` и при наличии результатов `getPatientLabResultDetails`.
+
+Ограничения безопасности:
+- Не хардкодить телефон/логин/пароль/auth_code/patient_key в коде.
+- Не сохранять runtime patient_key в env-файлах.
