@@ -286,3 +286,12 @@
 Последствия:
 - Перед выпуском обязателен прогон launch script и checklist.
 - Ручные операции и ограничения явно фиксируются в RUNBOOK/KNOWN_LIMITATIONS.
+
+DECISION: Patient session хранится server-side.
+Причины:
+1) исключить утечку patient_key на frontend;
+2) убрать доверие к patient_id от клиента;
+3) централизовать refreshPatientKey и аудит auth-событий.
+Последствия:
+- backend обязателен для всех patient-facing запросов;
+- нужен TTL сессии и lifecycle управления logout/refresh.

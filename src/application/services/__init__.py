@@ -1,6 +1,5 @@
 """Сервисы orchestration application-слоя."""
 
-from .delivery_orchestrator import DeliveryOrchestrator
 from .delivery_card_read_service import (
     DeliveryAttemptReadModel,
     DeliveryCardQueryFilters,
@@ -29,7 +28,6 @@ __all__ = [
     "DeliveryCardReadModel",
     "DeliveryCardReadService",
     "DeliveryCardSummaryReadModel",
-    "DeliveryOrchestrator",
     "DeliveryPolicy",
     "FallbackPolicy",
     "OperatorActionPolicy",

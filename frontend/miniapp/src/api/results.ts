@@ -16,13 +16,11 @@ export type PatientResult = {
 export class ResultsApi {
   constructor(private readonly client: ApiClient) {}
 
-  list(patientId: string): Promise<PatientResult[]> {
-    return this.client.get<PatientResult[]>(`/patient/results?patient_id=${encodeURIComponent(patientId)}`);
+  list(): Promise<PatientResult[]> {
+    return this.client.get<PatientResult[]>("/patient/results");
   }
 
-  get(resultId: string, patientId: string): Promise<PatientResult> {
-    return this.client.get<PatientResult>(
-      `/patient/results/${encodeURIComponent(resultId)}?patient_id=${encodeURIComponent(patientId)}`,
-    );
+  get(resultId: string): Promise<PatientResult> {
+    return this.client.get<PatientResult>(`/patient/results/${encodeURIComponent(resultId)}`);
   }
 }

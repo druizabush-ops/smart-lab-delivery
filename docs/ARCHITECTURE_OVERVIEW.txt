@@ -187,3 +187,9 @@
   1) Domain/Application/Runtime продолжают выполнять delivery логику.
   2) Launch readiness слой подтверждает возможность безопасного старта.
   3) Runbook/checklist/known limitations задают операционный контур handoff.
+
+Patient Auth Layer (новый слой)
+- Integration: RenovatioClient использует authPatient/checkAuthCode/refreshPatientKey/getPatientInfo.
+- Application: use-cases PatientLoginUseCase, PatientPhoneLoginUseCase, ConfirmPatientAuthCodeUseCase, RefreshPatientSessionUseCase, GetCurrentPatientUseCase.
+- Access: server-side session repository (session_id -> patient_key + метаданные), cookie transport.
+- Presentation: patient auth endpoints + existing patient results endpoints через session context.

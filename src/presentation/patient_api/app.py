@@ -7,6 +7,7 @@ from src.config.container import AppContainer
 from src.presentation.common.errors import register_error_handlers
 from src.presentation.common.health import HealthService, build_health_router
 from src.presentation.common.middleware import CorrelationIdMiddleware, SimpleRateLimitMiddleware
+from src.presentation.patient_api.routers.auth import router as auth_router
 from src.presentation.patient_api.routers.results import router as results_router
 
 
@@ -21,6 +22,13 @@ def create_patient_api_app(container: AppContainer | None = None) -> FastAPI:
     app.state.patient_result_read_service = PatientResultReadService(
         repository=app_container.delivery_card_repository,
     )
+    app.state.patient_login_use_case = app_container.patient_login_use_case
+    app.state.patient_phone_login_use_case = app_container.patient_phone_login_use_case
+    app.state.confirm_patient_auth_code_use_case = app_container.confirm_patient_auth_code_use_case
+    app.state.refresh_patient_session_use_case = app_container.refresh_patient_session_use_case
+    app.state.get_current_patient_use_case = app_container.get_current_patient_use_case
+    app.state.patient_session_repository = app_container.patient_session_repository
+    app.state.renovatio_settings = app_container.renovatio_settings
     app.add_middleware(CorrelationIdMiddleware)
     app.add_middleware(
         SimpleRateLimitMiddleware,
@@ -29,5 +37,6 @@ def create_patient_api_app(container: AppContainer | None = None) -> FastAPI:
     )
     register_error_handlers(app)
     app.include_router(build_health_router(HealthService(app_container)))
+    app.include_router(auth_router)
     app.include_router(results_router)
     return app

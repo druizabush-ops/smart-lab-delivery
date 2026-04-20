@@ -80,26 +80,13 @@ class RenovatioClient(LabResultProvider):
             )
         return data[0] if isinstance(data, list) else data
 
-    def auth_patient(
-        self,
-        *,
-        login: str | None = None,
-        password: str | None = None,
-        phone: str | None = None,
-    ) -> dict[str, Any]:
-        """Выполняет patient-facing авторизацию через authPatient."""
+    def auth_patient_by_login(self, login: str, password: str, lifetime: int | None = None) -> dict[str, Any]:
+        """Выполняет patient-facing авторизацию по login/password."""
 
         self._ensure_patient_real_mode("authPatient")
-        payload: dict[str, Any] = {}
-
-        if phone:
-            payload["phone"] = phone
-        elif login and password:
-            payload["login"] = login
-            payload["password"] = password
-        else:
-            raise ValueError("Для auth_patient требуется либо phone, либо пара login/password.")
-
+        payload: dict[str, Any] = {"login": login, "password": password}
+        if lifetime is not None:
+            payload["lifetime"] = lifetime
         data = self._call_api("authPatient", payload)
         if not isinstance(data, dict):
             raise IntegrationFailure(
@@ -108,11 +95,44 @@ class RenovatioClient(LabResultProvider):
             )
         return data
 
-    def check_auth_code(self, patient_id: str, auth_code: str) -> dict[str, Any]:
+    def auth_patient_by_phone(self, phone: str, lifetime: int | None = None) -> dict[str, Any]:
+        """Выполняет patient-facing авторизацию по телефону."""
+
+        self._ensure_patient_real_mode("authPatient")
+        payload: dict[str, Any] = {"phone": phone}
+        if lifetime is not None:
+            payload["lifetime"] = lifetime
+        data = self._call_api("authPatient", payload)
+        if not isinstance(data, dict):
+            raise IntegrationFailure(
+                IntegrationErrorKind.BAD_RESPONSE,
+                "Renovatio: authPatient вернул неожиданный формат.",
+            )
+        return data
+
+    def auth_patient(
+        self,
+        *,
+        login: str | None = None,
+        password: str | None = None,
+        phone: str | None = None,
+    ) -> dict[str, Any]:
+        """Backwards-compatible wrapper for auth flow."""
+
+        if phone:
+            return self.auth_patient_by_phone(phone)
+        if login and password:
+            return self.auth_patient_by_login(login, password)
+        raise ValueError("Для auth_patient требуется либо phone, либо пара login/password.")
+
+    def check_auth_code(self, patient_id: str, code: str | None = None, auth_code: str | None = None) -> dict[str, Any]:
         """Проверяет 2FA код и возвращает данные patient-facing авторизации."""
 
         self._ensure_patient_real_mode("checkAuthCode")
-        data = self._call_api("checkAuthCode", {"patient_id": patient_id, "auth_code": auth_code})
+        resolved_code = code or auth_code
+        if not resolved_code:
+            raise ValueError("check_auth_code требует code/auth_code")
+        data = self._call_api("checkAuthCode", {"patient_id": patient_id, "auth_code": resolved_code})
         if not isinstance(data, dict):
             raise IntegrationFailure(
                 IntegrationErrorKind.BAD_RESPONSE,
@@ -120,11 +140,14 @@ class RenovatioClient(LabResultProvider):
             )
         return data
 
-    def refresh_patient_key(self, patient_key: str) -> dict[str, Any]:
+    def refresh_patient_key(self, patient_key: str, lifetime: int | None = None) -> dict[str, Any]:
         """Продлевает patient_key через refreshPatientKey."""
 
         self._ensure_patient_real_mode("refreshPatientKey")
-        data = self._call_api("refreshPatientKey", {"patient_key": patient_key})
+        payload: dict[str, Any] = {"patient_key": patient_key}
+        if lifetime is not None:
+            payload["lifetime"] = lifetime
+        data = self._call_api("refreshPatientKey", payload)
         if not isinstance(data, dict):
             raise IntegrationFailure(
                 IntegrationErrorKind.BAD_RESPONSE,
@@ -144,19 +167,26 @@ class RenovatioClient(LabResultProvider):
             )
         return data[0] if isinstance(data, list) else data
 
-    def get_patient_lab_results_by_key(
+    def get_patient_lab_results(
         self,
-        patient_key: str,
+        patient_id: str | None = None,
         *,
+        patient_key: str | None = None,
         date_from: str | None = None,
         date_to: str | None = None,
         lab_id: str | None = None,
         clinic_id: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Возвращает patient-facing список результатов по patient_key."""
+        """Возвращает список результатов: либо по patient_id (operator), либо по patient_key (patient-facing)."""
 
-        self._ensure_patient_real_mode("getPatientLabResults")
-        payload: dict[str, Any] = {"patient_key": patient_key}
+        payload: dict[str, Any]
+        if patient_key:
+            self._ensure_patient_real_mode("getPatientLabResults")
+            payload = {"patient_key": patient_key}
+        elif patient_id:
+            payload = {"patient_id": patient_id}
+        else:
+            raise ValueError("Требуется patient_id или patient_key")
         if date_from:
             payload["date_from"] = date_from
         if date_to:
@@ -174,22 +204,28 @@ class RenovatioClient(LabResultProvider):
             )
         return data
 
-    def get_patient_lab_result_details_by_key(
+    def get_patient_lab_result_details(
         self,
-        patient_key: str,
-        result_id: str,
+        lab_result_id: str | None = None,
         *,
+        patient_key: str | None = None,
+        result_id: str | None = None,
         patient_id: str | None = None,
         lab_id: str | None = None,
         clinic_id: str | None = None,
     ) -> dict[str, Any]:
-        """Возвращает patient-facing детали результата по patient_key."""
+        """Возвращает детали результата: operator by lab_result_id, patient-facing by patient_key+result_id."""
 
-        self._ensure_patient_real_mode("getPatientLabResultDetails")
-        payload: dict[str, Any] = {
-            "patient_key": patient_key,
-            "result_id": result_id,
-        }
+        if patient_key:
+            self._ensure_patient_real_mode("getPatientLabResultDetails")
+            resolved_result_id = result_id
+            if not resolved_result_id:
+                raise ValueError("Для patient-facing деталей требуется result_id")
+            payload: dict[str, Any] = {"patient_key": patient_key, "result_id": resolved_result_id}
+        elif lab_result_id:
+            payload = {"lab_result_id": lab_result_id}
+        else:
+            raise ValueError("Требуется lab_result_id или patient_key+result_id")
         if patient_id:
             payload["patient_id"] = patient_id
         if lab_id:
@@ -204,6 +240,40 @@ class RenovatioClient(LabResultProvider):
                 "Renovatio: детали лабораторного результата отсутствуют.",
             )
         return data[0] if isinstance(data, list) else data
+
+    def get_patient_lab_results_by_key(
+        self,
+        patient_key: str,
+        *,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        lab_id: str | None = None,
+        clinic_id: str | None = None,
+    ) -> list[dict[str, Any]]:
+        return self.get_patient_lab_results(
+            patient_key=patient_key,
+            date_from=date_from,
+            date_to=date_to,
+            lab_id=lab_id,
+            clinic_id=clinic_id,
+        )
+
+    def get_patient_lab_result_details_by_key(
+        self,
+        patient_key: str,
+        result_id: str,
+        *,
+        patient_id: str | None = None,
+        lab_id: str | None = None,
+        clinic_id: str | None = None,
+    ) -> dict[str, Any]:
+        return self.get_patient_lab_result_details(
+            patient_key=patient_key,
+            result_id=result_id,
+            patient_id=patient_id,
+            lab_id=lab_id,
+            clinic_id=clinic_id,
+        )
 
     def _ensure_patient_real_mode(self, method_name: str) -> None:
         """Ограничивает patient-facing методы real режимом как контролируемое допущение."""
