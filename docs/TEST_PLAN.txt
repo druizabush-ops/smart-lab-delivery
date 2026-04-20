@@ -185,3 +185,17 @@
 - MAX context handling с реальным initData.
 - Real transport mode readiness (Renovatio/MAX/SMTP).
 - DB migration readiness на целевой БД и rollback rehearsal.
+
+## Hardening tests alignment после patient auth/session flow (2026-04-20)
+
+Автоматизировано:
+- Integration: `tests/integration/test_hardening_endpoints.py`
+  - `GET /health/live` и `GET /health/ready` доступны в hardening-сборке;
+  - `docs/openapi` корректно учитывают `root_path` для operator и patient API;
+  - strict/security boundary для patient results проверяется через `create_patient_api_app`: без активной server-side session endpoint возвращает `401`, даже при передаче `patient_id` в query.
+- Integration: `tests/integration/test_patient_auth_api.py`
+  - login/refresh/logout/me и phone auth flow подтверждают актуальный session-based patient access.
+
+Важно для регрессии:
+- Security boundary patient API проверяется только через patient app factory и patient session контур.
+- Устаревший сценарий strict-проверки через operator app не используется, чтобы не смешивать operator/patient контуры.

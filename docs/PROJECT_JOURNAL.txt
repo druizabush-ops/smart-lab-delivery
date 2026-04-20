@@ -115,6 +115,20 @@
 Следующий шаг разработки: Формализовать доменные контракты (пациент, результат, карточка доставки) и подготовить проект интерфейса integration/renovatio без реализации транспортных клиентов.
 Связанные блоки: Архитектура, ADR, статусная модель, технический долг, правила сопровождения.
 
+[Багфикс]
+Дата: 2026-04-20
+Ветка: work
+Блок: Выравнивание hardening tests после перехода на patient auth/session flow
+Файлы: tests/integration/test_hardening_endpoints.py; docs/PROJECT_JOURNAL.txt; docs/TEST_PLAN.txt
+Причина: Интеграционный hardening тест использовал устаревший контракт (strict-проверка через operator app и старый test container без patient auth use cases), из-за чего проверки расходились с текущей patient auth/session архитектурой.
+Что сделано:
+- Тестовый контейнер для hardening приведен к актуальному контракту `create_patient_api_app()` и дополнен patient auth/session use cases.
+- Strict-mode сценарий перенесен на корректный путь проверки через patient API (`/patient/results`) без активной сессии.
+- Зафиксирована актуальная граница security: доступ к patient results разрешается только через server-side session, а не через произвольный `patient_id` из клиента.
+Что изменилось в логике: Изменений production-логики нет; обновлен только интеграционный тестовый слой и документация.
+Что изменилось в архитектуре: Архитектура не менялась; тесты синхронизированы с уже внедренным разделением operator/patient и session-based patient access.
+Что нужно проверить: `tests/integration/test_hardening_endpoints.py`, `tests/integration/test_patient_auth_api.py` и полный `pytest` должны проходить без ослабления security-инвариантов.
+
 16. Реестр технического долга
 Поддерживается в docs/TECH_DEBT.txt.
 
