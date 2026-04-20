@@ -13,6 +13,7 @@ class RenovatioSettings:
     api_version: str
     timeout_seconds: float
     seed_patient_ids: tuple[str, ...]
+    patient_key_lifetime_minutes: int = 43200
 
     @classmethod
     def from_env(cls) -> "RenovatioSettings":
@@ -29,6 +30,7 @@ class RenovatioSettings:
             api_version=os.getenv("SLD_RENOVATIO_API_VERSION", "1"),
             timeout_seconds=float(os.getenv("SLD_RENOVATIO_TIMEOUT_SECONDS", "10")),
             seed_patient_ids=patient_ids,
+            patient_key_lifetime_minutes=int(os.getenv("SLD_RENOVATIO_PATIENT_KEY_LIFETIME_MINUTES", "43200")),
         )
 
     def validate_for_mode(self, integration_mode: str, environment: str) -> None:

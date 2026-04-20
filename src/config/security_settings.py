@@ -12,6 +12,7 @@ class SecuritySettings:
     max_webapp_secret: str
     rate_limit_enabled: bool
     rate_limit_per_minute: int
+    patient_session_ttl_minutes: int
 
     @classmethod
     def from_env(cls) -> "SecuritySettings":
@@ -20,6 +21,7 @@ class SecuritySettings:
             max_webapp_secret=os.getenv("SLD_MAX_WEBAPP_SECRET", ""),
             rate_limit_enabled=os.getenv("SLD_RATE_LIMIT_ENABLED", "1") == "1",
             rate_limit_per_minute=int(os.getenv("SLD_RATE_LIMIT_PER_MINUTE", "120")),
+            patient_session_ttl_minutes=int(os.getenv("SLD_PATIENT_SESSION_TTL_MINUTES", "43200")),
         )
         settings.validate()
         return settings
@@ -31,3 +33,5 @@ class SecuritySettings:
             raise ValueError("SLD_PATIENT_SECURITY_MODE должен быть relaxed или strict")
         if self.rate_limit_per_minute <= 0:
             raise ValueError("SLD_RATE_LIMIT_PER_MINUTE должен быть > 0")
+        if self.patient_session_ttl_minutes <= 0:
+            raise ValueError("SLD_PATIENT_SESSION_TTL_MINUTES должен быть > 0")

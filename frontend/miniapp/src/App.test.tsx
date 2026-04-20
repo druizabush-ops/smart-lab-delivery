@@ -1,7 +1,7 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { App } from "./App";
 
-describe("App", () => {
+describe("App auth flow", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     (globalThis as { fetch: typeof fetch }).fetch = vi.fn();
@@ -12,47 +12,38 @@ describe("App", () => {
     };
   });
 
-  it("рендерит список результатов", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
-      new Response(JSON.stringify([{ result_id: "card-1", status: "max_sent", channel: "max", attempts_count: 1, documents: [], patient_id: "patient-001", created_at: "2026-01-01", updated_at: "2026-01-01", last_error: null }]), { status: 200 }),
-    );
+  it("показывает экран входа при отсутствии сессии", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response("unauthorized", { status: 401 }));
+    render(<App />);
+    await waitFor(() => expect(screen.getByText("Вход пациента")).toBeInTheDocument());
+  });
+
+  it("логин по логину и паролю и загрузка результатов", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response("unauthorized", { status: 401 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            session_id: "s1",
+            patient_name: "Тест",
+            patient_number: "p1",
+            created_at: "2026-01-01",
+            expires_at: "2026-12-01",
+            last_refresh_at: "2026-01-01",
+            auth_type: "login",
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ result_id: "card-1", status: "max_sent", channel: "max", attempts_count: 1, documents: [], patient_id: "p1", created_at: "2026-01-01", updated_at: "2026-01-01", last_error: null }]), { status: 200 }));
 
     render(<App />);
+    await waitFor(() => expect(screen.getByText("Вход пациента")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Вход по логину"));
+    fireEvent.change(screen.getByPlaceholderText("Логин"), { target: { value: "demo" } });
+    fireEvent.change(screen.getByPlaceholderText("Пароль"), { target: { value: "secret" } });
+    fireEvent.click(screen.getByText("Войти"));
+
     await waitFor(() => expect(screen.getByText("Доступные результаты")).toBeInTheDocument());
-    expect(screen.getByText(/card-1/)).toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledWith("/api/patient/patient/results?patient_id=patient-001");
-  });
-
-  it("рендерит no-results state", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }));
-    render(<App />);
-    await waitFor(() => expect(screen.getByText(/нет доступных результатов/)).toBeInTheDocument());
-  });
-
-  it("рендерит error state", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(new Response("boom", { status: 500 }));
-    render(<App />);
-    await waitFor(() => expect(screen.getByText(/Ошибка API/)).toBeInTheDocument());
-  });
-
-  it("читает start_param", async () => {
-    window.WebApp = {
-      initDataUnsafe: { user: { id: "patient-001" }, start_param: "result:card-77" },
-      platform: "max-mobile",
-      version: "1.0",
-    };
-    vi.mocked(fetch).mockResolvedValueOnce(
-      new Response(JSON.stringify([{ result_id: "card-77", status: "max_sent", channel: "max", attempts_count: 1, documents: [], patient_id: "patient-001", created_at: "2026-01-01", updated_at: "2026-01-01", last_error: null }]), { status: 200 }),
-    );
-    render(<App />);
-    await waitFor(() => expect(screen.getByText(/start_param: result:card-77/)).toBeInTheDocument());
-    expect(screen.getByText(/Детали результата/)).toBeInTheDocument();
-  });
-
-  it("fallback вне MAX", async () => {
-    window.WebApp = undefined;
-    render(<App />);
-    expect(screen.getByText(/Режим вне MAX/)).toBeInTheDocument();
-    expect(screen.getByText(/Не удалось определить patient_id/)).toBeInTheDocument();
   });
 });

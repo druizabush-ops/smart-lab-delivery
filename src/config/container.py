@@ -29,9 +29,17 @@ from src.infrastructure.logging import configure_logging
 from src.infrastructure.queue import InMemoryDeliveryQueue
 from src.infrastructure.repositories import InMemoryDeliveryCardRepository
 from src.infrastructure.runtime import DeliveryProcessManager, DeliveryRuntime, DeliveryRuntimeSelector
+from src.infrastructure.session import InMemoryPatientSessionRepository
 from src.integration.delivery import EmailDeliveryProvider, MaxDeliveryProvider
 from src.integration.logging import LoggerAdapter, OperatorActionLoggerAdapter
 from src.integration.renovatio import RenovatioClient
+from src.application.use_cases.patient_auth import (
+    ConfirmPatientAuthCodeUseCase,
+    GetCurrentPatientUseCase,
+    PatientLoginUseCase,
+    PatientPhoneLoginUseCase,
+    RefreshPatientSessionUseCase,
+)
 
 
 class AppContainer:
@@ -150,6 +158,28 @@ class AppContainer:
 
         self.delivery_card_read_service = DeliveryCardReadService(
             repository=self.delivery_card_repository,
+        )
+        self.patient_session_repository = InMemoryPatientSessionRepository()
+        self.patient_login_use_case = PatientLoginUseCase(
+            client=self.renovatio_client,
+            session_repository=self.patient_session_repository,
+            session_ttl_minutes=self.security_settings.patient_session_ttl_minutes,
+            key_lifetime_minutes=self.renovatio_settings.patient_key_lifetime_minutes,
+        )
+        self.patient_phone_login_use_case = PatientPhoneLoginUseCase(client=self.renovatio_client)
+        self.confirm_patient_auth_code_use_case = ConfirmPatientAuthCodeUseCase(
+            client=self.renovatio_client,
+            session_repository=self.patient_session_repository,
+            session_ttl_minutes=self.security_settings.patient_session_ttl_minutes,
+        )
+        self.refresh_patient_session_use_case = RefreshPatientSessionUseCase(
+            client=self.renovatio_client,
+            session_repository=self.patient_session_repository,
+            session_ttl_minutes=self.security_settings.patient_session_ttl_minutes,
+            key_lifetime_minutes=self.renovatio_settings.patient_key_lifetime_minutes,
+        )
+        self.get_current_patient_use_case = GetCurrentPatientUseCase(
+            session_repository=self.patient_session_repository,
         )
 
     def _build_delivery_card_repository(self):

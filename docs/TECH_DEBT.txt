@@ -325,3 +325,8 @@
 - Нет полноценного production login flow пациента.
 Когда пересмотреть: На следующем этапе интеграции patient-facing backend контура.
 Что будет признаком, что пора заменить решение: Переход к production patient auth/session management и secure identity-linking между MAX и пациентом.
+
+Patient Auth ограничения / техдолг:
+- refresh lifetime зависит от ограничений Renovatio API и может отличаться от локального TTL;
+- текущая phone-ветка не хранит промежуточный challenge server-side (требуется усиление anti-replay);
+- in-memory session repository нужно заменить на persistent store для multi-instance production.

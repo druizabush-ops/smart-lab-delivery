@@ -713,3 +713,9 @@ Dependency wiring:
 - Не реализована интеграция patient_key в backend runtime и mini app контур.
 Следующий шаг:
 - Встроить auth flow в backend/patient-facing контур с безопасным управлением lifecycle patient_key и последующим MAX↔patient linking.
+
+2026-04-20 — Patient Auth Flow (Renovatio + Mini App)
+- Добавлен серверный session-контур для patient-facing авторизации: login/password, phone + SMS code.
+- Добавлены backend endpoints: /patient/auth/login, /phone, /confirm-code, /refresh, /logout, /me.
+- В mini app добавлены экраны выбора способа входа, вход по логину, по телефону, подтверждение кода.
+- Patient key полностью изолирован на backend, frontend работает только через cookie session.

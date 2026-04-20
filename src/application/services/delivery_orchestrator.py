@@ -1,11 +1,9 @@
 """Сервис orchestration потока доставки в application-слое."""
 
 from src.application.interfaces import LabResultProvider
-from src.application.use_cases import (
-    CreateDeliveryCardUseCase,
-    ProcessDeliveryUseCase,
-    RetryDeliveryUseCase,
-)
+from src.application.use_cases.create_delivery_card import CreateDeliveryCardUseCase
+from src.application.use_cases.process_delivery import ProcessDeliveryUseCase
+from src.application.use_cases.retry_delivery import RetryDeliveryUseCase
 from src.domain.entities import DeliveryCard, LabResult, Patient
 
 
