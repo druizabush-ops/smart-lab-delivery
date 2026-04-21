@@ -802,3 +802,25 @@ Dependency wiring:
 - Целевые 4 регрессионных теста проходят даже при export production-like env.
 - Полный `python -m pytest` зеленый.
 - На сервере `smart-process-manager` работает через timer без restart-loop.
+
+[Изменение]
+Дата: 2026-04-21
+Ветка: work
+Блок: Patient Result PDF Download via session-based Renovatio flow
+Файлы: src/application/use_cases/patient_results.py; src/config/container.py; src/presentation/patient_api/app.py; src/presentation/patient_api/dependencies.py; src/presentation/patient_api/routers/results.py; tests/unit/application/test_patient_results_use_case.py; tests/integration/test_patient_api_read_only.py; tests/integration/test_patient_auth_api.py; scripts/zapusk228.py; tests/unit/scripts/test_zapusk228.py; docs/PROJECT_JOURNAL.txt; docs/ARCHITECTURE_OVERVIEW.txt; docs/DECISIONS.txt; docs/TECH_DEBT.txt; docs/TEST_PLAN.txt; docs/SETUP_WINDOWS.txt; docs/RUNBOOK.txt; docs/GO_LIVE_CHECKLIST.txt
+Причина: Завершить patient-facing data pipeline до уровня скачивания PDF по server-side session без утечки base64/patient_key на клиент.
+Что сделано:
+- Добавлен application use case `PatientResultPdfUseCase` с оркестрацией `session -> patient_key -> getPatientLabResultDetails -> data.files[0]`.
+- Реализован endpoint `GET /patient/results/{result_id}/pdf` с бинарным `application/pdf` и `Content-Disposition`.
+- Добавлена controlled обработка ошибок: 401 (нет session), 404 (result not found / PDF absent), 502 (invalid base64/payload).
+- Сохранена совместимость существующего details endpoint `GET /patient/results/{id}`.
+- Добавлено unit/integration покрытие для PDF сценариев и регрессии details/auth.
+- Выполнена оценка operational contour: ZAPUSK228 расширен опциональным PDF smoke шагом через env (`SLD_SMOKE_PATIENT_SESSION`, `SLD_SMOKE_PATIENT_RESULT_ID`).
+Какой контракт подтвержден:
+- На реальном Renovatio-контуре PDF доступен в `getPatientLabResultDetails -> data.files[0]` как base64-строка.
+- После decode получается валидный PDF (`%PDF` header), поэтому текущий flow не требует отдельного `file_id`.
+Ограничения:
+- Пока используется только первый файл из `data.files`; множественные документы требуют отдельного расширения модели.
+Что нужно проверить:
+- `python -m pytest` должен оставаться зеленым.
+- Ручной smoke: login -> results -> details -> `/patient/results/{id}/pdf`.

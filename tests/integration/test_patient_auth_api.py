@@ -12,6 +12,7 @@ from src.application.use_cases.patient_auth import (
     RefreshPatientSessionUseCase,
 )
 from src.application.use_cases.patient_results import PatientResultsUseCase
+from src.application.use_cases.patient_results import PatientResultPdfUseCase
 from src.config.security_settings import SecuritySettings
 from src.infrastructure.repositories import InMemoryDeliveryCardRepository
 from src.infrastructure.session import InMemoryPatientSessionRepository
@@ -58,6 +59,7 @@ class _Container:
         self.refresh_patient_session_use_case = RefreshPatientSessionUseCase(client, session_repo, session_ttl_minutes=120, key_lifetime_minutes=120)
         self.get_current_patient_use_case = GetCurrentPatientUseCase(session_repo)
         self.patient_results_use_case = PatientResultsUseCase(sessions=self.get_current_patient_use_case, renovatio_client=client)
+        self.patient_result_pdf_use_case = PatientResultPdfUseCase(sessions=self.get_current_patient_use_case, renovatio_client=client)
 
 
 def test_login_me_refresh_logout_flow() -> None:
@@ -112,6 +114,7 @@ def test_login_returns_controlled_error_when_profile_fetch_failed() -> None:
             self.refresh_patient_session_use_case = RefreshPatientSessionUseCase(client, session_repo, session_ttl_minutes=120, key_lifetime_minutes=120)
             self.get_current_patient_use_case = GetCurrentPatientUseCase(session_repo)
             self.patient_results_use_case = PatientResultsUseCase(sessions=self.get_current_patient_use_case, renovatio_client=client)
+            self.patient_result_pdf_use_case = PatientResultPdfUseCase(sessions=self.get_current_patient_use_case, renovatio_client=client)
 
     client = TestClient(create_patient_api_app(container=BrokenProfileContainer()))
     response = client.post("/patient/auth/login", json={"login": "demo", "password": "secret"})

@@ -19,6 +19,7 @@ def create_patient_api_app(container: AppContainer | None = None) -> FastAPI:
     )
     app.state.security_settings = app_container.security_settings
     app.state.patient_results_use_case = app_container.patient_results_use_case
+    app.state.patient_result_pdf_use_case = app_container.patient_result_pdf_use_case
     app.state.patient_login_use_case = app_container.patient_login_use_case
     app.state.patient_phone_login_use_case = app_container.patient_phone_login_use_case
     app.state.confirm_patient_auth_code_use_case = app_container.confirm_patient_auth_code_use_case

@@ -69,3 +69,9 @@
 - [ ] Установлен `deploy/systemd/smart-process-manager.service` с `Type=oneshot` и `Restart=no`.
 - [ ] Установлен и активирован `deploy/systemd/smart-process-manager.timer`.
 - [ ] `systemctl status smart-process-manager` не показывает restart-loop/start-limit-hit после успешного цикла.
+
+13. Patient results PDF readiness
+- [ ] `GET /patient/results/{result_id}/pdf` возвращает `200` и `content-type: application/pdf` при валидной session.
+- [ ] Без session `GET /patient/results/{result_id}/pdf` возвращает `401`.
+- [ ] При отсутствии файла backend возвращает controlled `404` (без неуправляемого 500).
+- [ ] (Опционально) ZAPUSK228 PDF smoke активирован через `SLD_SMOKE_PATIENT_SESSION` + `SLD_SMOKE_PATIENT_RESULT_ID`.

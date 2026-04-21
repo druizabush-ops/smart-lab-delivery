@@ -40,7 +40,7 @@ from src.application.use_cases.patient_auth import (
     PatientPhoneLoginUseCase,
     RefreshPatientSessionUseCase,
 )
-from src.application.use_cases.patient_results import PatientResultsUseCase
+from src.application.use_cases.patient_results import PatientResultPdfUseCase, PatientResultsUseCase
 
 
 class AppContainer:
@@ -183,6 +183,10 @@ class AppContainer:
             session_repository=self.patient_session_repository,
         )
         self.patient_results_use_case = PatientResultsUseCase(
+            sessions=self.get_current_patient_use_case,
+            renovatio_client=self.renovatio_client,
+        )
+        self.patient_result_pdf_use_case = PatientResultPdfUseCase(
             sessions=self.get_current_patient_use_case,
             renovatio_client=self.renovatio_client,
         )

@@ -11,7 +11,7 @@ from src.application.use_cases.patient_auth import (
     PatientPhoneLoginUseCase,
     RefreshPatientSessionUseCase,
 )
-from src.application.use_cases.patient_results import PatientResultsUseCase
+from src.application.use_cases.patient_results import PatientResultPdfUseCase, PatientResultsUseCase
 from src.config.security_settings import SecuritySettings
 from src.infrastructure.repositories import InMemoryDeliveryCardRepository
 from src.infrastructure.session import InMemoryPatientSessionRepository
@@ -62,6 +62,10 @@ class _Container:
         )
         self.get_current_patient_use_case = GetCurrentPatientUseCase(session_repo)
         self.patient_results_use_case = PatientResultsUseCase(sessions=self.get_current_patient_use_case, renovatio_client=client)
+        self.patient_result_pdf_use_case = PatientResultPdfUseCase(
+            sessions=self.get_current_patient_use_case,
+            renovatio_client=client,
+        )
 
         class Runtime:
             repository_mode = "in_memory"

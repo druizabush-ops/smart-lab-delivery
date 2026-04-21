@@ -209,3 +209,18 @@ Patient Auth Layer (новый слой)
   - `smart-process-manager.service` — `Type=oneshot`, без `Restart=always`;
   - `smart-process-manager.timer` — периодический запуск cycle.
 - Test contour изолирован от внешнего shell env через `tests/conftest.py`, что сохраняет deterministic stub/runtime semantics независимо от production-like переменных в окружении.
+
+## Patient Result PDF contour (обновление 2026-04-21)
+- Добавлен отдельный patient-facing endpoint `GET /patient/results/{result_id}/pdf`.
+- Trust boundary сохранен:
+  1) presentation получает только cookie `sld_patient_session`;
+  2) application use case резолвит session и `patient_key`;
+  3) integration adapter вызывает Renovatio `getPatientLabResultDetails(patient_key, result_id)`;
+  4) application декодирует `data.files[0]` base64 -> bytes;
+  5) presentation возвращает бинарный `application/pdf` + `Content-Disposition`.
+- Ошибки типизированы по слоям:
+  - нет session -> 401;
+  - результат не найден -> 404;
+  - PDF отсутствует -> controlled 404;
+  - невалидный base64/payload -> controlled 502.
+- Контур не зависит от UI-фреймворка и используется как shared backend foundation для bot-first UI и mini app UI.
