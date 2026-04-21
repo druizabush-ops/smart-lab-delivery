@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 from scripts.zapusk228 import CommandRunner, Zapusk228, Zapusk228Config
 
 
@@ -59,3 +61,27 @@ def test_zapusk228_interactive_decline_skips_all_steps() -> None:
     tool.execute()
 
     assert runner.commands == []
+
+
+def test_zapusk228_runs_pdf_smoke_when_env_is_configured() -> None:
+    runner = RecordingRunner()
+    tool = Zapusk228(
+        config=_full_config(assume_yes=True),
+        runner=runner,
+    )
+    os.environ["SLD_SMOKE_PATIENT_SESSION"] = "sid-1"
+    os.environ["SLD_SMOKE_PATIENT_RESULT_ID"] = "r-1"
+    try:
+        tool.execute()
+    finally:
+        os.environ.pop("SLD_SMOKE_PATIENT_SESSION", None)
+        os.environ.pop("SLD_SMOKE_PATIENT_RESULT_ID", None)
+
+    commands = [item[0] for item in runner.commands]
+    assert [
+        "curl",
+        "-fsSI",
+        "-H",
+        "Cookie: sld_patient_session=sid-1",
+        "http://127.0.0.1:8002/patient/results/r-1/pdf",
+    ] in commands

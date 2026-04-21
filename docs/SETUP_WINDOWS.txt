@@ -540,3 +540,21 @@ python .\scripts\zapusk228.py --assume-yes --skip-frontend --skip-restart
 Важно:
 - В Windows без systemd шаги `systemctl` будут неприменимы; используйте `--skip-restart --skip-smoke` или dry-run.
 - ZAPUSK228 становится обязательным сопровождаемым operational инструментом: при изменении admin flow обновляйте скрипт и документацию синхронно.
+
+29. Ручная проверка patient PDF endpoint (PowerShell)
+```powershell
+# 1) Логин пациента (cookie session сохранится в веб-клиенте/браузере)
+Invoke-RestMethod -Uri "http://127.0.0.1:8002/patient/auth/login" -Method POST -ContentType "application/json" -Body '{"login":"demo","password":"secret"}'
+
+# 2) Проверка списка результатов
+Invoke-RestMethod -Uri "http://127.0.0.1:8002/patient/results" -Method GET
+
+# 3) Проверка деталей результата
+Invoke-RestMethod -Uri "http://127.0.0.1:8002/patient/results/<result_id>" -Method GET
+
+# 4) Скачивание PDF результата
+Invoke-WebRequest -Uri "http://127.0.0.1:8002/patient/results/<result_id>/pdf" -Method GET -OutFile ".\result-<result_id>.pdf"
+```
+Ожидаемо:
+- endpoint PDF возвращает `content-type: application/pdf`;
+- сохраненный файл открывается как валидный PDF.

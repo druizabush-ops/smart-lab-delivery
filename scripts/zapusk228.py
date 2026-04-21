@@ -168,8 +168,30 @@ class Zapusk228:
         self.runner.run(["curl", "-fsS", "http://127.0.0.1:8001/health/ready"])
         self.runner.run(["curl", "-fsS", "http://127.0.0.1:8002/health/live"])
         self.runner.run(["curl", "-fsS", "http://127.0.0.1:8002/health/ready"])
+        self._run_patient_pdf_smoke_if_configured()
         for service in ["smart-patient-api", "smart-operator-api", "smart-process-manager", "nginx"]:
             self.runner.run(["systemctl", "status", service, "--no-pager"])
+
+    def _run_patient_pdf_smoke_if_configured(self) -> None:
+        """Опционально проверяет PDF endpoint при наличии тестовой session cookie."""
+
+        session_cookie = os.getenv("SLD_SMOKE_PATIENT_SESSION")
+        result_id = os.getenv("SLD_SMOKE_PATIENT_RESULT_ID")
+        if not session_cookie or not result_id:
+            print(
+                "[ZAPUSK228] PDF smoke пропущен (ожидаются env "
+                "SLD_SMOKE_PATIENT_SESSION и SLD_SMOKE_PATIENT_RESULT_ID)."
+            )
+            return
+        self.runner.run(
+            [
+                "curl",
+                "-fsSI",
+                "-H",
+                f"Cookie: sld_patient_session={session_cookie}",
+                f"http://127.0.0.1:8002/patient/results/{result_id}/pdf",
+            ]
+        )
 
     def run_backend_tests(self) -> None:
         """Запускает backend pytest suite."""

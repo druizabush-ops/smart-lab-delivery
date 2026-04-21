@@ -1,3 +1,4 @@
+import base64
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -5,6 +6,9 @@ import pytest
 from src.application.use_cases.patient_auth import PatientSession
 from src.application.use_cases.patient_results import (
     PatientLabResultNotFoundError,
+    PatientResultPdfNotAvailableError,
+    PatientResultPdfPayloadError,
+    PatientResultPdfUseCase,
     PatientResultsAccessError,
     PatientResultsUseCase,
 )
@@ -45,6 +49,10 @@ class _Renovatio:
         self.calls.append(("details", patient_key, result_id, lab_id, clinic_id))
         if result_id == "missing":
             raise IntegrationFailure(IntegrationErrorKind.EMPTY_RESULT, "not found")
+        if result_id == "without-pdf":
+            return {"id": result_id, "files": []}
+        if result_id == "invalid-base64":
+            return {"id": result_id, "files": ["%%%not-base64%%%"]}
         return {
             "id": result_id,
             "date": "2026-04-20",
@@ -57,6 +65,7 @@ class _Renovatio:
             "sections": [{"name": "Гематология"}],
             "indicators": [{"name": "WBC", "value": "5.0"}],
             "documents": [{"id": "f-1", "title": "Бланк", "url": "https://files/1.pdf"}],
+            "files": [base64.b64encode(b"%PDF-1.3\nunit-test\n%%EOF").decode("ascii")],
         }
 
 
@@ -113,3 +122,40 @@ def test_get_result_details_by_session_returns_not_found() -> None:
 
     with pytest.raises(PatientLabResultNotFoundError):
         use_case.get_result_details_by_session(session_id="sid-1", result_id="missing")
+
+
+def test_get_pdf_by_session_decodes_pdf_payload() -> None:
+    client = _Renovatio()
+    use_case = PatientResultPdfUseCase(sessions=_Sessions(_session()), renovatio_client=client)
+
+    pdf = use_case.get_pdf_by_session(session_id="sid-1", result_id="r-1")
+
+    assert pdf.mime_type == "application/pdf"
+    assert pdf.filename == "result-r-1.pdf"
+    assert pdf.content.startswith(b"%PDF")
+
+
+@pytest.mark.parametrize("session", [None, _session(active=False), _session(expired=True)])
+def test_get_pdf_by_session_requires_active_session(session: PatientSession | None) -> None:
+    use_case = PatientResultPdfUseCase(sessions=_Sessions(session), renovatio_client=_Renovatio())
+
+    with pytest.raises(PatientResultsAccessError):
+        use_case.get_pdf_by_session(session_id="sid-1", result_id="r-1")
+
+
+def test_get_pdf_by_session_returns_not_found() -> None:
+    use_case = PatientResultPdfUseCase(sessions=_Sessions(_session()), renovatio_client=_Renovatio())
+    with pytest.raises(PatientLabResultNotFoundError):
+        use_case.get_pdf_by_session(session_id="sid-1", result_id="missing")
+
+
+def test_get_pdf_by_session_handles_empty_files() -> None:
+    use_case = PatientResultPdfUseCase(sessions=_Sessions(_session()), renovatio_client=_Renovatio())
+    with pytest.raises(PatientResultPdfNotAvailableError):
+        use_case.get_pdf_by_session(session_id="sid-1", result_id="without-pdf")
+
+
+def test_get_pdf_by_session_handles_invalid_base64() -> None:
+    use_case = PatientResultPdfUseCase(sessions=_Sessions(_session()), renovatio_client=_Renovatio())
+    with pytest.raises(PatientResultPdfPayloadError):
+        use_case.get_pdf_by_session(session_id="sid-1", result_id="invalid-base64")

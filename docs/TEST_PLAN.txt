@@ -232,3 +232,21 @@
 - Unit: `tests/unit/scripts/test_zapusk228.py`
   - smoke проверки оркестрации ключевых команд в `--assume-yes` режиме;
   - проверка интерактивного отказа (step skip) без выполнения команд.
+
+## Patient Result PDF download flow (обновление 2026-04-21)
+Unit:
+- `PatientResultPdfUseCase` успешно декодирует `data.files[0]` base64 в бинарный PDF.
+- Ошибка при отсутствии/просрочке session.
+- Ошибка при пустом `files`.
+- Ошибка при невалидном base64 payload.
+- Ошибка not found при пустом/отсутствующем details.
+- Проверка filename/mime (`result-<id>.pdf`, `application/pdf`).
+
+Integration:
+- `GET /patient/results/{id}/pdf` с валидной session -> 200 + `application/pdf`.
+- `GET /patient/results/{id}/pdf` без session -> 401.
+- `GET /patient/results/{id}/pdf` при отсутствии файла -> 404.
+- Регрессия: `GET /patient/results/{id}` остается рабочим и не ломается после добавления PDF endpoint.
+
+Regression:
+- `python -m pytest` обязателен для полного зеленого прогона auth/results/details/pdf контуров.

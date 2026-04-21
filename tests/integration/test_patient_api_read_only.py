@@ -12,11 +12,13 @@ from src.application.use_cases.patient_auth import (
     RefreshPatientSessionUseCase,
 )
 from src.application.use_cases.patient_results import PatientResultsUseCase
+from src.application.use_cases.patient_results import PatientResultPdfUseCase
 from src.config.security_settings import SecuritySettings
 from src.infrastructure.repositories import InMemoryDeliveryCardRepository
 from src.infrastructure.session import InMemoryPatientSessionRepository
 from src.integration.errors import IntegrationErrorKind, IntegrationFailure
 from src.presentation.patient_api import create_patient_api_app
+import base64
 
 
 class _RenovatioStub:
@@ -58,6 +60,9 @@ class _RenovatioStub:
     def get_patient_lab_result_details_by_key(self, patient_key: str, result_id: str, *, lab_id=None, clinic_id=None):
         if result_id == "missing":
             raise IntegrationFailure(IntegrationErrorKind.EMPTY_RESULT, "not found")
+        files: list[str] = []
+        if result_id != "without-pdf":
+            files = [base64.b64encode(b"%PDF-1.3\nstub-pdf\n%%EOF").decode("ascii")]
         return {
             "id": result_id,
             "date": "2026-04-20",
@@ -70,6 +75,7 @@ class _RenovatioStub:
             "sections": [{"name": "Section"}],
             "indicators": [{"name": "WBC", "value": "5.0"}],
             "documents": [{"id": "d-1", "title": "PDF", "url": "https://file/1.pdf"}],
+            "files": files,
         }
 
 
@@ -87,6 +93,7 @@ class _Container:
         self.refresh_patient_session_use_case = RefreshPatientSessionUseCase(client, session_repo, session_ttl_minutes=120, key_lifetime_minutes=120)
         self.get_current_patient_use_case = GetCurrentPatientUseCase(session_repo)
         self.patient_results_use_case = PatientResultsUseCase(sessions=self.get_current_patient_use_case, renovatio_client=client)
+        self.patient_result_pdf_use_case = PatientResultPdfUseCase(sessions=self.get_current_patient_use_case, renovatio_client=client)
 
 
 def _login(client: TestClient) -> None:
@@ -126,5 +133,32 @@ def test_result_details_not_found_returns_404() -> None:
     _login(client)
 
     response = client.get("/patient/results/missing")
+
+    assert response.status_code == 404
+
+
+def test_result_pdf_download_via_server_side_session() -> None:
+    client = TestClient(create_patient_api_app(container=_Container()))
+    _login(client)
+
+    response = client.get("/patient/results/r-1/pdf")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/pdf")
+    assert "attachment; filename=\"result-r-1.pdf\"" == response.headers["content-disposition"]
+    assert response.content.startswith(b"%PDF")
+
+
+def test_result_pdf_requires_session() -> None:
+    client = TestClient(create_patient_api_app(container=_Container()))
+    response = client.get("/patient/results/r-1/pdf")
+    assert response.status_code == 401
+
+
+def test_result_pdf_not_available_returns_404() -> None:
+    client = TestClient(create_patient_api_app(container=_Container()))
+    _login(client)
+
+    response = client.get("/patient/results/without-pdf/pdf")
 
     assert response.status_code == 404

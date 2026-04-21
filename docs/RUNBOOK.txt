@@ -93,3 +93,20 @@
 1) `systemctl cat smart-process-manager.service`
 2) Убедиться, что используется one-shot модель (`Type=oneshot`, `Restart=no`).
 3) Убедиться, что периодичность обеспечивается `smart-process-manager.timer`, а не `Restart=always`.
+
+13. Patient PDF endpoint возвращает 404/502
+Симптомы:
+- `GET /patient/results/{result_id}/pdf` -> 404 (нет файла) или 502 (невалидный payload).
+Шаги:
+1) Проверить активность session через `GET /patient/auth/me` (должен быть 200).
+2) Проверить детали результата `GET /patient/results/{result_id}` и наличие признаков документов.
+3) Проверить интеграционный payload `getPatientLabResultDetails`: наличие `data.files` и корректность base64 в `files[0]`.
+4) При системной проблеме Renovatio временно зафиксировать инцидент и переключиться на ручной канал выдачи PDF по операционному регламенту.
+
+14. ZAPUSK228: опциональный PDF smoke
+Для включения smoke проверки PDF endpoint в `scripts/zapusk228.py` перед запуском задайте:
+- `SLD_SMOKE_PATIENT_SESSION`
+- `SLD_SMOKE_PATIENT_RESULT_ID`
+
+Пример:
+- `SLD_SMOKE_PATIENT_SESSION=<session_id> SLD_SMOKE_PATIENT_RESULT_ID=<result_id> python scripts/zapusk228.py --assume-yes --skip-update --skip-deps`

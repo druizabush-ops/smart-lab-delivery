@@ -1,5 +1,7 @@
 """Use-case слой patient-facing результатов через Renovatio + server-side session."""
 
+import base64
+import binascii
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
@@ -15,6 +17,14 @@ class PatientResultsAccessError(RuntimeError):
 
 class PatientLabResultNotFoundError(RuntimeError):
     """Сигнализирует, что запрошенный результат отсутствует в источнике."""
+
+
+class PatientResultPdfNotAvailableError(RuntimeError):
+    """Сигнализирует, что у результата отсутствует PDF документ."""
+
+
+class PatientResultPdfPayloadError(RuntimeError):
+    """Сигнализирует о невалидном payload PDF от интеграции."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,6 +62,16 @@ class PatientLabResultDetailsDto:
     sections: list[dict[str, Any]]
     indicators: list[dict[str, Any]]
     documents: list[PatientLabResultDocumentDto]
+
+
+@dataclass(frozen=True, slots=True)
+class PatientResultPdfDto:
+    """DTO бинарного PDF-документа результата."""
+
+    result_id: str
+    filename: str
+    mime_type: str
+    content: bytes
 
 
 class PatientResultsUseCase:
@@ -100,6 +120,68 @@ class PatientResultsUseCase:
         if not payload:
             raise PatientLabResultNotFoundError(result_id)
         return _map_result_details(payload)
+
+    def _get_active_session(self, session_id: str) -> PatientSession:
+        session = self._sessions.execute(session_id)
+        now = datetime.now(timezone.utc)
+        if session is None or not session.is_active or session.expires_at <= now:
+            raise PatientResultsAccessError("Patient session недействительна или отсутствует")
+        return session
+
+
+class PatientResultPdfUseCase:
+    """Сценарий получения PDF результата через patient session и Renovatio details."""
+
+    def __init__(self, *, sessions: GetCurrentPatientUseCase, renovatio_client: RenovatioClient) -> None:
+        self._sessions = sessions
+        self._renovatio_client = renovatio_client
+
+    def get_pdf_by_session(
+        self,
+        *,
+        session_id: str,
+        result_id: str,
+        lab_id: str | None = None,
+        clinic_id: str | None = None,
+    ) -> PatientResultPdfDto:
+        session = self._get_active_session(session_id)
+        try:
+            payload = self._renovatio_client.get_patient_lab_result_details_by_key(
+                session.patient_key,
+                result_id,
+                lab_id=lab_id,
+                clinic_id=clinic_id,
+            )
+        except IntegrationFailure as exc:
+            if exc.kind is IntegrationErrorKind.EMPTY_RESULT:
+                raise PatientLabResultNotFoundError(result_id) from exc
+            raise
+
+        if not payload:
+            raise PatientLabResultNotFoundError(result_id)
+
+        files = payload.get("files")
+        if not isinstance(files, list) or not files:
+            raise PatientResultPdfNotAvailableError("В details payload отсутствует data.files")
+
+        first_file = files[0]
+        if not isinstance(first_file, str) or not first_file.strip():
+            raise PatientResultPdfPayloadError("Первый элемент data.files не содержит base64 PDF")
+
+        try:
+            decoded = base64.b64decode(first_file, validate=True)
+        except (ValueError, binascii.Error) as exc:
+            raise PatientResultPdfPayloadError("Не удалось декодировать PDF из base64") from exc
+
+        if not decoded.startswith(b"%PDF"):
+            raise PatientResultPdfPayloadError("Декодированный файл не похож на PDF")
+
+        return PatientResultPdfDto(
+            result_id=result_id,
+            filename=_build_pdf_filename(result_id),
+            mime_type="application/pdf",
+            content=decoded,
+        )
 
     def _get_active_session(self, session_id: str) -> PatientSession:
         session = self._sessions.execute(session_id)
@@ -158,6 +240,11 @@ def _extract_documents(raw: dict[str, Any]) -> list[PatientLabResultDocumentDto]
             )
         )
     return documents
+
+
+def _build_pdf_filename(result_id: str) -> str:
+    safe = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "-" for ch in result_id).strip("-")
+    return f"result-{safe or 'unknown'}.pdf"
 
 
 def _extract_services(raw: dict[str, Any]) -> list[str]:
