@@ -342,3 +342,16 @@ Patient Auth ограничения / техдолг:
 - Возможны partial failure сценарии: ключ получен, но профиль временно недоступен.
 Когда пересмотреть: При появлении в Renovatio объединенного/атомарного patient auth+profile контракта или при внедрении устойчивой retry/circuit-breaker политики для patient auth flow.
 Что будет признаком, что пора заменить решение: Рост ошибок profile fetch в проде или подтвержденный контракт, возвращающий профиль в auth-ответе.
+
+[Технический долг]
+Дата: 2026-04-21
+Ветка: work
+Блок: Вариативность URL-контрактов Renovatio между инсталляциями
+Что временно:
+- В integration adapter зафиксирована allowlist-стратегия: часть patient-facing методов (`authPatient`, `checkAuthCode`, `refreshPatientKey`, `getPatientInfo`, `getPatientLabResults`, `getPatientLabResultDetails`) всегда вызывается по unversioned пути.
+Почему это временно: Контракт Renovatio неоднороден между установками (v1/v2/unversioned), а единый discovery-механизм методов со стороны API отсутствует.
+Какие ограничения:
+- При подключении новых patient-facing методов требуется ручная валидация route strategy и обновление allowlist.
+- Возможны отличия поведения между staging/prod окружениями одной интеграции.
+Когда пересмотреть: При появлении официального capability/discovery механизма Renovatio или унифицированного versioned контракта во всех целевых инсталляциях.
+Что будет признаком, что пора заменить решение: Появление documented API matrix с гарантированной поддержкой versioning по всем patient-facing методам.

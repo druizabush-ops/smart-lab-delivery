@@ -43,8 +43,8 @@ def test_real_renovatio_maps_ready_results_from_api_payload() -> None:
     assert results[0].status is LabResultStatus.READY
     assert request_urls == [
         "https://renovatio.local/api/1/getPatient",
-        "https://renovatio.local/api/1/getPatientLabResults",
-        "https://renovatio.local/api/1/getPatientLabResultDetails",
+        "https://renovatio.local/api/getPatientLabResults",
+        "https://renovatio.local/api/getPatientLabResultDetails",
     ]
     assert all("method" not in body for body in request_bodies)
     assert all(body.get("api_key") == "key" for body in request_bodies)
@@ -154,10 +154,12 @@ def test_real_renovatio_check_auth_code_uses_patient_id_and_auth_code() -> None:
 
 
 def test_real_renovatio_get_patient_info_uses_patient_key() -> None:
+    captured_url = ""
     captured_body: dict[str, str] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
-        nonlocal captured_body
+        nonlocal captured_url, captured_body
+        captured_url = str(request.url)
         captured_body = dict(parse_qsl(request.content.decode()))
         return httpx.Response(200, json={"error": None, "data": {"id": "patient-1", "name": "P"}})
 
@@ -170,14 +172,17 @@ def test_real_renovatio_get_patient_info_uses_patient_key() -> None:
     response = adapter.get_patient_info("pk-1")
 
     assert response["id"] == "patient-1"
+    assert captured_url == "https://renovatio.local/api/getPatientInfo"
     assert captured_body["patient_key"] == "pk-1"
 
 
 def test_real_renovatio_get_patient_lab_results_by_key_uses_patient_key() -> None:
+    captured_url = ""
     captured_body: dict[str, str] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
-        nonlocal captured_body
+        nonlocal captured_url, captured_body
+        captured_url = str(request.url)
         captured_body = dict(parse_qsl(request.content.decode()))
         return httpx.Response(200, json={"error": None, "data": [{"id": "lr-1"}]})
 
@@ -196,6 +201,7 @@ def test_real_renovatio_get_patient_lab_results_by_key_uses_patient_key() -> Non
     )
 
     assert response[0]["id"] == "lr-1"
+    assert captured_url == "https://renovatio.local/api/getPatientLabResults"
     assert captured_body["patient_key"] == "pk-1"
     assert captured_body["date_from"] == "2026-01-01"
     assert captured_body["date_to"] == "2026-01-31"
@@ -204,10 +210,12 @@ def test_real_renovatio_get_patient_lab_results_by_key_uses_patient_key() -> Non
 
 
 def test_real_renovatio_get_patient_lab_result_details_by_key_uses_result_id_and_patient_key() -> None:
+    captured_url = ""
     captured_body: dict[str, str] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
-        nonlocal captured_body
+        nonlocal captured_url, captured_body
+        captured_url = str(request.url)
         captured_body = dict(parse_qsl(request.content.decode()))
         return httpx.Response(200, json={"error": None, "data": {"id": "lr-1", "status": "ready"}})
 
@@ -226,6 +234,7 @@ def test_real_renovatio_get_patient_lab_result_details_by_key_uses_result_id_and
     )
 
     assert response["id"] == "lr-1"
+    assert captured_url == "https://renovatio.local/api/getPatientLabResultDetails"
     assert captured_body["patient_key"] == "pk-1"
     assert captured_body["result_id"] == "result-1"
     assert captured_body["patient_id"] == "patient-1"
@@ -243,3 +252,38 @@ def test_patient_facing_methods_raise_controlled_error_in_stub_mode() -> None:
         adapter.get_patient_info("pk-1")
 
     assert "только в real режиме" in str(exc_info.value)
+
+
+def test_real_renovatio_routes_auth_patient_without_version() -> None:
+    captured_url = ""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal captured_url
+        captured_url = str(request.url)
+        return httpx.Response(200, json={"error": None, "data": {"patient_key": "pk-1"}})
+
+    adapter = RenovatioClient(
+        mode="real",
+        settings=RenovatioSettings("https://renovatio.local/api", "key", "1", 2, ("patient-1",)),
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    adapter.auth_patient_by_login(login="demo", password="secret")
+
+    assert captured_url == "https://renovatio.local/api/authPatient"
+
+
+def test_real_renovatio_reports_method_routing_mismatch() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"error": 1, "data": {"code": "404", "desc": "Method not found"}})
+
+    adapter = RenovatioClient(
+        mode="real",
+        settings=RenovatioSettings("https://renovatio.local/api", "key", "1", 2, ("patient-1",)),
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    with pytest.raises(IntegrationFailure) as exc_info:
+        adapter.get_patient_info("pk-1")
+
+    assert "routing mismatch" in str(exc_info.value)
