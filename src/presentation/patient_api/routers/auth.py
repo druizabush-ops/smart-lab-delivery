@@ -4,7 +4,16 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
-from src.application.use_cases.patient_auth import PendingPhoneAuth, PatientSession
+from src.application.use_cases.patient_auth import (
+    ConfirmPatientAuthCodeUseCase,
+    PatientAuthError,
+    PatientLoginUseCase,
+    PatientPhoneLoginUseCase,
+    PatientProfileFetchError,
+    PatientSession,
+    PatientSessionCreationError,
+    PendingPhoneAuth,
+)
 from src.integration.errors import IntegrationFailure
 from src.presentation.patient_api.schemas.auth import (
     ConfirmPatientCodeRequest,
@@ -21,9 +30,16 @@ router = APIRouter(prefix="/patient/auth", tags=["patient-auth"])
 @router.post("/login", response_model=PatientSessionResponse)
 def login_by_credentials(request: PatientLoginRequest, http_response: Response, app_request: Request) -> PatientSessionResponse:
     try:
-        session: PatientSession = app_request.app.state.patient_login_use_case.execute(request.login, request.password)
-    except (ValueError, IntegrationFailure) as exc:
+        use_case: PatientLoginUseCase = app_request.app.state.patient_login_use_case
+        session: PatientSession = use_case.execute(request.login, request.password)
+    except PatientAuthError as exc:
         raise HTTPException(status_code=401, detail="Неверные учетные данные") from exc
+    except PatientProfileFetchError as exc:
+        raise HTTPException(status_code=502, detail="Не удалось получить профиль пациента") from exc
+    except PatientSessionCreationError as exc:
+        raise HTTPException(status_code=500, detail="Не удалось создать сессию пациента") from exc
+    except IntegrationFailure as exc:
+        raise HTTPException(status_code=502, detail="Ошибка интеграции авторизации пациента") from exc
     _set_session_cookie(http_response, session.session_id)
     return _session_response(session)
 
@@ -31,11 +47,12 @@ def login_by_credentials(request: PatientLoginRequest, http_response: Response, 
 @router.post("/phone", response_model=PhoneAuthPendingResponse)
 def login_by_phone(request: PatientPhoneLoginRequest, app_request: Request) -> PhoneAuthPendingResponse:
     try:
-        response = app_request.app.state.patient_phone_login_use_case.execute(
+        use_case: PatientPhoneLoginUseCase = app_request.app.state.patient_phone_login_use_case
+        response = use_case.execute(
             request.phone,
             key_lifetime_minutes=app_request.app.state.renovatio_settings.patient_key_lifetime_minutes,
         )
-    except (ValueError, IntegrationFailure) as exc:
+    except (PatientAuthError, ValueError, IntegrationFailure) as exc:
         raise HTTPException(status_code=401, detail="Не удалось инициировать вход по телефону") from exc
     if not isinstance(response, PendingPhoneAuth):
         raise HTTPException(status_code=500, detail="Неподдерживаемый ответ phone auth")
@@ -45,9 +62,16 @@ def login_by_phone(request: PatientPhoneLoginRequest, app_request: Request) -> P
 @router.post("/confirm-code", response_model=PatientSessionResponse)
 def confirm_code(request: ConfirmPatientCodeRequest, http_response: Response, app_request: Request) -> PatientSessionResponse:
     try:
-        session: PatientSession = app_request.app.state.confirm_patient_auth_code_use_case.execute(request.patient_id, request.code)
-    except (ValueError, IntegrationFailure) as exc:
+        use_case: ConfirmPatientAuthCodeUseCase = app_request.app.state.confirm_patient_auth_code_use_case
+        session: PatientSession = use_case.execute(request.patient_id, request.code)
+    except PatientAuthError as exc:
         raise HTTPException(status_code=401, detail="Неверный SMS код") from exc
+    except PatientProfileFetchError as exc:
+        raise HTTPException(status_code=502, detail="Не удалось получить профиль пациента") from exc
+    except PatientSessionCreationError as exc:
+        raise HTTPException(status_code=500, detail="Не удалось создать сессию пациента") from exc
+    except IntegrationFailure as exc:
+        raise HTTPException(status_code=502, detail="Ошибка интеграции подтверждения кода") from exc
     _set_session_cookie(http_response, session.session_id)
     return _session_response(session)
 

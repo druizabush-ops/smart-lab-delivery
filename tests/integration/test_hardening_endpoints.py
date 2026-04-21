@@ -22,7 +22,7 @@ class _RenovatioStub:
     def auth_patient_by_login(self, login: str, password: str, lifetime=None):
         if login != "demo" or password != "secret":
             raise ValueError("bad creds")
-        return {"patient_key": "pk-1", "patient_id": "p-1", "patient_name": "Demo"}
+        return {"patient_key": "pk-1", "patient_id": None, "need_auth_key": 0}
 
     def auth_patient_by_phone(self, phone: str, lifetime=None):
         return {"need_auth_key": 1, "patient_id": "p-1"}
@@ -30,7 +30,12 @@ class _RenovatioStub:
     def check_auth_code(self, patient_id: str, code: str):
         if code != "1234":
             raise ValueError("bad code")
-        return {"patient_key": "pk-2", "patient_id": patient_id, "patient_name": "Phone User"}
+        return {"patient_key": "pk-2", "patient_id": patient_id}
+
+    def get_patient_info(self, patient_key: str):
+        if patient_key == "pk-1":
+            return {"patient_name": "Demo", "patient_number": "p-1", "patient_id": None}
+        return {"patient_name": "Phone User", "patient_number": "p-1", "patient_id": "p-1"}
 
     def refresh_patient_key(self, patient_key: str, lifetime=None):
         return {"patient_key": f"{patient_key}-r"}

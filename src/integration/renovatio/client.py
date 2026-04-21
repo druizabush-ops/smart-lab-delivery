@@ -167,6 +167,11 @@ class RenovatioClient(LabResultProvider):
             )
         return data[0] if isinstance(data, list) else data
 
+    def get_patient_info_by_key(self, patient_key: str) -> dict[str, Any]:
+        """Явный alias для patient auth flow: профиль только по patient_key."""
+
+        return self.get_patient_info(patient_key)
+
     def get_patient_lab_results(
         self,
         patient_id: str | None = None,
