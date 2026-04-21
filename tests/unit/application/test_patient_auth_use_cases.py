@@ -58,7 +58,7 @@ class _RenovatioClientStub:
         self.calls.append(("get_patient_info", patient_key))
         if patient_key == "pk-bad-profile":
             raise IntegrationFailure(IntegrationErrorKind.BAD_RESPONSE, "bad profile")
-        return {"patient_name": "Demo User", "patient_number": "P-100", "patient_id": None}
+        return {"number": "P-100", "last_name": "Иванов", "first_name": "Иван", "third_name": "Иванович", "patient_id": "internal-id"}
 
     def check_auth_code(self, patient_id: str, code: str):
         if code != "1234":
@@ -75,7 +75,7 @@ def test_login_fetches_profile_and_creates_session_from_get_patient_info() -> No
     session = use_case.execute("demo", "secret")
 
     assert session.patient_key == "pk-1"
-    assert session.patient_name == "Demo User"
+    assert session.patient_name == "Иванов Иван Иванович"
     assert session.patient_number == "P-100"
     assert ("auth_login", "demo") in client.calls
     assert ("get_patient_info", "pk-1") in client.calls
@@ -89,6 +89,21 @@ def test_login_does_not_fail_when_auth_patient_id_is_null() -> None:
     session = use_case.execute("demo", "secret")
 
     assert session.patient_number == "P-100"
+
+
+def test_login_uses_full_name_when_present() -> None:
+    class _FullNameClient(_RenovatioClientStub):
+        def get_patient_info(self, patient_key: str):
+            return {"full_name": "Готовое Имя", "number": "P-200", "last_name": "Иванов", "first_name": "Иван"}
+
+    client = _FullNameClient()
+    repo = _SessionRepo()
+    use_case = PatientLoginUseCase(client, repo, session_ttl_minutes=120, key_lifetime_minutes=120)
+
+    session = use_case.execute("demo", "secret")
+
+    assert session.patient_name == "Готовое Имя"
+    assert session.patient_number == "P-200"
 
 
 def test_login_raises_profile_error_when_profile_fetch_failed() -> None:

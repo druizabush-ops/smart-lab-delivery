@@ -188,8 +188,8 @@ def _create_session(*, patient_key: str, profile_payload: dict, auth_type: str, 
     session = PatientSession(
         session_id=str(uuid4()),
         patient_key=patient_key,
-        patient_name=str(profile_payload.get("patient_name") or profile_payload.get("full_name") or ""),
-        patient_number=str(profile_payload.get("patient_number") or profile_payload.get("patient_id") or ""),
+        patient_name=_resolve_patient_name(profile_payload),
+        patient_number=str(profile_payload.get("patient_number") or profile_payload.get("number") or ""),
         created_at=now,
         expires_at=now + timedelta(minutes=session_ttl_minutes),
         last_refresh_at=now,
@@ -204,3 +204,16 @@ def _create_session(*, patient_key: str, profile_payload: dict, auth_type: str, 
 
 def _truthy(value: object) -> bool:
     return str(value).lower() in {"1", "true", "yes"}
+
+
+def _resolve_patient_name(profile_payload: dict) -> str:
+    explicit_name = str(profile_payload.get("patient_name") or profile_payload.get("full_name") or "").strip()
+    if explicit_name:
+        return explicit_name
+
+    fio_parts = [
+        str(profile_payload.get("last_name") or "").strip(),
+        str(profile_payload.get("first_name") or "").strip(),
+        str(profile_payload.get("third_name") or "").strip(),
+    ]
+    return " ".join(part for part in fio_parts if part)

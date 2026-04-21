@@ -16,6 +16,16 @@ class RenovatioClient(LabResultProvider):
     """Адаптер к Renovatio c поддержкой dual-mode (stub/real)."""
     # Временное решение: один адаптер поддерживает stub и real режим.
     # В будущем может быть разделено на отдельные реализации.
+    _PATIENT_UNVERSIONED_METHODS = frozenset(
+        {
+            "authPatient",
+            "checkAuthCode",
+            "refreshPatientKey",
+            "getPatientInfo",
+            "getPatientLabResults",
+            "getPatientLabResultDetails",
+        }
+    )
 
     def __init__(
         self,
@@ -333,6 +343,19 @@ class RenovatioClient(LabResultProvider):
 
         error = parsed.get("error")
         if error:
+            error_data = parsed.get("data")
+            if isinstance(error_data, dict):
+                error_code = str(error_data.get("code") or "")
+                error_desc = str(error_data.get("desc") or "")
+                if error_code == "404" and "Method not found" in error_desc:
+                    raise IntegrationFailure(
+                        IntegrationErrorKind.BAD_RESPONSE,
+                        f"Renovatio method routing mismatch for {method_name}: {error_desc} (code={error_code}).",
+                    )
+                raise IntegrationFailure(
+                    IntegrationErrorKind.BAD_RESPONSE,
+                    f"Renovatio error {error_code or 'unknown'}: {error_desc or 'unknown error'}.",
+                )
             raise IntegrationFailure(IntegrationErrorKind.BAD_RESPONSE, f"Renovatio error: {error}")
 
         return parsed.get("data")
@@ -341,6 +364,8 @@ class RenovatioClient(LabResultProvider):
         """Строит URL метода Renovatio по real HTTP-контракту."""
 
         base_url = self._settings.base_url.rstrip("/")
+        if method_name in self._PATIENT_UNVERSIONED_METHODS:
+            return f"{base_url}/{method_name}"
         api_version = self._settings.api_version.strip()
         if api_version:
             return f"{base_url}/{api_version}/{method_name}"

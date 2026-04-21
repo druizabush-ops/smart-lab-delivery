@@ -749,3 +749,19 @@ Dependency wiring:
 Что изменилось в логике: login и confirm-code flow теперь выполняют orchestration `auth -> profile -> session` в application-слое; router лишь маппит типы ошибок в controlled HTTP-ответы.
 Что нужно проверить: `POST /patient/auth/login`, `POST /patient/auth/confirm-code`, `GET /patient/auth/me`, сценарий profile fetch failure, полный `pytest`.
 Риски / ограничения: доступность `getPatientInfo` стала критичной частью login flow.
+
+[Багфикс]
+Дата: 2026-04-21
+Ветка: work
+Блок: Fix: URL-стратегия Renovatio patient методов + корректный profile mapping
+Файлы: src/integration/renovatio/client.py; src/application/use_cases/patient_auth.py; tests/unit/integration/test_renovatio_real_adapter.py; tests/unit/application/test_patient_auth_use_cases.py; tests/integration/test_patient_auth_api.py; docs/PROJECT_JOURNAL.txt; docs/TECH_DEBT.txt
+Причина: В текущей инсталляции Renovatio часть patient-facing методов не поддерживает versioned путь (`/api/public/{version}/{method}`) и возвращает `Method not found`; это ломало шаг `getPatientInfo` после успешного `authPatient` и приводило к 502 в login flow.
+Что сделано:
+- В Renovatio client внедрена allowlist-стратегия URL-роутинга: patient-facing методы вызываются только через unversioned путь `/api/public/{method}`.
+- Для остальных методов сохранен текущий versioned маршрут `/api/public/{version}/{method}` (или unversioned при пустой версии).
+- Улучшена диагностика API-ошибок: `code=404` + `Method not found` теперь явно маркируется как routing mismatch, а не маскируется как invalid credentials.
+- Исправлен session profile mapping: `patient_number` берется из `number`; `patient_name` собирается из ФИО (`last_name`, `first_name`, `third_name`) с приоритетом `patient_name/full_name`.
+- Добавлены/обновлены unit+integration тесты на URL-стратегию и profile mapping.
+Что изменилось в архитектуре: URL-стратегия осталась в integration adapter, orchestration `auth -> profile -> session` осталась в application use case; роутеры не получили бизнес/HTTP-логики.
+Что нужно проверить: `POST /patient/auth/login` => 200; `GET /patient/auth/me` возвращает корректные `patient_name` и `patient_number`; полный `pytest` зеленый.
+Риски / ограничения: Поведение Renovatio может отличаться между инсталляциями; allowlist требует поддержки при добавлении новых patient-facing методов.
