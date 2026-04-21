@@ -59,3 +59,13 @@
 - [ ] Известен порядок rollback миграции (`alembic downgrade -1`) при частичном фейле.
 - [ ] Подготовлен контакт/ответственный оператор на окно запуска.
 - [ ] После rollback повторно пройден health/readiness smoke.
+
+11. ZAPUSK228 operational checklist
+- [ ] `python scripts/zapusk228.py --assume-yes --dry-run` отрабатывает без ошибок синтаксиса/CLI.
+- [ ] Перед релизным окном выбран целевой режим запуска ZAPUSK228 (interactive или `--assume-yes`).
+- [ ] При изменении operational flow выполнена проверка необходимости обновить ZAPUSK228 и связанные docs.
+
+12. Process manager systemd model checklist
+- [ ] Установлен `deploy/systemd/smart-process-manager.service` с `Type=oneshot` и `Restart=no`.
+- [ ] Установлен и активирован `deploy/systemd/smart-process-manager.timer`.
+- [ ] `systemctl status smart-process-manager` не показывает restart-loop/start-limit-hit после успешного цикла.

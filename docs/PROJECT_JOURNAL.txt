@@ -779,3 +779,26 @@ Dependency wiring:
 
 Ограничения:
 - Поддержка `lab_id`/`clinic_id` реализована как optional filter query params и прокидывается в Renovatio; финальные продуктовые значения и UX фильтров требуют дальнейшей калибровки.
+
+[Багфикс]
+Дата: 2026-04-21
+Ветка: work
+Блок: Test env isolation + process-manager service model + ZAPUSK228
+Файлы: tests/conftest.py; tests/unit/scripts/test_zapusk228.py; scripts/zapusk228.py; scripts/__init__.py; deploy/systemd/smart-process-manager.service; deploy/systemd/smart-process-manager.timer; docs/PROJECT_JOURNAL.txt; docs/ARCHITECTURE_OVERVIEW.txt; docs/DECISIONS.txt; docs/TECH_DEBT.txt; docs/TEST_PLAN.txt; docs/SETUP_WINDOWS.txt; docs/RUNBOOK.txt; docs/GO_LIVE_CHECKLIST.txt
+Причина:
+- Backend тесты зависели от внешнего shell env (`SLD_INTEGRATION_MODE=real`, `SLD_REPOSITORY_MODE=postgres` и др.) и теряли stub/in-memory semantics.
+- `smart-process-manager` запускался как one-shot, но service-модель с `Restart=always` приводила к бесконечным рестартам и `start-limit-hit`.
+- Требовалась единая сопровождаемая operational точка запуска.
+Что сделано:
+- Добавлена глобальная test-изоляция критичных `SLD_*` переменных в `tests/conftest.py` (autouse fixture).
+- Добавлены systemd артефакты `deploy/systemd/smart-process-manager.service` (oneshot, `Restart=no`) и `deploy/systemd/smart-process-manager.timer`.
+- Реализован административный CLI `scripts/zapusk228.py` с интерактивными подтверждениями, dry-run и шагами update/deps/env/migrations/frontend/restart/smoke/tests.
+- Добавлены unit-тесты ZAPUSK228 (`tests/unit/scripts/test_zapusk228.py`).
+- Обновлены архитектурные/операционные документы, включая новое правило: при изменении operational flow обязательно оценивать обновление ZAPUSK228.
+Что изменилось в логике:
+- Production-логика delivery/patient контуров не менялась.
+- Изменен только test/bootstrap и operational/runtime model для systemd.
+Что нужно проверить:
+- Целевые 4 регрессионных теста проходят даже при export production-like env.
+- Полный `python -m pytest` зеленый.
+- На сервере `smart-process-manager` работает через timer без restart-loop.

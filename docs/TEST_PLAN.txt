@@ -214,3 +214,21 @@
   - `GET /patient/results/{id}` без session -> 401;
   - `GET /patient/results/{id}` для отсутствующего результата -> 404;
   - query `patient_id` не влияет на trust context.
+
+## Environment isolation regression fix (2026-04-21)
+Автоматизировано:
+- Глобальная test-изоляция критичных `SLD_*` env через `tests/conftest.py` (autouse fixture):
+  - `SLD_INTEGRATION_MODE`, `SLD_REPOSITORY_MODE`, DB env, Renovatio env.
+- Регрессионный сценарий: backend тесты должны проходить независимо от того, экспортированы ли в shell production-like env значения.
+
+Обязательный набор после изменений:
+- `python -m pytest tests/integration/test_stub_adapters_and_orchestrator.py::test_app_container_builds_and_orchestrates_ready_results_end_to_end`
+- `python -m pytest tests/integration/test_stub_adapters_and_orchestrator.py::test_orchestrator_retry_failure_pipeline_keeps_architecture_consistent`
+- `python -m pytest tests/unit/infrastructure/test_delivery_process_manager.py::test_process_manager_run_once_keeps_single_cycle_behavior`
+- `python -m pytest tests/unit/infrastructure/test_runtime_infrastructure.py::test_runtime_process_cycle_returns_summary_and_persists_cards`
+- `python -m pytest`
+
+## ZAPUSK228 test coverage (2026-04-21)
+- Unit: `tests/unit/scripts/test_zapusk228.py`
+  - smoke проверки оркестрации ключевых команд в `--assume-yes` режиме;
+  - проверка интерактивного отказа (step skip) без выполнения команд.
