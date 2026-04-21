@@ -499,3 +499,23 @@ python .\scripts\test_renovatio_patient_auth_flow.py
 Ограничения безопасности:
 - Не хардкодить телефон/логин/пароль/auth_code/patient_key в коде.
 - Не сохранять runtime patient_key в env-файлах.
+
+## Проверка patient-facing results (session-based)
+1) Логин и создание session cookie:
+```powershell
+$login = Invoke-WebRequest -Uri "http://127.0.0.1:8001/patient/auth/login" -Method POST -ContentType "application/json" -Body '{"login":"demo","password":"secret"}' -SessionVariable s
+$login.StatusCode
+```
+2) Проверка профиля:
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8001/patient/auth/me" -WebSession $s
+```
+3) Список результатов через server-side session:
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8001/patient/results?lab_id=lab-1&clinic_id=clinic-1" -WebSession $s
+```
+4) Детали результата:
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8001/patient/results/<result_id>" -WebSession $s
+```
+5) Проверка документов/PDF (если есть в payload): убедиться, что в `documents[]` заполнены `url` и `readiness`.

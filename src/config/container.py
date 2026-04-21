@@ -40,6 +40,7 @@ from src.application.use_cases.patient_auth import (
     PatientPhoneLoginUseCase,
     RefreshPatientSessionUseCase,
 )
+from src.application.use_cases.patient_results import PatientResultsUseCase
 
 
 class AppContainer:
@@ -180,6 +181,10 @@ class AppContainer:
         )
         self.get_current_patient_use_case = GetCurrentPatientUseCase(
             session_repository=self.patient_session_repository,
+        )
+        self.patient_results_use_case = PatientResultsUseCase(
+            sessions=self.get_current_patient_use_case,
+            renovatio_client=self.renovatio_client,
         )
 
     def _build_delivery_card_repository(self):

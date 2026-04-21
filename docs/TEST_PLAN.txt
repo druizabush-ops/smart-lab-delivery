@@ -199,3 +199,18 @@
 Важно для регрессии:
 - Security boundary patient API проверяется только через patient app factory и patient session контур.
 - Устаревший сценарий strict-проверки через operator app не используется, чтобы не смешивать operator/patient контуры.
+
+## Coverage update: Renovatio patient results pipeline
+- Unit:
+  - `PatientResultsUseCase.list_results_by_session` (session -> patient_key -> mapping list DTO);
+  - `PatientResultsUseCase.get_result_details_by_session` (details mapping + documents);
+  - ошибки при отсутствии/невалидности session;
+  - 404 mapping при отсутствии результата в Renovatio;
+  - прокидывание optional filters `lab_id`/`clinic_id`.
+- Integration:
+  - `GET /patient/results` с валидной session -> 200;
+  - `GET /patient/results` без session -> 401;
+  - `GET /patient/results/{id}` с валидной session -> 200;
+  - `GET /patient/results/{id}` без session -> 401;
+  - `GET /patient/results/{id}` для отсутствующего результата -> 404;
+  - query `patient_id` не влияет на trust context.

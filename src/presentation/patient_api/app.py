@@ -2,7 +2,6 @@
 
 from fastapi import FastAPI
 
-from src.application.services import PatientResultReadService
 from src.config.container import AppContainer
 from src.presentation.common.errors import register_error_handlers
 from src.presentation.common.health import HealthService, build_health_router
@@ -19,9 +18,7 @@ def create_patient_api_app(container: AppContainer | None = None) -> FastAPI:
         root_path="/api/patient",
     )
     app.state.security_settings = app_container.security_settings
-    app.state.patient_result_read_service = PatientResultReadService(
-        repository=app_container.delivery_card_repository,
-    )
+    app.state.patient_results_use_case = app_container.patient_results_use_case
     app.state.patient_login_use_case = app_container.patient_login_use_case
     app.state.patient_phone_login_use_case = app_container.patient_phone_login_use_case
     app.state.confirm_patient_auth_code_use_case = app_container.confirm_patient_auth_code_use_case

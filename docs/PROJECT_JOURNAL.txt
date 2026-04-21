@@ -765,3 +765,17 @@ Dependency wiring:
 Что изменилось в архитектуре: URL-стратегия осталась в integration adapter, orchestration `auth -> profile -> session` осталась в application use case; роутеры не получили бизнес/HTTP-логики.
 Что нужно проверить: `POST /patient/auth/login` => 200; `GET /patient/auth/me` возвращает корректные `patient_name` и `patient_number`; полный `pytest` зеленый.
 Риски / ограничения: Поведение Renovatio может отличаться между инсталляциями; allowlist требует поддержки при добавлении новых patient-facing методов.
+
+## 2026-04-21 — Renovatio patient results pipeline / shared backend for bot UI and mini app
+Причина: `/patient/results*` был привязан к внутреннему delivery read-model (`patient_id`) и не использовал server-side session + `patient_key`.
+
+Что сделано:
+- Patient-facing endpoints `/patient/results` и `/patient/results/{id}` переведены на application use case `PatientResultsUseCase` с trust-source только из cookie-сессии (`sld_patient_session`).
+- Старый `patient_id` query param сохранен только как формальная обратная совместимость и полностью игнорируется как источник доверия.
+- Источник данных для patient-facing результатов теперь Renovatio методы `getPatientLabResults/getPatientLabResultDetails` по `patient_key`.
+- Введены отдельные patient-facing контракты ответа: list item/details/documents без внутренних delivery-полей (`channel`, `attempts_count`, `last_error`).
+- Для деталей подготовлен document/PDF contour: backend возвращает нормализованные документы (id/title/url/readiness/mime_type), без имитации несуществующих файлов.
+- Добавлены unit/integration тесты для session-based сценариев, 401/404 и mapping payload.
+
+Ограничения:
+- Поддержка `lab_id`/`clinic_id` реализована как optional filter query params и прокидывается в Renovatio; финальные продуктовые значения и UX фильтров требуют дальнейшей калибровки.

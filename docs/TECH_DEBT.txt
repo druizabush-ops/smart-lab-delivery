@@ -355,3 +355,8 @@ Patient Auth ограничения / техдолг:
 - Возможны отличия поведения между staging/prod окружениями одной интеграции.
 Когда пересмотреть: При появлении официального capability/discovery механизма Renovatio или унифицированного versioned контракта во всех целевых инсталляциях.
 Что будет признаком, что пора заменить решение: Появление documented API matrix с гарантированной поддержкой versioning по всем patient-facing методам.
+
+## 2026-04-21 — Patient results filters/documents follow-up
+- `lab_id`/`clinic_id` поддержаны как optional фильтры и прокидываются в Renovatio, но продуктовые defaults и UX-сценарии фильтрации требуют уточнения.
+- Контракт документов/PDF нормализован (url/readiness/mime_type), но отдельный download endpoint и полный lifecycle файлов зависит от подтвержденного контракта Renovatio.
+- Bot-first UX и mini app UX должны развиваться поверх общего backend contour, который уже переведен на session-based Renovatio source.

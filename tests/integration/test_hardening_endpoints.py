@@ -11,6 +11,7 @@ from src.application.use_cases.patient_auth import (
     PatientPhoneLoginUseCase,
     RefreshPatientSessionUseCase,
 )
+from src.application.use_cases.patient_results import PatientResultsUseCase
 from src.config.security_settings import SecuritySettings
 from src.infrastructure.repositories import InMemoryDeliveryCardRepository
 from src.infrastructure.session import InMemoryPatientSessionRepository
@@ -60,6 +61,7 @@ class _Container:
             client, session_repo, session_ttl_minutes=120, key_lifetime_minutes=120
         )
         self.get_current_patient_use_case = GetCurrentPatientUseCase(session_repo)
+        self.patient_results_use_case = PatientResultsUseCase(sessions=self.get_current_patient_use_case, renovatio_client=client)
 
         class Runtime:
             repository_mode = "in_memory"

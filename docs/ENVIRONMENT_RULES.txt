@@ -125,3 +125,8 @@ Unsafe defaults (запрещены в release-like):
 - API key остается общим ключом интеграции (system-side + patient-facing вызовы).
 - `patient_key` — runtime-результат методов `authPatient/checkAuthCode`, не задается через env.
 - `patient_key` запрещено хранить в `.env` и в репозитории.
+
+## Patient results pipeline (session + Renovatio)
+- `lab_id` и `clinic_id` допускаются как optional query filters в patient-facing `/patient/results*` и валидируются на уровне API как строковые значения.
+- Контекст пациента определяется только по cookie `sld_patient_session` и server-side session repository.
+- `patient_id`/`start_param` в query допускаются только для обратной совместимости и игнорируются как trust-source.

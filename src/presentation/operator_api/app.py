@@ -2,7 +2,7 @@
 
 from fastapi import FastAPI
 
-from src.application.services import DeliveryCardReadService, PatientResultReadService
+from src.application.services import DeliveryCardReadService
 from src.config.container import AppContainer
 from src.presentation.common.errors import register_error_handlers
 from src.presentation.common.health import HealthService, build_health_router
@@ -29,9 +29,8 @@ def create_operator_api_app(container: AppContainer | None = None) -> FastAPI:
     app.state.move_to_manual_review_command_use_case = app_container.move_to_manual_review_command_use_case
     app.state.requeue_delivery_card_command_use_case = app_container.requeue_delivery_card_command_use_case
     app.state.override_channel_command_use_case = app_container.override_channel_command_use_case
-    app.state.patient_result_read_service = PatientResultReadService(
-        repository=app_container.delivery_card_repository
-    )
+    app.state.patient_results_use_case = getattr(app_container, "patient_results_use_case", None)
+    app.state.get_current_patient_use_case = getattr(app_container, "get_current_patient_use_case", None)
     app.add_middleware(CorrelationIdMiddleware)
     app.add_middleware(
         SimpleRateLimitMiddleware,
