@@ -733,3 +733,19 @@ Dependency wiring:
 - Добавлены backend endpoints: /patient/auth/login, /phone, /confirm-code, /refresh, /logout, /me.
 - В mini app добавлены экраны выбора способа входа, вход по логину, по телефону, подтверждение кода.
 - Patient key полностью изолирован на backend, frontend работает только через cookie session.
+
+[Багфикс]
+Дата: 2026-04-21
+Ветка: work
+Блок: Fix: корректное создание patient session после authPatient
+Файлы: src/application/use_cases/patient_auth.py; src/presentation/patient_api/routers/auth.py; tests/unit/application/test_patient_auth_use_cases.py; tests/integration/test_patient_auth_api.py; tests/integration/test_hardening_endpoints.py; docs/PROJECT_JOURNAL.txt; docs/TECH_DEBT.txt
+Причина: После успешного `authPatient` backend ошибочно строил session напрямую из auth-ответа и возвращал 401 при отсутствии профиля/`patient_id`.
+Что сделано:
+- `authPatient` используется только как источник `patient_key`.
+- Добавлен обязательный шаг `getPatientInfo(patient_key)` перед созданием session.
+- Создание session переведено на профильные поля из `getPatientInfo`.
+- Устранена ошибка 401 при успешном auth и `patient_id = null`.
+- Введено семантическое разделение ошибок: auth/profile/session creation.
+Что изменилось в логике: login и confirm-code flow теперь выполняют orchestration `auth -> profile -> session` в application-слое; router лишь маппит типы ошибок в controlled HTTP-ответы.
+Что нужно проверить: `POST /patient/auth/login`, `POST /patient/auth/confirm-code`, `GET /patient/auth/me`, сценарий profile fetch failure, полный `pytest`.
+Риски / ограничения: доступность `getPatientInfo` стала критичной частью login flow.

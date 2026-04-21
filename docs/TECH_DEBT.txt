@@ -330,3 +330,15 @@ Patient Auth ограничения / техдолг:
 - refresh lifetime зависит от ограничений Renovatio API и может отличаться от локального TTL;
 - текущая phone-ветка не хранит промежуточный challenge server-side (требуется усиление anti-replay);
 - in-memory session repository нужно заменить на persistent store для multi-instance production.
+
+[Технический долг]
+Дата: 2026-04-21
+Ветка: work
+Блок: Зависимость patient login flow от getPatientInfo
+Что временно: Создание patient session после `authPatient` требует обязательного шага `getPatientInfo(patient_key)`; при частичном сбое (`auth ok`, `profile fail`) login завершается controlled ошибкой.
+Почему это временно: Внешний API Renovatio разделяет auth и профиль, но не дает транзакционной гарантии между вызовами.
+Какие ограничения:
+- Доступность `getPatientInfo` напрямую влияет на успешность login.
+- Возможны partial failure сценарии: ключ получен, но профиль временно недоступен.
+Когда пересмотреть: При появлении в Renovatio объединенного/атомарного patient auth+profile контракта или при внедрении устойчивой retry/circuit-breaker политики для patient auth flow.
+Что будет признаком, что пора заменить решение: Рост ошибок profile fetch в проде или подтвержденный контракт, возвращающий профиль в auth-ответе.
