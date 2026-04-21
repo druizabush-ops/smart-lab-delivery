@@ -4,71 +4,127 @@ pytest.importorskip("fastapi")
 
 from fastapi.testclient import TestClient
 
-from src.domain.entities import DeliveryAttempt, DeliveryCard, DeliveryChannel, LabResult, Patient
-from src.domain.statuses import AttemptStatus, LabResultStatus
-from src.infrastructure.identity import build_operational_card_id
-from src.infrastructure.repositories import InMemoryDeliveryCardRepository
-from src.presentation.operator_api import create_operator_api_app
+from src.application.use_cases.patient_auth import (
+    ConfirmPatientAuthCodeUseCase,
+    GetCurrentPatientUseCase,
+    PatientLoginUseCase,
+    PatientPhoneLoginUseCase,
+    RefreshPatientSessionUseCase,
+)
+from src.application.use_cases.patient_results import PatientResultsUseCase
 from src.config.security_settings import SecuritySettings
+from src.infrastructure.repositories import InMemoryDeliveryCardRepository
+from src.infrastructure.session import InMemoryPatientSessionRepository
+from src.integration.errors import IntegrationErrorKind, IntegrationFailure
+from src.presentation.patient_api import create_patient_api_app
 
 
-def _build_card(patient_id: str, lab_result_id: str) -> DeliveryCard:
-    patient = Patient(id=patient_id, full_name="Test User", email="test@example.org")
-    result = LabResult(id=lab_result_id, patient_id=patient_id, status=LabResultStatus.READY)
-    return DeliveryCard.create(patient=patient, lab_result=result, channel=DeliveryChannel.MAX)
+class _RenovatioStub:
+    def auth_patient_by_login(self, login: str, password: str, lifetime=None):
+        if login != "demo" or password != "secret":
+            raise ValueError("bad creds")
+        return {"patient_key": "pk-1", "patient_id": None, "need_auth_key": 0}
+
+    def auth_patient_by_phone(self, phone: str, lifetime=None):
+        return {"need_auth_key": 1, "patient_id": "p-1"}
+
+    def check_auth_code(self, patient_id: str, code: str):
+        if code != "1234":
+            raise ValueError("bad code")
+        return {"patient_key": "pk-2", "patient_id": patient_id}
+
+    def get_patient_info(self, patient_key: str):
+        return {"number": "p-1", "full_name": "User One", "patient_id": None}
+
+    def refresh_patient_key(self, patient_key: str, lifetime=None):
+        return {"patient_key": f"{patient_key}-r"}
+
+    def get_patient_lab_results_by_key(self, patient_key: str, *, lab_id=None, clinic_id=None):
+        assert patient_key.startswith("pk-")
+        return [
+            {
+                "id": "r-1",
+                "date": "2026-04-20",
+                "datetime": "2026-04-20T11:10:00Z",
+                "lab_id": lab_id or "lab-default",
+                "lab": "Lab",
+                "clinic_id": clinic_id or "clinic-default",
+                "clinic": "Clinic",
+                "services": ["ОАК"],
+                "documents": [{"id": "d-1", "title": "PDF", "url": "https://file/1.pdf"}],
+            }
+        ]
+
+    def get_patient_lab_result_details_by_key(self, patient_key: str, result_id: str, *, lab_id=None, clinic_id=None):
+        if result_id == "missing":
+            raise IntegrationFailure(IntegrationErrorKind.EMPTY_RESULT, "not found")
+        return {
+            "id": result_id,
+            "date": "2026-04-20",
+            "datetime": "2026-04-20T11:10:00Z",
+            "lab_id": lab_id or "lab-default",
+            "lab": "Lab",
+            "clinic_id": clinic_id or "clinic-default",
+            "clinic": "Clinic",
+            "services": ["ОАК"],
+            "sections": [{"name": "Section"}],
+            "indicators": [{"name": "WBC", "value": "5.0"}],
+            "documents": [{"id": "d-1", "title": "PDF", "url": "https://file/1.pdf"}],
+        }
 
 
-def _build_client(repository) -> TestClient:
-    class _Container:
-        def __init__(self):
-            self.delivery_card_repository = repository
-            self.retry_delivery_card_command_use_case = None
-            self.move_to_manual_review_command_use_case = None
-            self.requeue_delivery_card_command_use_case = None
-            self.override_channel_command_use_case = None
-            self.security_settings = SecuritySettings.from_env()
+class _Container:
+    def __init__(self):
+        session_repo = InMemoryPatientSessionRepository()
+        client = _RenovatioStub()
+        self.security_settings = SecuritySettings.from_env()
+        self.renovatio_settings = type("RS", (), {"patient_key_lifetime_minutes": 120})()
+        self.delivery_card_repository = InMemoryDeliveryCardRepository()
+        self.patient_session_repository = session_repo
+        self.patient_login_use_case = PatientLoginUseCase(client, session_repo, session_ttl_minutes=120, key_lifetime_minutes=120)
+        self.patient_phone_login_use_case = PatientPhoneLoginUseCase(client)
+        self.confirm_patient_auth_code_use_case = ConfirmPatientAuthCodeUseCase(client, session_repo, session_ttl_minutes=120)
+        self.refresh_patient_session_use_case = RefreshPatientSessionUseCase(client, session_repo, session_ttl_minutes=120, key_lifetime_minutes=120)
+        self.get_current_patient_use_case = GetCurrentPatientUseCase(session_repo)
+        self.patient_results_use_case = PatientResultsUseCase(sessions=self.get_current_patient_use_case, renovatio_client=client)
 
-    return TestClient(create_operator_api_app(container=_Container()))
 
-
-def test_patient_results_list_and_detail_isolated_from_operator_contract() -> None:
-    repository = InMemoryDeliveryCardRepository()
-    card = _build_card("patient-001", "lr-1")
-    card.add_attempt(
-        DeliveryAttempt(
-            timestamp=card.created_at,
-            channel=DeliveryChannel.MAX,
-            result=AttemptStatus.SUCCESS,
-        )
-    )
-    repository.save(card)
-    repository.save(_build_card("patient-002", "lr-2"))
-
-    client = _build_client(repository)
-    response = client.get("/patient/results", params={"patient_id": "patient-001"})
-
+def _login(client: TestClient) -> None:
+    response = client.post("/patient/auth/login", json={"login": "demo", "password": "secret"})
     assert response.status_code == 200
-    payload = response.json()
+
+
+def test_results_list_and_detail_via_server_side_session() -> None:
+    client = TestClient(create_patient_api_app(container=_Container()))
+    _login(client)
+
+    list_response = client.get("/patient/results", params={"patient_id": "foreign", "lab_id": "lab-1", "clinic_id": "clinic-1"})
+    assert list_response.status_code == 200
+    payload = list_response.json()
     assert len(payload) == 1
-    assert payload[0]["patient_id"] == "patient-001"
-    assert "attempts_count" in payload[0]
-    assert "attempts" not in payload[0]
+    assert payload[0]["result_id"] == "r-1"
+    assert payload[0]["files_count"] == 1
+    assert "patient_id" not in payload[0]
 
-    result_id = payload[0]["result_id"]
-    detail = client.get(f"/patient/results/{result_id}", params={"patient_id": "patient-001"})
-    assert detail.status_code == 200
-    assert detail.json()["documents"][0]["readiness"] == "ready"
+    details = client.get("/patient/results/r-1", params={"patient_id": "foreign", "lab_id": "lab-1", "clinic_id": "clinic-1"})
+    assert details.status_code == 200
+    assert details.json()["documents"][0]["readiness"] == "ready"
 
 
-def test_patient_result_returns_404_for_foreign_patient_or_unknown_result() -> None:
-    repository = InMemoryDeliveryCardRepository()
-    card = _build_card("patient-777", "lr-777")
-    repository.save(card)
-    card_id = build_operational_card_id(card)
-    client = _build_client(repository)
+def test_results_endpoints_require_session() -> None:
+    client = TestClient(create_patient_api_app(container=_Container()))
 
-    foreign_response = client.get(f"/patient/results/{card_id}", params={"patient_id": "patient-other"})
-    assert foreign_response.status_code == 404
+    list_response = client.get("/patient/results", params={"patient_id": "foreign"})
+    details_response = client.get("/patient/results/r-1", params={"patient_id": "foreign"})
 
-    unknown_response = client.get("/patient/results/unknown", params={"patient_id": "patient-777"})
-    assert unknown_response.status_code == 404
+    assert list_response.status_code == 401
+    assert details_response.status_code == 401
+
+
+def test_result_details_not_found_returns_404() -> None:
+    client = TestClient(create_patient_api_app(container=_Container()))
+    _login(client)
+
+    response = client.get("/patient/results/missing")
+
+    assert response.status_code == 404

@@ -12,6 +12,7 @@ from .operator_commands import (
 from .process_delivery import ProcessDeliveryUseCase
 from .register_delivery_result import RegisterDeliveryResultUseCase
 from .retry_delivery import RetryDeliveryUseCase
+from .patient_results import PatientResultsUseCase
 
 __all__ = [
     "CreateDeliveryCardUseCase",
@@ -24,4 +25,5 @@ __all__ = [
     "ProcessDeliveryUseCase",
     "RegisterDeliveryResultUseCase",
     "RetryDeliveryUseCase",
+    "PatientResultsUseCase",
 ]

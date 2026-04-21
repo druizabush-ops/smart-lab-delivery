@@ -295,3 +295,13 @@ DECISION: Patient session хранится server-side.
 Последствия:
 - backend обязателен для всех patient-facing запросов;
 - нужен TTL сессии и lifecycle управления logout/refresh.
+
+## ADR: Session-based Renovatio source for patient results
+- Статус: Accepted (2026-04-21)
+- Контекст: Старый `/patient/results` использовал internal delivery-card read model и `patient_id` как контекст.
+- Решение:
+  1) patient-facing results читаются только по server-side session;
+  2) source of truth для patient API — Renovatio patient-facing методы по `patient_key`;
+  3) internal delivery read model остается только для internal/operator контуров;
+  4) backend contracts унифицированы как shared foundation для MAX bot UI и mini app UI.
+- Последствия: снижается риск подмены контекста через query params; ускоряется разработка двух UI каналов поверх единого API.

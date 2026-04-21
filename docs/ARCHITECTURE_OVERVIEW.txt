@@ -193,3 +193,10 @@ Patient Auth Layer (новый слой)
 - Application: use-cases PatientLoginUseCase, PatientPhoneLoginUseCase, ConfirmPatientAuthCodeUseCase, RefreshPatientSessionUseCase, GetCurrentPatientUseCase.
 - Access: server-side session repository (session_id -> patient_key + метаданные), cookie transport.
 - Presentation: patient auth endpoints + existing patient results endpoints через session context.
+
+## Patient-facing results contour (Renovatio/session-based)
+- Consumer layers: MAX bot UI и mini app UI используют единый backend endpoint `/patient/results*`.
+- Trust boundary: presentation слой принимает запрос и извлекает только `session_id` из cookie; пациентский контекст разрешается в application use case через repository server-side sessions.
+- Orchestration: `PatientResultsUseCase` получает session -> `patient_key` -> вызывает Renovatio patient-facing методы.
+- Integration boundary: HTTP/URL стратегия Renovatio (включая unversioned методы) остается только в integration adapter.
+- External contract: patient-facing DTO (список/детали/документы), без утечки внутренней delivery модели.
