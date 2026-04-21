@@ -73,3 +73,23 @@
 - `SLD_INTEGRATION_MODE=stub`
 - `SLD_PATIENT_SECURITY_MODE=strict` сохраняется
 - Перезапуск API + `python scripts/run_launch_readiness_checks.py`
+
+11. Единый admin flow через ZAPUSK228
+Шаги:
+1) Базовый запуск с подтверждениями:
+   - `python scripts/zapusk228.py`
+2) Неинтерактивный dry-run:
+   - `python scripts/zapusk228.py --assume-yes --dry-run`
+3) Пример частичного запуска без frontend/restart:
+   - `python scripts/zapusk228.py --assume-yes --skip-frontend --skip-restart`
+
+Примечания:
+- ZAPUSK228 не печатает секреты env, только факт наличия ключевых переменных.
+- Для server-операций с systemd запускать инструмент от пользователя с нужными правами.
+
+12. Process manager start-limit-hit
+Симптом: сервис `smart-process-manager` уходит в `start-limit-hit` после успешного выполнения цикла.
+Проверка:
+1) `systemctl cat smart-process-manager.service`
+2) Убедиться, что используется one-shot модель (`Type=oneshot`, `Restart=no`).
+3) Убедиться, что периодичность обеспечивается `smart-process-manager.timer`, а не `Restart=always`.

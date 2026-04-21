@@ -519,3 +519,24 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8001/patient/results?lab_id=lab-1&clini
 Invoke-RestMethod -Uri "http://127.0.0.1:8001/patient/results/<result_id>" -WebSession $s
 ```
 5) Проверка документов/PDF (если есть в payload): убедиться, что в `documents[]` заполнены `url` и `readiness`.
+
+## ZAPUSK228 (единый admin entrypoint, 2026-04-21)
+
+Быстрый запуск:
+```powershell
+python .\scripts\zapusk228.py
+```
+
+Dry-run (рекомендуется перед первым применением):
+```powershell
+python .\scripts\zapusk228.py --assume-yes --dry-run
+```
+
+Пример частичного сценария без frontend/restart:
+```powershell
+python .\scripts\zapusk228.py --assume-yes --skip-frontend --skip-restart
+```
+
+Важно:
+- В Windows без systemd шаги `systemctl` будут неприменимы; используйте `--skip-restart --skip-smoke` или dry-run.
+- ZAPUSK228 становится обязательным сопровождаемым operational инструментом: при изменении admin flow обновляйте скрипт и документацию синхронно.

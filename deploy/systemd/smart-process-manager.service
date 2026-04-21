@@ -1,0 +1,17 @@
+[Unit]
+Description=Smart Lab Delivery Process Manager (one-shot cycle)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/smart-lab-delivery
+EnvironmentFile=/etc/smart-lab-delivery/sld.env
+ExecStart=/usr/bin/python3 /opt/smart-lab-delivery/scripts/run_process_manager.py
+# Процесс выполняет один цикл и успешно завершается, поэтому Restart не используется.
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

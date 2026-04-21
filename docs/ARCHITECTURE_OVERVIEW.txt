@@ -200,3 +200,12 @@ Patient Auth Layer (новый слой)
 - Orchestration: `PatientResultsUseCase` получает session -> `patient_key` -> вызывает Renovatio patient-facing методы.
 - Integration boundary: HTTP/URL стратегия Renovatio (включая unversioned методы) остается только в integration adapter.
 - External contract: patient-facing DTO (список/детали/документы), без утечки внутренней delivery модели.
+
+## Operational/admin contour (обновление 2026-04-21)
+- Введен единый административный entrypoint `scripts/zapusk228.py` (ZAPUSK228).
+- Контур ZAPUSK228 охватывает: code update, dependency sync, env readiness hint, alembic migration, frontend build/deploy, restart сервисов, smoke checks, backend tests.
+- ZAPUSK228 работает как orchestration-wrapper и не переносит в себя бизнес-логику domain/application.
+- Process manager lifecycle приведен к one-shot модели systemd:
+  - `smart-process-manager.service` — `Type=oneshot`, без `Restart=always`;
+  - `smart-process-manager.timer` — периодический запуск cycle.
+- Test contour изолирован от внешнего shell env через `tests/conftest.py`, что сохраняет deterministic stub/runtime semantics независимо от production-like переменных в окружении.
