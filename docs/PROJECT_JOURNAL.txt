@@ -841,3 +841,30 @@ Dependency wiring:
 Риски / ограничения:
 - Нужна верификация финального стабильного MAX user-id поля (пока используется abstraction `external_platform_user_id`/header).
 - Полноценный QR-flow не реализован, заложен как следующий архитектурный шаг.
+
+[Багфикс]
+Дата: 2026-04-22
+Ветка: work
+Блок: MINI APP POLISH + results consistency + PDF UX fix
+Файлы: src/application/use_cases/patient_results.py; frontend/miniapp/src/App.tsx; frontend/miniapp/src/components/ResultList.tsx; frontend/miniapp/src/components/ResultDetails.tsx; frontend/miniapp/src/styles.css; tests/unit/application/test_patient_results_use_case.py; frontend/miniapp/src/App.test.tsx; docs/PROJECT_JOURNAL.txt; docs/DECISIONS.txt; docs/TEST_PLAN.txt
+Причина: В patient-facing контуре фиксировались рассогласования list/details (result_id/status/has_pdf), нестабильный PDF UX в webview и «технический» вид mini app.
+Что было причиной проблем:
+- details мог вернуть пустой `id`, что приводило к невалидным PDF route;
+- fallback статуса зависел от наличия PDF и расходился между list/details payload;
+- open PDF через `window.open(url)` работал нестабильно по session/cookie в webview-сценариях;
+- UI показывал слишком «сырой» MVP без нормальной карточной структуры и friendly-ошибок.
+Что исправлено:
+- В application-слое добавлена единая нормализация `result_id/status/has_pdf`.
+- Для details введен обязательный fallback `result_id <- requested_result_id` и запрет построения PDF URL из пустого id.
+- `has_pdf` унифицирован по признакам `has_pdf|is_pdf_available|files|files_count|documents`.
+- В mini app open/download PDF переведены на единый fetch с `credentials: include` + Blob URL.
+- Пользовательские ошибки PDF нормализованы в friendly-тексты без сырого JSON.
+- UI списка/details переведен на аккуратные карточки с отступами и читаемой структурой.
+Что нужно проверить:
+- `python -m pytest tests/unit/application/test_patient_results_use_case.py`
+- `python -m pytest tests/integration/test_patient_api_read_only.py tests/integration/test_patient_auth_api.py`
+- `cd frontend/miniapp && npm run test -- --run`
+- `cd frontend/miniapp && npm run build`
+Ограничения и ZAPUSK228:
+- Подтвержденных новых ограничений MAX webview не выявлено в этом блоке.
+- Operational flow не менялся, поэтому обновление ZAPUSK228 не потребовалось.

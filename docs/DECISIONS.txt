@@ -377,3 +377,26 @@ DECISION: Patient session хранится server-side.
 Дата: 2026-04-22
 Решение: session и привязка `external_platform_user_id -> session_id` живут только на сервере; frontend не хранит credentials.
 Причина: foundation для no-repeat-login и безопасного lifecycle (logout/unbind/change credentials).
+
+[ADR-025] Единая нормализация patient results contract для list/details/pdf
+Дата: 2026-04-22
+Решение:
+- result_id нормализуется в application-слое единым правилом и для details обязателен fallback на `requested_result_id` из route.
+- status в patient-facing DTO нормализуется единообразно по сырым статусам/ready-признакам и не вычисляется из UI.
+- has_pdf вычисляется единообразно через `has_pdf|is_pdf_available|files|files_count|documents`.
+- `pdf_open_url`/`pdf_download_url` строятся только из непустого `result_id` в формате `/patient/results/{id}/pdf`.
+Причина: устранить расхождения list/details и предотвратить генерацию PDF route с пустым id.
+Последствия:
+- frontend перестает «догадываться» о статусе/доступности PDF;
+- backend держит единый source of truth для patient-facing контракта.
+
+[ADR-026] PDF open/download в mini app только через backend session endpoint
+Дата: 2026-04-22
+Решение:
+- open/download сценарии используют единый fetch к `/patient/results/{id}/pdf` с `credentials: include`.
+- Открытие выполняется через Blob URL после backend-ответа, скачивание — через тот же Blob без прямой работы с base64.
+- Пользователю показываются только patient-friendly тексты ошибок без сырых JSON payload.
+Причина: сохранить server-side session semantics в webview и исключить утечку интеграционных деталей на клиент.
+Последствия:
+- стабильнее поведение в мобильном webview;
+- сохранена граница доверия (frontend не обращается к Renovatio напрямую).

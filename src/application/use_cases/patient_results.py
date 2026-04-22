@@ -85,7 +85,13 @@ class PatientResultsUseCase:
             lab_id=lab_id,
             clinic_id=clinic_id,
         )
-        return [_map_result_list_item(item) for item in payload]
+        normalized: list[PatientLabResultListItemDto] = []
+        for item in payload:
+            try:
+                normalized.append(_map_result_list_item(item))
+            except PatientLabResultNotFoundError:
+                continue
+        return normalized
 
     def get_result_details_by_session(
         self,
@@ -110,7 +116,7 @@ class PatientResultsUseCase:
 
         if not payload:
             raise PatientLabResultNotFoundError(result_id)
-        return _map_result_details(payload)
+        return _map_result_details(payload, requested_result_id=result_id)
 
     def _get_active_session(self, session_id: str) -> PatientSession:
         session = self._sessions.execute(session_id)
@@ -183,9 +189,12 @@ class PatientResultPdfUseCase:
 
 
 def _map_result_list_item(raw: dict[str, Any]) -> PatientLabResultListItemDto:
+    result_id = _resolve_result_id(raw)
+    if not result_id:
+        raise PatientLabResultNotFoundError("В payload списка отсутствует result_id")
     services = _extract_services(raw)
     return PatientLabResultListItemDto(
-        result_id=_first_str(raw, "result_id", "id", "lab_result_id"),
+        result_id=result_id,
         title=_resolve_title(raw, services),
         date=_first_optional_str(raw, "date") or _format_date(_first_optional_str(raw, "datetime", "date_time", "created_at")),
         status=_normalize_status(raw),
@@ -196,8 +205,10 @@ def _map_result_list_item(raw: dict[str, Any]) -> PatientLabResultListItemDto:
     )
 
 
-def _map_result_details(raw: dict[str, Any]) -> PatientLabResultDetailsDto:
-    result_id = _first_str(raw, "result_id", "id", "lab_result_id")
+def _map_result_details(raw: dict[str, Any], *, requested_result_id: str) -> PatientLabResultDetailsDto:
+    result_id = _resolve_result_id(raw, fallback=requested_result_id)
+    if not result_id:
+        raise PatientLabResultNotFoundError("В payload details отсутствует result_id")
     services = _extract_services(raw)
     has_pdf = _has_pdf(raw)
     pdf_route = f"/patient/results/{result_id}/pdf"
@@ -246,6 +257,8 @@ def _extract_list(raw: dict[str, Any], *keys: str) -> list[dict[str, Any]]:
 
 
 def _has_pdf(raw: dict[str, Any]) -> bool:
+    if _first_bool(raw, "has_pdf", "is_pdf_available"):
+        return True
     files = raw.get("files")
     if isinstance(files, list):
         for item in files:
@@ -253,6 +266,9 @@ def _has_pdf(raw: dict[str, Any]) -> bool:
                 return True
             if isinstance(item, dict) and _first_optional_str(item, "url", "file_url", "pdf_url", "link"):
                 return True
+    files_count = _first_int(raw, "files_count", "pdf_count")
+    if files_count is not None and files_count > 0:
+        return True
     documents = _extract_list(raw, "documents", "pdfs")
     for doc in documents:
         if _first_optional_str(doc, "url", "file_url", "pdf_url", "link"):
@@ -272,7 +288,15 @@ def _normalize_status(raw: dict[str, Any]) -> str:
     }
     if raw_status in mapping:
         return mapping[raw_status]
-    return "Готов" if _has_pdf(raw) else "В обработке"
+    if _first_bool(raw, "is_ready", "ready", "is_completed"):
+        return "Готов"
+    if _first_optional_str(raw, "ready_at", "completed_at", "validated_at"):
+        return "Готов"
+    return "В обработке"
+
+
+def _resolve_result_id(raw: dict[str, Any], *, fallback: str = "") -> str:
+    return _first_str(raw, "result_id", "id", "lab_result_id", default=fallback.strip())
 
 
 def _resolve_title(raw: dict[str, Any], services: list[str]) -> str:
@@ -314,6 +338,35 @@ def _first_optional_str(raw: dict[str, Any], *keys: str) -> str | None:
         text = str(value).strip()
         if text:
             return text
+    return None
+
+
+def _first_bool(raw: dict[str, Any], *keys: str) -> bool:
+    truthy = {"1", "true", "yes", "y", "да"}
+    falsy = {"0", "false", "no", "n", "нет"}
+    for key in keys:
+        value = raw.get(key)
+        if isinstance(value, bool):
+            return value
+        if value is None:
+            continue
+        text = str(value).strip().lower()
+        if text in truthy:
+            return True
+        if text in falsy:
+            return False
+    return False
+
+
+def _first_int(raw: dict[str, Any], *keys: str) -> int | None:
+    for key in keys:
+        value = raw.get(key)
+        if value is None:
+            continue
+        try:
+            return int(str(value).strip())
+        except ValueError:
+            continue
     return None
 
 

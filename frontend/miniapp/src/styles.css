@@ -1,11 +1,54 @@
 body {
   font-family: Inter, sans-serif;
   margin: 0;
-  background: #f2f4f8;
+  background: #f4f6fb;
+  color: #1f2a37;
 }
 
 main {
   max-width: 720px;
   margin: 0 auto;
   padding: 16px;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.panel {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 16px;
+  margin-top: 12px;
+  box-shadow: 0 2px 10px rgba(31, 42, 55, 0.08);
+}
+
+.home-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.result-card {
+  border: 1px solid #dbe2ef;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fbfdff;
+}
+
+.result-card__title {
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.result-card__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }

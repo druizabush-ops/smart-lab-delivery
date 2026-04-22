@@ -8,7 +8,7 @@ export function ResultDetails(props: {
   onDownloadPdf: () => void;
 }): JSX.Element {
   return (
-    <div>
+    <div className="result-details">
       <Button onClick={props.onBack}>Назад к списку</Button>
       <h2>{props.result.title}</h2>
       <p>Дата: {props.result.date ?? "—"}</p>
@@ -19,9 +19,10 @@ export function ResultDetails(props: {
       {props.result.indicators.map((item, index) => (
         <p key={index}>{String(item.name ?? "Показатель")}: {String(item.value ?? "—")}</p>
       ))}
-      <Button disabled={!props.result.has_pdf} onClick={props.onOpenPdf}>Открыть PDF</Button>
-      <Button disabled={!props.result.has_pdf} onClick={props.onDownloadPdf}>Скачать PDF</Button>
-      {!props.result.has_pdf ? <p>PDF временно недоступен.</p> : null}
+      <div className="result-card__actions">
+        <Button disabled={!props.result.has_pdf} onClick={props.onOpenPdf}>Открыть PDF</Button>
+        <Button disabled={!props.result.has_pdf} onClick={props.onDownloadPdf}>Скачать PDF</Button>
+      </div>
     </div>
   );
 }

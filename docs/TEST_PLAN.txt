@@ -258,3 +258,24 @@ Regression:
 - Проверить состояния loading/empty/error.
 - Проверить backend semantics `has_pdf` и стабильность `/patient/results/{id}/pdf`.
 - Проверить binding foundation: login с external user id, последующий `GET /patient/auth/me` без cookie и `POST /patient/auth/unbind`.
+
+17. Results consistency + PDF UX regression (обновление 2026-04-22)
+Backend (обязательно):
+- `python -m pytest tests/unit/application/test_patient_results_use_case.py`
+  - result_id не теряется в details при пустом id в payload (fallback на route id);
+  - status/has_pdf нормализуются одинаково между list/details;
+  - pdf route строится как `/patient/results/{id}/pdf` без пустых сегментов.
+
+Frontend (обязательно):
+- `cd frontend/miniapp && npm run test -- --run`
+  - PDF-кнопки disabled при `has_pdf=false`;
+  - при ошибке PDF показывается patient-friendly текст;
+  - сырой backend JSON не отображается в UI.
+
+Regression contour:
+- `python -m pytest tests/integration/test_patient_api_read_only.py tests/integration/test_patient_auth_api.py`
+- `python -m pytest`
+- `cd frontend/miniapp && npm run build`
+
+Проверка ZAPUSK228:
+- В текущем блоке operational flow не менялся (шаги smoke уже покрывают login/results/pdf), поэтому обновление `scripts/zapusk228.py` не требуется.

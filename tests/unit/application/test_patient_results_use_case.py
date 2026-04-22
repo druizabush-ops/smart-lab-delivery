@@ -117,6 +117,43 @@ def test_get_result_details_by_session_maps_documents() -> None:
     assert details.sections[0]["name"] == "Гематология"
 
 
+def test_get_result_details_by_session_uses_requested_result_id_when_payload_is_empty() -> None:
+    class EmptyIdRenovatio(_Renovatio):
+        def get_patient_lab_result_details_by_key(self, patient_key: str, result_id: str, *, lab_id=None, clinic_id=None):
+            payload = super().get_patient_lab_result_details_by_key(
+                patient_key,
+                result_id,
+                lab_id=lab_id,
+                clinic_id=clinic_id,
+            )
+            payload["id"] = ""
+            return payload
+
+    use_case = PatientResultsUseCase(sessions=_Sessions(_session()), renovatio_client=EmptyIdRenovatio())
+    details = use_case.get_result_details_by_session(session_id="sid-1", result_id="r-42")
+    assert details.result_id == "r-42"
+    assert details.pdf_open_url == "/patient/results/r-42/pdf"
+
+
+def test_status_and_pdf_normalization_consistent_between_list_and_details() -> None:
+    class ConsistencyRenovatio(_Renovatio):
+        def get_patient_lab_results_by_key(self, patient_key: str, *, lab_id=None, clinic_id=None):
+            return [{"id": "r-sync", "status": "completed", "files_count": "1"}]
+
+        def get_patient_lab_result_details_by_key(self, patient_key: str, result_id: str, *, lab_id=None, clinic_id=None):
+            return {"id": "r-sync", "result_status": "completed", "has_pdf": True}
+
+    use_case = PatientResultsUseCase(sessions=_Sessions(_session()), renovatio_client=ConsistencyRenovatio())
+    items = use_case.list_results_by_session(session_id="sid-1")
+    details = use_case.get_result_details_by_session(session_id="sid-1", result_id="r-sync")
+
+    assert items[0].result_id == details.result_id
+    assert items[0].status == details.status == "Готов"
+    assert items[0].has_pdf is True
+    assert details.has_pdf is True
+    assert details.pdf_download_url == "/patient/results/r-sync/pdf"
+
+
 def test_get_result_details_by_session_returns_not_found() -> None:
     client = _Renovatio()
     use_case = PatientResultsUseCase(sessions=_Sessions(_session()), renovatio_client=client)
