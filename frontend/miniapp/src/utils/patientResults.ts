@@ -41,8 +41,15 @@ function resolveIndicatorCode(indicator: Record<string, unknown>): string | null
 }
 
 function resolveIndicatorValueText(indicator: Record<string, unknown>): string {
-  const value = toNonEmptyString(indicator.value) ?? toNonEmptyString(indicator.result_value) ?? "—";
-  const unit = toNonEmptyString(indicator.unit) ?? toNonEmptyString(indicator.measure_unit);
+  const value =
+    toNonEmptyString(indicator.parameter_value) ??
+    toNonEmptyString(indicator.value) ??
+    toNonEmptyString(indicator.result_value) ??
+    "—";
+  const unit =
+    toNonEmptyString(indicator.measurement_unit) ??
+    toNonEmptyString(indicator.unit) ??
+    toNonEmptyString(indicator.measure_unit);
   return unit ? `${value} ${unit}` : value;
 }
 

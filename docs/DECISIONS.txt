@@ -423,3 +423,24 @@ DECISION: Patient session хранится server-side.
 Последствия:
 - пациент видит консистентный и фактический статус;
 - снижена вероятность UI-расхождений между list/details.
+
+[Решение]
+Дата: 2026-04-22
+Контекст: В MAX/webview open/download PDF через blob URL и `window.open(blob)` работает нестабильно, хотя backend endpoint `/patient/results/{id}/pdf` стабилен и session-aware.
+Решение: Для mini app принят runtime-path «session-aware URL navigation»:
+- Open PDF: endpoint вызывается с `?disposition=inline`.
+- Download PDF: endpoint вызывается с `?disposition=attachment`.
+- Перед переходом выполняется availability-check, чтобы сохранить человекочитаемые ошибки в UI.
+Последствия:
+- Увеличен сетевой overhead (дополнительный pre-check запрос).
+- Зато исключена зависимость от blob/object URL поведения webview.
+- Backend контракт не расширялся новым endpoint, только добавлен query-параметр для Content-Disposition.
+
+[Решение]
+Дата: 2026-04-22
+Контекст: В patient details labels уже маппились по services, но values/units иногда рендерились как «—» при наличии фактических данных Renovatio.
+Решение: В util `buildPatientIndicators` canonical-полями для patient-facing рендера зафиксированы `parameter_value` и `measurement_unit` с fallback на legacy-ключи (`value`, `result_value`, `unit`, `measure_unit`).
+Последствия:
+- Строка результата стабильно строится в формате «<label>: <value> <unit>».
+- Если unit отсутствует, строка рендерится без unit.
+- Если label по services не найден, fallback остается на `parameter_name/parameter_code/code`.

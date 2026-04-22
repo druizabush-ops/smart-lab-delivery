@@ -36,7 +36,7 @@ export type MiniAppContentConfig = {
 export const miniAppContentConfig: MiniAppContentConfig = {
   appTitle: "Smart Lab",
   appSubtitle: "Медицинский мини-сервис",
-  homeGreetingTitle: "Здравствуйте!",
+  homeGreetingTitle: "Здравствуйте",
   homeGreetingSubtitle: "Ваши данные и результаты доступны в защищённой сессии.",
   homeActions: {
     results: "Результаты анализов",

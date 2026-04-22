@@ -297,3 +297,32 @@ Frontend:
 Build / smoke:
 - `cd frontend/miniapp && npm run build`
 - (опционально вручную) login -> results -> details -> open/download PDF в MAX/webview.
+
+## Обновление test scope — MINI APP UX/PDF polish (2026-04-22)
+
+### Frontend unit/integration (vitest)
+- Проверка patient-facing строки в `buildPatientIndicators`:
+  - canonical mapping `parameter_value + measurement_unit`;
+  - fallback без unit;
+  - fallback label на `parameter_name`, если service match отсутствует.
+- Проверка home screen:
+  - главный CTA «Результаты анализов» присутствует;
+  - старые кнопки не остаются primary-navigation.
+- Проверка result list UX:
+  - карточка результата открывает details по клику всей карточки;
+  - action-кнопки (иконки) остаются доступны и независимы.
+- Проверка PDF error UX:
+  - в UI не попадает raw backend payload;
+  - показывается человекочитаемая ошибка.
+
+### Backend regression (pytest)
+- Сохранить зеленым existing patient API regression suite.
+- Для PDF endpoint отдельно проверить, что `disposition=inline|attachment` не ломает:
+  - session-auth behavior;
+  - 404/502 controlled errors;
+  - contract `GET /patient/results/{id}/pdf`.
+
+### Operational flow / ZAPUSK228
+- Обновление ZAPUSK228 не потребовалось:
+  - frontend build уже входит в шаг `rebuild_frontend`;
+  - smoke для patient auth/results и optional pdf уже присутствуют.
