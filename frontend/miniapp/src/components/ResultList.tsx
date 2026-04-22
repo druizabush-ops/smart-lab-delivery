@@ -1,16 +1,27 @@
 import { Button } from "@maxhub/max-ui";
-import type { PatientResult } from "../api/results";
+import type { PatientResultListItem } from "../api/results";
 
-export function ResultList(props: { results: PatientResult[]; onOpen: (id: string) => void }): JSX.Element {
+export function ResultList(props: {
+  results: PatientResultListItem[];
+  onOpen: (id: string) => void;
+  onOpenPdf: (id: string) => void;
+  onDownloadPdf: (id: string) => void;
+}): JSX.Element {
   return (
     <div>
-      <h2>Доступные результаты</h2>
+      <h2>Результаты анализов</h2>
       {props.results.map((result) => (
         <section key={result.result_id}>
-          <p>ID: {result.result_id}</p>
+          <p>{result.title}</p>
+          <p>Дата: {result.date ?? "—"}</p>
           <p>Статус: {result.status}</p>
-          <p>Канал: {result.channel}</p>
           <Button onClick={() => props.onOpen(result.result_id)}>Открыть</Button>
+          <Button disabled={!result.has_pdf} onClick={() => props.onOpenPdf(result.result_id)}>
+            Открыть PDF
+          </Button>
+          <Button disabled={!result.has_pdf} onClick={() => props.onDownloadPdf(result.result_id)}>
+            Скачать PDF
+          </Button>
         </section>
       ))}
     </div>

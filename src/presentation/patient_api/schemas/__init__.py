@@ -6,14 +6,9 @@ from .auth import (
     PatientSessionResponse,
     PhoneAuthPendingResponse,
 )
-from .results import (
-    PatientLabResultDetailsResponse,
-    PatientLabResultDocumentResponse,
-    PatientLabResultListItemResponse,
-)
+from .results import PatientLabResultDetailsResponse, PatientLabResultListItemResponse
 
 __all__ = [
-    "PatientLabResultDocumentResponse",
     "PatientLabResultListItemResponse",
     "PatientLabResultDetailsResponse",
     "PatientLoginRequest",

@@ -362,3 +362,18 @@ DECISION: Patient session хранится server-side.
 Последствия:
 - при множественных файлах действует правило «первый файл как основной PDF»;
 - для альтернативного `file_id` flow потребуется отдельный ADR при изменении контракта Renovatio.
+
+[ADR-022] Patient-facing result DTO normalization
+Дата: 2026-04-22
+Решение: list/details API возвращают patient-friendly DTO (`title`, `status`, `has_pdf`, `lab_name`, `clinic_name`) и не раскрывают сырой Renovatio payload.
+Причина: UI mini app и будущий bot-first интерфейс должны быть стабильны и независимы от структуры Renovatio.
+
+[ADR-023] Frontend never talks to Renovatio directly
+Дата: 2026-04-22
+Решение: любой результат/PDF route обслуживается только backend-слоем.
+Причина: trust boundary, безопасность секретов и единая бизнес-логика.
+
+[ADR-024] Backend owns patient session and external identity binding
+Дата: 2026-04-22
+Решение: session и привязка `external_platform_user_id -> session_id` живут только на сервере; frontend не хранит credentials.
+Причина: foundation для no-repeat-login и безопасного lifecycle (logout/unbind/change credentials).

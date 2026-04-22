@@ -92,8 +92,8 @@ def test_list_results_by_session_maps_payload_and_filters() -> None:
 
     assert len(items) == 1
     assert items[0].result_id == "r-1"
-    assert items[0].services == ["ОАК"]
-    assert items[0].files_count == 1
+    assert items[0].title.startswith("Результаты")
+    assert items[0].has_pdf is True
     assert client.calls[0] == ("list", "pk-1", "lab-1", "clinic-1")
 
 
@@ -112,7 +112,8 @@ def test_get_result_details_by_session_maps_documents() -> None:
     details = use_case.get_result_details_by_session(session_id="sid-1", result_id="r-1")
 
     assert details.result_id == "r-1"
-    assert details.documents[0].readiness == "ready"
+    assert details.has_pdf is True
+    assert details.pdf_open_url == "/patient/results/r-1/pdf"
     assert details.sections[0]["name"] == "Гематология"
 
 

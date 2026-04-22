@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 
 from src.application.use_cases.patient_auth import (
     ConfirmPatientAuthCodeUseCase,
@@ -16,8 +16,8 @@ from src.application.use_cases.patient_auth import (
 )
 from src.integration.errors import IntegrationFailure
 from src.presentation.patient_api.schemas.auth import (
-    ConfirmPatientCodeRequest,
     LogoutResponse,
+    ConfirmPatientCodeRequest,
     PatientLoginRequest,
     PatientPhoneLoginRequest,
     PatientSessionResponse,
@@ -27,13 +27,31 @@ from src.presentation.patient_api.schemas.auth import (
 router = APIRouter(prefix="/patient/auth", tags=["patient-auth"])
 
 
+def _resolve_external_user_id(
+    x_external_platform_user_id: Annotated[str | None, Header()] = None,
+    x_max_user_id: Annotated[str | None, Header()] = None,
+) -> str | None:
+    """Возвращает внешний user_id в абстрактном формате без привязки к конкретному MAX-полю."""
+
+    candidate = x_external_platform_user_id or x_max_user_id
+    if candidate is None:
+        return None
+    normalized = candidate.strip()
+    return normalized or None
+
+
 @router.post("/login", response_model=PatientSessionResponse)
-def login_by_credentials(request: PatientLoginRequest, http_response: Response, app_request: Request) -> PatientSessionResponse:
+def login_by_credentials(
+    request: PatientLoginRequest,
+    http_response: Response,
+    app_request: Request,
+    external_platform_user_id: Annotated[str | None, Depends(_resolve_external_user_id)] = None,
+) -> PatientSessionResponse:
     try:
         use_case: PatientLoginUseCase = app_request.app.state.patient_login_use_case
         session: PatientSession = use_case.execute(request.login, request.password)
     except PatientAuthError as exc:
-        raise HTTPException(status_code=401, detail="Неверные учетные данные") from exc
+        raise HTTPException(status_code=401, detail="Неверный логин или пароль") from exc
     except PatientProfileFetchError as exc:
         raise HTTPException(status_code=502, detail="Не удалось получить профиль пациента") from exc
     except PatientSessionCreationError as exc:
@@ -41,6 +59,8 @@ def login_by_credentials(request: PatientLoginRequest, http_response: Response, 
     except IntegrationFailure as exc:
         raise HTTPException(status_code=502, detail="Ошибка интеграции авторизации пациента") from exc
     _set_session_cookie(http_response, session.session_id)
+    if external_platform_user_id:
+        app_request.app.state.bind_patient_session_use_case.execute(external_platform_user_id, session.session_id)
     return _session_response(session)
 
 
@@ -96,9 +116,28 @@ def logout(response: Response, request: Request) -> LogoutResponse:
     return LogoutResponse(success=True)
 
 
+@router.post("/unbind", response_model=LogoutResponse)
+def unbind_external_user(
+    request: Request,
+    external_platform_user_id: Annotated[str | None, Depends(_resolve_external_user_id)] = None,
+) -> LogoutResponse:
+    if not external_platform_user_id:
+        raise HTTPException(status_code=400, detail="Не передан внешний идентификатор пользователя")
+    request.app.state.unbind_patient_session_use_case.execute(external_platform_user_id)
+    return LogoutResponse(success=True)
+
+
 @router.get("/me", response_model=PatientSessionResponse)
-def get_me(request: Request) -> PatientSessionResponse:
+def get_me(
+    request: Request,
+    response: Response,
+    external_platform_user_id: Annotated[str | None, Depends(_resolve_external_user_id)] = None,
+) -> PatientSessionResponse:
     session_id = request.cookies.get("sld_patient_session")
+    if not session_id and external_platform_user_id:
+        session_id = request.app.state.resolve_bound_patient_session_use_case.execute(external_platform_user_id)
+        if session_id:
+            _set_session_cookie(response, session_id)
     if not session_id:
         raise HTTPException(status_code=401, detail="Нет активной сессии")
     session = request.app.state.get_current_patient_use_case.execute(session_id)

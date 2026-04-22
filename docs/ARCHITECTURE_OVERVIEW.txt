@@ -224,3 +224,9 @@ Patient Auth Layer (новый слой)
   - PDF отсутствует -> controlled 404;
   - невалидный base64/payload -> controlled 502.
 - Контур не зависит от UI-фреймворка и используется как shared backend foundation для bot-first UI и mini app UI.
+
+15. Patient-facing mini app MVP contour (обновление 2026-04-22)
+- Mini app и будущий bot используют единый backend application слой; frontend не ходит в Renovatio напрямую.
+- Session контур остается server-side (`sld_patient_session` cookie + repository), а medical source-of-truth — Renovatio patient_key.
+- Для no-repeat-login заложен server-side binding слой `external_platform_user_id -> session_id`.
+- Поле внешнего идентификатора MAX не зафиксировано жестко: используется абстракция external platform user id с возможностью смены конкретного transport field.

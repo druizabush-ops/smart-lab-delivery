@@ -5,17 +5,20 @@ pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
 
 from src.application.use_cases.patient_auth import (
+    BindPatientSessionUseCase,
     ConfirmPatientAuthCodeUseCase,
     GetCurrentPatientUseCase,
     PatientLoginUseCase,
     PatientPhoneLoginUseCase,
     RefreshPatientSessionUseCase,
+    ResolveBoundPatientSessionUseCase,
+    UnbindPatientSessionUseCase,
 )
 from src.application.use_cases.patient_results import PatientResultsUseCase
 from src.application.use_cases.patient_results import PatientResultPdfUseCase
 from src.config.security_settings import SecuritySettings
 from src.infrastructure.repositories import InMemoryDeliveryCardRepository
-from src.infrastructure.session import InMemoryPatientSessionRepository
+from src.infrastructure.session import InMemoryExternalPatientBindingRepository, InMemoryPatientSessionRepository
 from src.integration.errors import IntegrationErrorKind, IntegrationFailure
 from src.presentation.patient_api import create_patient_api_app
 import base64
@@ -94,6 +97,10 @@ class _Container:
         self.get_current_patient_use_case = GetCurrentPatientUseCase(session_repo)
         self.patient_results_use_case = PatientResultsUseCase(sessions=self.get_current_patient_use_case, renovatio_client=client)
         self.patient_result_pdf_use_case = PatientResultPdfUseCase(sessions=self.get_current_patient_use_case, renovatio_client=client)
+        bindings = InMemoryExternalPatientBindingRepository()
+        self.bind_patient_session_use_case = BindPatientSessionUseCase(bindings)
+        self.resolve_bound_patient_session_use_case = ResolveBoundPatientSessionUseCase(bindings)
+        self.unbind_patient_session_use_case = UnbindPatientSessionUseCase(bindings)
 
 
 def _login(client: TestClient) -> None:
@@ -110,12 +117,13 @@ def test_results_list_and_detail_via_server_side_session() -> None:
     payload = list_response.json()
     assert len(payload) == 1
     assert payload[0]["result_id"] == "r-1"
-    assert payload[0]["files_count"] == 1
-    assert "patient_id" not in payload[0]
+    assert payload[0]["has_pdf"] is True
+    assert payload[0]["title"]
 
     details = client.get("/patient/results/r-1", params={"patient_id": "foreign", "lab_id": "lab-1", "clinic_id": "clinic-1"})
     assert details.status_code == 200
-    assert details.json()["documents"][0]["readiness"] == "ready"
+    assert details.json()["has_pdf"] is True
+    assert details.json()["pdf_open_url"] == "/patient/results/r-1/pdf"
 
 
 def test_results_endpoints_require_session() -> None:
