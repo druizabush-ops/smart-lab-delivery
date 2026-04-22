@@ -279,3 +279,21 @@ Regression contour:
 
 Проверка ZAPUSK228:
 - В текущем блоке operational flow не менялся (шаги smoke уже покрывают login/results/pdf), поэтому обновление `scripts/zapusk228.py` не требуется.
+
+18. FINAL RESULTS UX + clean layout regression (обновление 2026-04-22)
+Backend:
+- `python -m pytest tests/unit/application/test_patient_results_use_case.py`
+  - статус нормализуется в `Готов`, если уже есть PDF и/или реальные показатели, даже при сырых `pending/processing`;
+  - list/details остаются консистентными по status/has_pdf.
+
+Frontend:
+- `cd frontend/miniapp && npm run test -- --run`
+  - сопоставление `services + results` выполняется по коду до `•`, а не по индексу;
+  - формат строки показателя строго `Название: значение единица`;
+  - fallback на `parameter_name` работает при отсутствии matching service;
+  - список результатов не показывает длинные service summaries;
+  - details отображает реальные показатели и PDF кнопки без регрессии.
+
+Build / smoke:
+- `cd frontend/miniapp && npm run build`
+- (опционально вручную) login -> results -> details -> open/download PDF в MAX/webview.

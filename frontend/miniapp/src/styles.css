@@ -1,7 +1,7 @@
 body {
   font-family: Inter, sans-serif;
   margin: 0;
-  background: #f4f6fb;
+  background: #f3f6fb;
   color: #1f2a37;
 }
 
@@ -15,18 +15,79 @@ main {
   min-height: 100vh;
 }
 
+.app-header h1 {
+  margin-bottom: 4px;
+}
+
+.app-header p {
+  margin-top: 0;
+  color: #5a6a7f;
+}
+
 .panel {
   background: #ffffff;
   border-radius: 16px;
-  padding: 16px;
+  padding: 18px;
   margin-top: 12px;
   box-shadow: 0 2px 10px rgba(31, 42, 55, 0.08);
+}
+
+.welcome-card {
+  border: 1px solid #d9e2f0;
+  border-radius: 14px;
+  padding: 14px;
+  background: #f9fbff;
+}
+
+.welcome-card h2 {
+  margin: 0 0 8px;
+}
+
+.welcome-card p {
+  margin: 0 0 10px;
+  color: #5a6a7f;
+}
+
+.home-layout {
+  margin-top: 14px;
 }
 
 .home-actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.placeholder-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.placeholder-card {
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.placeholder-card h3 {
+  margin: 0 0 6px;
+}
+
+.placeholder-card p {
+  margin: 0;
+  color: #495b72;
+}
+
+.placeholder-card--blue {
+  background: #e8f1ff;
+}
+
+.placeholder-card--mint {
+  background: #eaf9f3;
+}
+
+.placeholder-card--violet {
+  background: #f1ecff;
 }
 
 .results-list {
@@ -44,11 +105,24 @@ main {
 
 .result-card__title {
   font-weight: 600;
-  margin: 0 0 8px;
+  margin: 0 0 6px;
+}
+
+.result-card__meta {
+  margin: 0 0 4px;
+  color: #5a6a7f;
+}
+
+.result-status {
+  margin: 10px 0;
 }
 
 .result-card__actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.indicator-line {
+  margin: 0 0 6px;
 }

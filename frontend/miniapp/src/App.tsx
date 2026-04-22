@@ -5,6 +5,7 @@ import { PatientResultDetails, PatientResultListItem, ResultsApi } from "./api/r
 import { AuthApi, PatientSession } from "./api/auth";
 import { ResultDetails } from "./components/ResultDetails";
 import { ResultList } from "./components/ResultList";
+import { miniAppContentConfig } from "./ui/contentConfig";
 
 type Screen = "home" | "results" | "details";
 
@@ -147,7 +148,10 @@ export function App(): JSX.Element {
   return (
     <MaxUI>
       <main className="app-shell">
-        <h1>Smart Lab</h1>
+        <header className="app-header">
+          <h1>{miniAppContentConfig.appTitle}</h1>
+          <p>{miniAppContentConfig.appSubtitle}</p>
+        </header>
         {loading ? <p>Загрузка...</p> : null}
         {!loading && !session ? (
           <section className="panel">
@@ -160,18 +164,31 @@ export function App(): JSX.Element {
 
         {!loading && session ? (
           <section className="panel">
-            <p>Здравствуйте, {session.patient_name || session.patient_number}</p>
-            <button onClick={handleLogout}>Выйти</button>
+            <div className="welcome-card">
+              <h2>{miniAppContentConfig.homeGreetingTitle} {session.patient_name || session.patient_number}!</h2>
+              <p>{miniAppContentConfig.homeGreetingSubtitle}</p>
+              <button onClick={handleLogout}>Выйти</button>
+            </div>
             {screen === "home" ? (
-              <div className="home-actions">
-                <button onClick={() => setScreen("results")}>Результаты анализов</button>
-                <button disabled>Мои записи</button>
-                <button disabled>Профиль</button>
+              <div className="home-layout">
+                <div className="home-actions">
+                  <button onClick={() => setScreen("results")}>{miniAppContentConfig.homeActions.results}</button>
+                  <button disabled>{miniAppContentConfig.homeActions.appointments}</button>
+                  <button disabled>{miniAppContentConfig.homeActions.profile}</button>
+                </div>
+                <div className="placeholder-grid">
+                  {miniAppContentConfig.placeholders.map((item) => (
+                    <section key={item.key} className={`placeholder-card placeholder-card--${item.tone}`}>
+                      <h3>{item.title}</h3>
+                      <p>{item.subtitle}</p>
+                    </section>
+                  ))}
+                </div>
               </div>
             ) : null}
             {screen === "results" ? (
               results.length === 0 ? (
-                <p>Результатов пока нет.</p>
+                <p>{miniAppContentConfig.results.emptyState}</p>
               ) : (
                 <ResultList
                   results={results}
