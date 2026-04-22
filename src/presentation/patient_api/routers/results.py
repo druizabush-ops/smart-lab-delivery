@@ -73,6 +73,7 @@ def download_result_pdf(
     __: str | None = Query(default=None, alias="start_param"),
     lab_id: str | None = Query(default=None),
     clinic_id: str | None = Query(default=None),
+    disposition: str = Query(default="attachment", pattern="^(inline|attachment)$"),
     session_id: Annotated[str, Depends(get_patient_session_id)] = "",
     use_case: Annotated[PatientResultPdfUseCase, Depends(get_patient_result_pdf_use_case)] = None,
 ) -> Response:
@@ -95,5 +96,5 @@ def download_result_pdf(
     return Response(
         content=pdf.content,
         media_type=pdf.mime_type,
-        headers={"Content-Disposition": f'attachment; filename="{pdf.filename}"'},
+        headers={"Content-Disposition": f'{disposition}; filename="{pdf.filename}"'},
     )

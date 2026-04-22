@@ -157,6 +157,18 @@ def test_result_pdf_download_via_server_side_session() -> None:
     assert response.content.startswith(b"%PDF")
 
 
+def test_result_pdf_open_inline_disposition_via_query() -> None:
+    client = TestClient(create_patient_api_app(container=_Container()))
+    _login(client)
+
+    response = client.get("/patient/results/r-1/pdf", params={"disposition": "inline"})
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/pdf")
+    assert "inline; filename=\"result-r-1.pdf\"" == response.headers["content-disposition"]
+    assert response.content.startswith(b"%PDF")
+
+
 def test_result_pdf_requires_session() -> None:
     client = TestClient(create_patient_api_app(container=_Container()))
     response = client.get("/patient/results/r-1/pdf")

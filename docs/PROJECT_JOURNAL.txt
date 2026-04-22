@@ -894,3 +894,21 @@ Dependency wiring:
 - ручной smoke login -> results -> details -> PDF в webview.
 Ограничения и ZAPUSK228:
 - Operational flow не изменялся, поэтому обновление `scripts/zapusk228.py` не потребовалось.
+
+[Багфикс]
+Дата: 2026-04-22
+Ветка: work
+Блок: MINI APP UX polish + patient values mapping + MAX PDF runtime flow
+Файлы: frontend/miniapp/src/App.tsx; frontend/miniapp/src/components/ResultList.tsx; frontend/miniapp/src/utils/patientResults.ts; frontend/miniapp/src/styles.css; frontend/miniapp/src/App.test.tsx; frontend/miniapp/src/utils/patientResults.test.ts; src/presentation/patient_api/routers/results.py; docs/PROJECT_JOURNAL.txt; docs/DECISIONS.txt; docs/TEST_PLAN.txt
+Причина: После стабилизации backend flow login->results->details->pdf в mini app оставались UX/runtime дефекты: второстепенная home-навигация, неполный рендер значений показателей, и нестабильное PDF open/download в MAX webview.
+Что сделано:
+- Главный экран переведен на крупный CTA-блок «Результаты анализов», старые мелкие кнопки убраны из primary-навигации.
+- Приветствие нормализовано до human-friendly формата «Здравствуйте, Имя Отчество!» с fallback без awkward-пустых частей.
+- Карточка результата сделана полностью кликабельной (open details), при этом сохранены явные action-кнопки (глаз/PDF/скачать) c stopPropagation.
+- Исправлен mapping patient indicators: value/unit теперь берутся из canonical полей `parameter_value` и `measurement_unit` с fallback на старые ключи.
+- PDF flow в mini app переведен на session-aware navigation URL (вместо blob-open): перед навигацией выполняется controlled availability-check, затем open/download идут через backend endpoint с query `disposition=inline|attachment`.
+- Ошибки PDF в UI оставлены только в user-friendly форме без вывода raw JSON payload.
+Что изменилось в архитектуре: backend-контракт patient results не ломался; добавлен только безопасный query-переключатель Content-Disposition на существующем PDF endpoint.
+Что нужно проверить: vitest (App + patientResults), pytest regression для patient API PDF endpoint, и frontend build в mini app контуре.
+Риски / ограничения: availability-check перед навигацией делает дополнительный сетевой запрос к PDF endpoint; это осознанный компромисс ради controlled ошибок и стабильности MAX runtime.
+Связанные блоки: patient-facing mini app contour; MAX/webview runtime интеграция; patient results/details/pdf flow.

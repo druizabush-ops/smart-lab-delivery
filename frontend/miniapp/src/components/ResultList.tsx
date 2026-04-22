@@ -1,4 +1,3 @@
-import { Button } from "@maxhub/max-ui";
 import type { PatientResultListItem } from "../api/results";
 import { miniAppContentConfig } from "../ui/contentConfig";
 
@@ -12,19 +11,62 @@ export function ResultList(props: {
     <div className="results-list">
       <h2>{miniAppContentConfig.results.title}</h2>
       {props.results.map((result) => (
-        <section key={result.result_id} className="result-card">
+        <section
+          key={result.result_id}
+          className="result-card result-card--clickable"
+          role="button"
+          tabIndex={0}
+          onClick={() => props.onOpen(result.result_id)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              props.onOpen(result.result_id);
+            }
+          }}
+        >
           <p className="result-card__title">Результат №{result.result_id}</p>
           <p className="result-card__meta">{result.date ?? "—"}</p>
           {result.lab_name ? <p className="result-card__meta">{result.lab_name}</p> : null}
           <p className="result-status">Статус: {result.status}</p>
           <div className="result-card__actions">
-            <Button onClick={() => props.onOpen(result.result_id)}>{miniAppContentConfig.results.openButton}</Button>
-            <Button disabled={!result.has_pdf} onClick={() => props.onOpenPdf(result.result_id)}>
-              {miniAppContentConfig.results.openPdfButton}
-            </Button>
-            <Button disabled={!result.has_pdf} onClick={() => props.onDownloadPdf(result.result_id)}>
-              {miniAppContentConfig.results.downloadPdfButton}
-            </Button>
+            <button
+              type="button"
+              className="icon-action-button"
+              aria-label={miniAppContentConfig.results.openButton}
+              title={miniAppContentConfig.results.openButton}
+              onClick={(event) => {
+                event.stopPropagation();
+                props.onOpen(result.result_id);
+              }}
+            >
+              👁
+            </button>
+            <button
+              type="button"
+              className="icon-action-button"
+              aria-label={miniAppContentConfig.results.openPdfButton}
+              title={miniAppContentConfig.results.openPdfButton}
+              disabled={!result.has_pdf}
+              onClick={(event) => {
+                event.stopPropagation();
+                props.onOpenPdf(result.result_id);
+              }}
+            >
+              📄
+            </button>
+            <button
+              type="button"
+              className="icon-action-button"
+              aria-label={miniAppContentConfig.results.downloadPdfButton}
+              title={miniAppContentConfig.results.downloadPdfButton}
+              disabled={!result.has_pdf}
+              onClick={(event) => {
+                event.stopPropagation();
+                props.onDownloadPdf(result.result_id);
+              }}
+            >
+              ⬇️
+            </button>
           </div>
         </section>
       ))}

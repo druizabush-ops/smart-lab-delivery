@@ -6,6 +6,7 @@ import { AuthApi, PatientSession } from "./api/auth";
 import { ResultDetails } from "./components/ResultDetails";
 import { ResultList } from "./components/ResultList";
 import { miniAppContentConfig } from "./ui/contentConfig";
+import { getMaxContext } from "./max/context";
 
 type Screen = "home" | "results" | "details";
 
@@ -32,6 +33,18 @@ export function App(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
+  const maxContext = useMemo(() => getMaxContext(), []);
+
+  const resolvePatientDisplayName = (rawName: string, fallbackNumber: string): string => {
+    const parts = rawName.split(/\s+/).map((part) => part.trim()).filter(Boolean);
+    if (parts.length >= 3) {
+      return `${parts[1]} ${parts[2]}`;
+    }
+    if (parts.length >= 1) {
+      return parts[0];
+    }
+    return fallbackNumber;
+  };
 
   const getUserMessage = (error: unknown, fallback: string): string => {
     if (error instanceof ApiError) {
@@ -94,26 +107,36 @@ export function App(): JSX.Element {
     }
   };
 
-  const fetchPdfBlob = async (resultId: string): Promise<Blob> => {
-    const response = await fetch(`${baseUrl}/patient/results/${encodeURIComponent(resultId)}/pdf`, {
+  const buildPdfUrl = (resultId: string, mode: "inline" | "attachment"): string => (
+    `${baseUrl}/patient/results/${encodeURIComponent(resultId)}/pdf?disposition=${mode}`
+  );
+
+  const ensurePdfAvailable = async (resultId: string): Promise<void> => {
+    const response = await fetch(buildPdfUrl(resultId, "inline"), {
       credentials: "include",
     });
     if (!response.ok) {
       throw new ApiError("pdf_error", response.status);
     }
-    return response.blob();
+    await response.arrayBuffer();
   };
 
   const openPdf = async (resultId: string): Promise<void> => {
     setBusy(true);
     setError(null);
     try {
-      const blob = await fetchPdfBlob(resultId);
-      const url = URL.createObjectURL(blob);
-      window.open(url, "_blank");
-      window.setTimeout(() => URL.revokeObjectURL(url), 5000);
+      await ensurePdfAvailable(resultId);
+      const inlineUrl = buildPdfUrl(resultId, "inline");
+      if (maxContext.isInsideMax) {
+        window.location.assign(inlineUrl);
+      } else {
+        const popup = window.open(inlineUrl, "_blank", "noopener,noreferrer");
+        if (!popup) {
+          window.location.assign(inlineUrl);
+        }
+      }
     } catch (err: unknown) {
-      setError(getUserMessage(err, "Не удалось открыть документ"));
+      setError(getUserMessage(err, "Не удалось открыть PDF"));
     } finally {
       setBusy(false);
     }
@@ -123,15 +146,15 @@ export function App(): JSX.Element {
     setBusy(true);
     setError(null);
     try {
-      const blob = await fetchPdfBlob(resultId);
-      const url = URL.createObjectURL(blob);
+      await ensurePdfAvailable(resultId);
+      const url = buildPdfUrl(resultId, "attachment");
       const link = document.createElement("a");
       link.href = url;
-      link.download = `result-${resultId}.pdf`;
+      link.target = maxContext.isInsideMax ? "_self" : "_blank";
+      link.rel = "noopener noreferrer";
       link.click();
-      URL.revokeObjectURL(url);
     } catch (err: unknown) {
-      setError(getUserMessage(err, "PDF временно недоступен"));
+      setError(getUserMessage(err, "Документ временно недоступен"));
     } finally {
       setBusy(false);
     }
@@ -165,17 +188,16 @@ export function App(): JSX.Element {
         {!loading && session ? (
           <section className="panel">
             <div className="welcome-card">
-              <h2>{miniAppContentConfig.homeGreetingTitle} {session.patient_name || session.patient_number}!</h2>
+              <h2>{miniAppContentConfig.homeGreetingTitle}, {resolvePatientDisplayName(session.patient_name, session.patient_number)}!</h2>
               <p>{miniAppContentConfig.homeGreetingSubtitle}</p>
               <button onClick={handleLogout}>Выйти</button>
             </div>
             {screen === "home" ? (
               <div className="home-layout">
-                <div className="home-actions">
-                  <button onClick={() => setScreen("results")}>{miniAppContentConfig.homeActions.results}</button>
-                  <button disabled>{miniAppContentConfig.homeActions.appointments}</button>
-                  <button disabled>{miniAppContentConfig.homeActions.profile}</button>
-                </div>
+                <button className="home-results-cta" onClick={() => setScreen("results")}>
+                  <h3>{miniAppContentConfig.homeActions.results}</h3>
+                  <p>Откройте список результатов и подробные показатели.</p>
+                </button>
                 <div className="placeholder-grid">
                   {miniAppContentConfig.placeholders.map((item) => (
                     <section key={item.key} className={`placeholder-card placeholder-card--${item.tone}`}>

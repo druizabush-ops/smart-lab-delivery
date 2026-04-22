@@ -24,8 +24,8 @@ describe("buildPatientIndicators", () => {
     const details = makeDetails({
       services: ["K • Калий (К+)", "Mg • Магний (кровь, фотометрия)"],
       indicators: [
-        { parameter_name: "K", value: "4.2", unit: "ммоль/л" },
-        { parameter_name: "Mg", value: "0.83", unit: "ммоль/л" },
+        { parameter_name: "K", parameter_value: "4.2", measurement_unit: "ммоль/л" },
+        { parameter_name: "Mg", parameter_value: "0.83", measurement_unit: "ммоль/л" },
       ],
     });
 
@@ -37,10 +37,20 @@ describe("buildPatientIndicators", () => {
   it("использует fallback на parameter_name при отсутствии matching service", () => {
     const details = makeDetails({
       services: ["Na • Натрий"],
-      indicators: [{ parameter_name: "PRL", value: "53.8 ++", unit: "нг/мл" }],
+      indicators: [{ parameter_name: "PRL", parameter_value: "53.8 ++", measurement_unit: "нг/мл" }],
     });
 
     const view = buildPatientIndicators(details);
     expect(view[0].line).toBe("PRL: 53.8 ++ нг/мл");
+  });
+
+  it("использует fallback без единицы измерения, если unit отсутствует", () => {
+    const details = makeDetails({
+      services: ["PROLACTIN • Пролактин"],
+      indicators: [{ parameter_name: "PROLACTIN", parameter_value: "53.8 ++" }],
+    });
+
+    const view = buildPatientIndicators(details);
+    expect(view[0].line).toBe("Пролактин: 53.8 ++");
   });
 });
