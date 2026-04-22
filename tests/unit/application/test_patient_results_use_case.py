@@ -154,6 +154,33 @@ def test_status_and_pdf_normalization_consistent_between_list_and_details() -> N
     assert details.pdf_download_url == "/patient/results/r-sync/pdf"
 
 
+def test_status_normalization_marks_ready_when_payload_contains_results_or_pdf() -> None:
+    class HonestStatusRenovatio(_Renovatio):
+        def get_patient_lab_results_by_key(self, patient_key: str, *, lab_id=None, clinic_id=None):
+            return [
+                {"id": "r-pdf", "status": "pending", "files_count": 1},
+                {"id": "r-results", "status": "pending", "results": [{"parameter_name": "K", "value": "4.2"}]},
+            ]
+
+        def get_patient_lab_result_details_by_key(self, patient_key: str, result_id: str, *, lab_id=None, clinic_id=None):
+            if result_id == "r-pdf":
+                return {"id": "r-pdf", "result_status": "processing", "has_pdf": True}
+            return {
+                "id": "r-results",
+                "result_status": "processing",
+                "results": [{"parameter_name": "K", "value": "4.2"}],
+            }
+
+    use_case = PatientResultsUseCase(sessions=_Sessions(_session()), renovatio_client=HonestStatusRenovatio())
+    items = use_case.list_results_by_session(session_id="sid-1")
+    details_pdf = use_case.get_result_details_by_session(session_id="sid-1", result_id="r-pdf")
+    details_results = use_case.get_result_details_by_session(session_id="sid-1", result_id="r-results")
+
+    assert [item.status for item in items] == ["Готов", "Готов"]
+    assert details_pdf.status == "Готов"
+    assert details_results.status == "Готов"
+
+
 def test_get_result_details_by_session_returns_not_found() -> None:
     client = _Renovatio()
     use_case = PatientResultsUseCase(sessions=_Sessions(_session()), renovatio_client=client)

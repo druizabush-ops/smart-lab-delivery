@@ -868,3 +868,29 @@ Dependency wiring:
 Ограничения и ZAPUSK228:
 - Подтвержденных новых ограничений MAX webview не выявлено в этом блоке.
 - Operational flow не менялся, поэтому обновление ZAPUSK228 не потребовалось.
+
+[Изменение]
+Дата: 2026-04-22
+Ветка: work
+Блок: FINAL RESULTS UX + clean mini app layout + placeholder visual system
+Файлы: src/application/use_cases/patient_results.py; tests/unit/application/test_patient_results_use_case.py; frontend/miniapp/src/App.tsx; frontend/miniapp/src/components/ResultList.tsx; frontend/miniapp/src/components/ResultDetails.tsx; frontend/miniapp/src/styles.css; frontend/miniapp/src/ui/contentConfig.ts; frontend/miniapp/src/utils/patientResults.ts; frontend/miniapp/src/utils/patientResults.test.ts; frontend/miniapp/src/App.test.tsx; docs/PROJECT_JOURNAL.txt; docs/DECISIONS.txt; docs/TEST_PLAN.txt
+Причина: Довести patient-facing results UX до clean medical MVP без изменения backend contracts и без тяжелых графических ассетов.
+Что сделано:
+- Список результатов в mini app упрощен до patient-facing минимума: `Результат №<id>`, дата, (опционально) лаборатория, статус.
+- Details экран показывает номер результата, дату, лабораторию, статус, реальные показатели и рабочие PDF-кнопки.
+- Реализован канонический mapping `services + results` по коду до символа `•` с fallback на `parameter_name`.
+- Формат строки показателя закреплен как `Название: значение единица`.
+- Добавлен легкий content-layer `frontend/miniapp/src/ui/contentConfig.ts` для заголовков, подписей кнопок и placeholder-блоков.
+- Визуальный слой mini app переведен на clean карточный layout с placeholder visual system без фото/тяжелых баннеров.
+- На backend усилена честная status-нормализация: при наличии PDF/реальных показателей статус отдается как `Готов`.
+- Добавлены/обновлены unit tests backend и frontend на mapping/formatting/status/layout регрессии.
+Что изменилось в архитектуре:
+- Контрактная граница сохранена: backend отвечает за нормализацию и статус, frontend — за конфигурируемый рендер и UI-состояние.
+- Mapping логика вынесена из JSX в отдельный util-слой mini app.
+Что нужно проверить:
+- `python -m pytest tests/unit/application/test_patient_results_use_case.py`
+- `cd frontend/miniapp && npm run test -- --run`
+- `cd frontend/miniapp && npm run build`
+- ручной smoke login -> results -> details -> PDF в webview.
+Ограничения и ZAPUSK228:
+- Operational flow не изменялся, поэтому обновление `scripts/zapusk228.py` не потребовалось.

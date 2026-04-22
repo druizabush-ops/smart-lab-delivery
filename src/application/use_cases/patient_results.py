@@ -287,12 +287,24 @@ def _normalize_status(raw: dict[str, Any]) -> str:
         "processing": "В обработке",
     }
     if raw_status in mapping:
-        return mapping[raw_status]
+        normalized = mapping[raw_status]
+        if normalized == "В обработке" and (_has_pdf(raw) or _has_structured_results(raw)):
+            return "Готов"
+        return normalized
+    if _has_pdf(raw) or _has_structured_results(raw):
+        return "Готов"
     if _first_bool(raw, "is_ready", "ready", "is_completed"):
         return "Готов"
     if _first_optional_str(raw, "ready_at", "completed_at", "validated_at"):
         return "Готов"
     return "В обработке"
+
+
+def _has_structured_results(raw: dict[str, Any]) -> bool:
+    return any(
+        bool(_extract_list(raw, key))
+        for key in ("results", "indicators", "result_indicators")
+    )
 
 
 def _resolve_result_id(raw: dict[str, Any], *, fallback: str = "") -> str:
