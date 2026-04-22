@@ -1,27 +1,27 @@
 import { Button } from "@maxhub/max-ui";
-import type { PatientResult } from "../api/results";
+import type { PatientResultDetails } from "../api/results";
 
-export function ResultDetails(props: { result: PatientResult; onBack: () => void }): JSX.Element {
+export function ResultDetails(props: {
+  result: PatientResultDetails;
+  onBack: () => void;
+  onOpenPdf: () => void;
+  onDownloadPdf: () => void;
+}): JSX.Element {
   return (
     <div>
       <Button onClick={props.onBack}>Назад к списку</Button>
-      <h2>Детали результата</h2>
+      <h2>{props.result.title}</h2>
+      <p>Дата: {props.result.date ?? "—"}</p>
       <p>Статус: {props.result.status}</p>
-      <p>Попыток отправки: {props.result.attempts_count}</p>
-      {props.result.last_error ? <p>Последняя ошибка: {props.result.last_error}</p> : null}
-      <h3>Документы</h3>
-      {props.result.documents.map((doc) => (
-        <div key={doc.title}>
-          <span>{doc.title} — {doc.readiness}</span>
-          {doc.url ? (
-            <a href={doc.url} target="_blank" rel="noreferrer">
-              Открыть
-            </a>
-          ) : (
-            <span> Файл пока недоступен</span>
-          )}
-        </div>
+      <p>Лаборатория: {props.result.lab_name ?? "—"}</p>
+      <h3>Показатели</h3>
+      {props.result.indicators.length === 0 ? <p>Показатели пока недоступны.</p> : null}
+      {props.result.indicators.map((item, index) => (
+        <p key={index}>{String(item.name ?? "Показатель")}: {String(item.value ?? "—")}</p>
       ))}
+      <Button disabled={!props.result.has_pdf} onClick={props.onOpenPdf}>Открыть PDF</Button>
+      <Button disabled={!props.result.has_pdf} onClick={props.onDownloadPdf}>Скачать PDF</Button>
+      {!props.result.has_pdf ? <p>PDF временно недоступен.</p> : null}
     </div>
   );
 }

@@ -39,6 +39,15 @@ class PendingPhoneAuth:
     created_at: datetime
 
 
+@dataclass(frozen=True, slots=True)
+class ExternalPatientBinding:
+    """Связь внешнего user_id платформы и patient session."""
+
+    external_platform_user_id: str
+    session_id: str
+    bound_at: datetime
+
+
 class PatientAuthError(ValueError):
     """Ошибка аутентификации пациента (невалидные credentials/code)."""
 
@@ -62,6 +71,14 @@ class InMemoryPatientSessionRepositoryContract:
     def deactivate(self, session_id: str) -> None: ...
 
 
+class ExternalPatientBindingRepositoryContract:
+    def save(self, binding: ExternalPatientBinding) -> None: ...
+
+    def get(self, external_platform_user_id: str) -> ExternalPatientBinding | None: ...
+
+    def delete(self, external_platform_user_id: str) -> None: ...
+
+
 class PatientLoginUseCase:
     def __init__(self, client: RenovatioClient, session_repository: InMemoryPatientSessionRepositoryContract, *, session_ttl_minutes: int, key_lifetime_minutes: int) -> None:
         self._client = client
@@ -83,6 +100,54 @@ class PatientLoginUseCase:
             session_repository=self._session_repository,
             session_ttl_minutes=self._session_ttl_minutes,
         )
+
+
+class BindPatientSessionUseCase:
+    """Привязывает текущую session к внешнему user_id платформы."""
+
+    def __init__(self, repository: ExternalPatientBindingRepositoryContract) -> None:
+        self._repository = repository
+
+    def execute(self, external_platform_user_id: str, session_id: str) -> None:
+        if not external_platform_user_id.strip() or not session_id.strip():
+            return
+        self._repository.save(
+            ExternalPatientBinding(
+                external_platform_user_id=external_platform_user_id,
+                session_id=session_id,
+                bound_at=datetime.now(timezone.utc),
+            )
+        )
+
+
+class ResolveBoundPatientSessionUseCase:
+    """Возвращает активную session_id по внешнему user_id, если есть связка."""
+
+    def __init__(self, repository: ExternalPatientBindingRepositoryContract) -> None:
+        self._repository = repository
+
+    def execute(self, external_platform_user_id: str) -> str | None:
+        if not external_platform_user_id.strip():
+            return None
+        binding = self._repository.get(external_platform_user_id)
+        if binding is None:
+            return None
+        return binding.session_id
+
+
+class UnbindPatientSessionUseCase:
+    """Удаляет привязку внешнего user_id к patient session."""
+
+    def __init__(self, repository: ExternalPatientBindingRepositoryContract) -> None:
+        self._repository = repository
+
+    def execute(self, external_platform_user_id: str) -> bool:
+        if not external_platform_user_id.strip():
+            return False
+        if self._repository.get(external_platform_user_id) is None:
+            return False
+        self._repository.delete(external_platform_user_id)
+        return True
 
 
 class PatientPhoneLoginUseCase:

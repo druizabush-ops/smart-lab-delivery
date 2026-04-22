@@ -250,3 +250,11 @@ Integration:
 
 Regression:
 - `python -m pytest` обязателен для полного зеленого прогона auth/results/details/pdf контуров.
+
+16. Mini app MVP verification (обновление 2026-04-22)
+- Проверить login flow: ошибки `401 -> Неверный логин или пароль`, controlled fallback `5xx -> Попробуйте позже`.
+- Проверить home -> results -> details navigation.
+- Проверить в results/details наличие действий `Открыть PDF` и `Скачать PDF`.
+- Проверить состояния loading/empty/error.
+- Проверить backend semantics `has_pdf` и стабильность `/patient/results/{id}/pdf`.
+- Проверить binding foundation: login с external user id, последующий `GET /patient/auth/me` без cookie и `POST /patient/auth/unbind`.

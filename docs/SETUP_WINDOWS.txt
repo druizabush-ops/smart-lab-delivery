@@ -558,3 +558,16 @@ Invoke-WebRequest -Uri "http://127.0.0.1:8002/patient/results/<result_id>/pdf" -
 Ожидаемо:
 - endpoint PDF возвращает `content-type: application/pdf`;
 - сохраненный файл открывается как валидный PDF.
+
+29. Ручная проверка mini app login/results/pdf flow (обновление 2026-04-22)
+```powershell
+# Запуск patient API
+python .\scripts\run_patient_api.py
+
+# Сборка mini app
+Set-Location .\frontend\miniapp
+npm run build
+
+# В mini app проверить сценарий:
+# login -> results list -> details -> open/download PDF
+```

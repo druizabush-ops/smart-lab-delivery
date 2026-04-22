@@ -29,16 +29,19 @@ from src.infrastructure.logging import configure_logging
 from src.infrastructure.queue import InMemoryDeliveryQueue
 from src.infrastructure.repositories import InMemoryDeliveryCardRepository
 from src.infrastructure.runtime import DeliveryProcessManager, DeliveryRuntime, DeliveryRuntimeSelector
-from src.infrastructure.session import InMemoryPatientSessionRepository
+from src.infrastructure.session import InMemoryExternalPatientBindingRepository, InMemoryPatientSessionRepository
 from src.integration.delivery import EmailDeliveryProvider, MaxDeliveryProvider
 from src.integration.logging import LoggerAdapter, OperatorActionLoggerAdapter
 from src.integration.renovatio import RenovatioClient
 from src.application.use_cases.patient_auth import (
+    BindPatientSessionUseCase,
     ConfirmPatientAuthCodeUseCase,
     GetCurrentPatientUseCase,
     PatientLoginUseCase,
     PatientPhoneLoginUseCase,
     RefreshPatientSessionUseCase,
+    ResolveBoundPatientSessionUseCase,
+    UnbindPatientSessionUseCase,
 )
 from src.application.use_cases.patient_results import PatientResultPdfUseCase, PatientResultsUseCase
 
@@ -161,6 +164,7 @@ class AppContainer:
             repository=self.delivery_card_repository,
         )
         self.patient_session_repository = InMemoryPatientSessionRepository()
+        self.external_patient_binding_repository = InMemoryExternalPatientBindingRepository()
         self.patient_login_use_case = PatientLoginUseCase(
             client=self.renovatio_client,
             session_repository=self.patient_session_repository,
@@ -182,6 +186,9 @@ class AppContainer:
         self.get_current_patient_use_case = GetCurrentPatientUseCase(
             session_repository=self.patient_session_repository,
         )
+        self.bind_patient_session_use_case = BindPatientSessionUseCase(self.external_patient_binding_repository)
+        self.resolve_bound_patient_session_use_case = ResolveBoundPatientSessionUseCase(self.external_patient_binding_repository)
+        self.unbind_patient_session_use_case = UnbindPatientSessionUseCase(self.external_patient_binding_repository)
         self.patient_results_use_case = PatientResultsUseCase(
             sessions=self.get_current_patient_use_case,
             renovatio_client=self.renovatio_client,

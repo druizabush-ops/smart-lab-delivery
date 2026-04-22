@@ -5,16 +5,19 @@ pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
 
 from src.application.use_cases.patient_auth import (
+    BindPatientSessionUseCase,
     ConfirmPatientAuthCodeUseCase,
     GetCurrentPatientUseCase,
     PatientLoginUseCase,
     PatientPhoneLoginUseCase,
     RefreshPatientSessionUseCase,
+    ResolveBoundPatientSessionUseCase,
+    UnbindPatientSessionUseCase,
 )
 from src.application.use_cases.patient_results import PatientResultPdfUseCase, PatientResultsUseCase
 from src.config.security_settings import SecuritySettings
 from src.infrastructure.repositories import InMemoryDeliveryCardRepository
-from src.infrastructure.session import InMemoryPatientSessionRepository
+from src.infrastructure.session import InMemoryExternalPatientBindingRepository, InMemoryPatientSessionRepository
 from src.presentation.operator_api import create_operator_api_app
 from src.presentation.patient_api import create_patient_api_app
 
@@ -66,6 +69,10 @@ class _Container:
             sessions=self.get_current_patient_use_case,
             renovatio_client=client,
         )
+        bindings = InMemoryExternalPatientBindingRepository()
+        self.bind_patient_session_use_case = BindPatientSessionUseCase(bindings)
+        self.resolve_bound_patient_session_use_case = ResolveBoundPatientSessionUseCase(bindings)
+        self.unbind_patient_session_use_case = UnbindPatientSessionUseCase(bindings)
 
         class Runtime:
             repository_mode = "in_memory"

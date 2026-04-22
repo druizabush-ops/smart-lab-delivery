@@ -5,17 +5,20 @@ pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
 
 from src.application.use_cases.patient_auth import (
+    BindPatientSessionUseCase,
     ConfirmPatientAuthCodeUseCase,
     GetCurrentPatientUseCase,
     PatientLoginUseCase,
     PatientPhoneLoginUseCase,
     RefreshPatientSessionUseCase,
+    ResolveBoundPatientSessionUseCase,
+    UnbindPatientSessionUseCase,
 )
 from src.application.use_cases.patient_results import PatientResultsUseCase
 from src.application.use_cases.patient_results import PatientResultPdfUseCase
 from src.config.security_settings import SecuritySettings
 from src.infrastructure.repositories import InMemoryDeliveryCardRepository
-from src.infrastructure.session import InMemoryPatientSessionRepository
+from src.infrastructure.session import InMemoryExternalPatientBindingRepository, InMemoryPatientSessionRepository
 from src.integration.errors import IntegrationErrorKind, IntegrationFailure
 from src.presentation.patient_api import create_patient_api_app
 
@@ -60,6 +63,10 @@ class _Container:
         self.get_current_patient_use_case = GetCurrentPatientUseCase(session_repo)
         self.patient_results_use_case = PatientResultsUseCase(sessions=self.get_current_patient_use_case, renovatio_client=client)
         self.patient_result_pdf_use_case = PatientResultPdfUseCase(sessions=self.get_current_patient_use_case, renovatio_client=client)
+        bindings = InMemoryExternalPatientBindingRepository()
+        self.bind_patient_session_use_case = BindPatientSessionUseCase(bindings)
+        self.resolve_bound_patient_session_use_case = ResolveBoundPatientSessionUseCase(bindings)
+        self.unbind_patient_session_use_case = UnbindPatientSessionUseCase(bindings)
 
 
 def test_login_me_refresh_logout_flow() -> None:
@@ -115,9 +122,47 @@ def test_login_returns_controlled_error_when_profile_fetch_failed() -> None:
             self.get_current_patient_use_case = GetCurrentPatientUseCase(session_repo)
             self.patient_results_use_case = PatientResultsUseCase(sessions=self.get_current_patient_use_case, renovatio_client=client)
             self.patient_result_pdf_use_case = PatientResultPdfUseCase(sessions=self.get_current_patient_use_case, renovatio_client=client)
+            bindings = InMemoryExternalPatientBindingRepository()
+            self.bind_patient_session_use_case = BindPatientSessionUseCase(bindings)
+            self.resolve_bound_patient_session_use_case = ResolveBoundPatientSessionUseCase(bindings)
+            self.unbind_patient_session_use_case = UnbindPatientSessionUseCase(bindings)
 
     client = TestClient(create_patient_api_app(container=BrokenProfileContainer()))
     response = client.post("/patient/auth/login", json={"login": "demo", "password": "secret"})
     assert response.status_code == 502
     assert response.json()["code"] == "http_error"
     assert response.json()["message"] == "Не удалось получить профиль пациента"
+
+
+def test_me_allows_external_binding_without_cookie() -> None:
+    client = TestClient(create_patient_api_app(container=_Container()))
+
+    login = client.post(
+        "/patient/auth/login",
+        json={"login": "demo", "password": "secret"},
+        headers={"X-External-Platform-User-Id": "max-user-1"},
+    )
+    assert login.status_code == 200
+    client.cookies.clear()
+
+    me = client.get("/patient/auth/me", headers={"X-External-Platform-User-Id": "max-user-1"})
+    assert me.status_code == 200
+    assert me.json()["patient_number"] == "p-1"
+
+
+def test_unbind_external_user_resets_binding() -> None:
+    client = TestClient(create_patient_api_app(container=_Container()))
+
+    login = client.post(
+        "/patient/auth/login",
+        json={"login": "demo", "password": "secret"},
+        headers={"X-External-Platform-User-Id": "max-user-2"},
+    )
+    assert login.status_code == 200
+
+    unbind = client.post("/patient/auth/unbind", headers={"X-External-Platform-User-Id": "max-user-2"})
+    assert unbind.status_code == 200
+
+    client.cookies.clear()
+    me = client.get("/patient/auth/me", headers={"X-External-Platform-User-Id": "max-user-2"})
+    assert me.status_code == 401

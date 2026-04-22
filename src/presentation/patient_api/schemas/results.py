@@ -1,39 +1,29 @@
 """Pydantic-схемы patient-facing results API."""
 
-from datetime import datetime
-
 from pydantic import BaseModel
-
-
-class PatientLabResultDocumentResponse(BaseModel):
-    document_id: str
-    title: str
-    url: str | None
-    readiness: str
-    mime_type: str | None = None
 
 
 class PatientLabResultListItemResponse(BaseModel):
     result_id: str
+    title: str
     date: str | None
-    datetime: datetime | None
-    lab_id: str | None
-    lab: str | None
-    clinic_id: str | None
-    clinic: str | None
-    services: list[str]
-    files_count: int
+    status: str
+    has_pdf: bool
+    lab_name: str | None
+    clinic_name: str | None
+    short_services_summary: str | None
 
 
 class PatientLabResultDetailsResponse(BaseModel):
     result_id: str
+    title: str
     date: str | None
-    datetime: datetime | None
-    lab_id: str | None
-    lab: str | None
-    clinic_id: str | None
-    clinic: str | None
+    status: str
+    has_pdf: bool
+    lab_name: str | None
+    clinic_name: str | None
     services: list[str]
     sections: list[dict]
     indicators: list[dict]
-    documents: list[PatientLabResultDocumentResponse]
+    pdf_open_url: str | None
+    pdf_download_url: str | None

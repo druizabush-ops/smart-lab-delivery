@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { MaxUI } from "@maxhub/max-ui";
 import { ApiClient, ApiError } from "./api/client";
-import { PatientResult, ResultsApi } from "./api/results";
+import { PatientResultDetails, PatientResultListItem, ResultsApi } from "./api/results";
 import { AuthApi, PatientSession } from "./api/auth";
 import { ResultDetails } from "./components/ResultDetails";
 import { ResultList } from "./components/ResultList";
-import { getMaxContext, parseStartParam } from "./max/context";
 
-type AuthMode = "chooser" | "login" | "phone" | "code";
+type Screen = "home" | "results" | "details";
 
 export function resolvePatientApiBaseUrl(): string {
   const configuredBaseUrl = import.meta.env.VITE_PATIENT_API_BASE_URL;
@@ -18,23 +17,20 @@ export function resolvePatientApiBaseUrl(): string {
 }
 
 export function App(): JSX.Element {
-  const context = getMaxContext();
-  const start = parseStartParam(context.startParam);
   const baseUrl = resolvePatientApiBaseUrl();
   const client = useMemo(() => new ApiClient({ baseUrl }), [baseUrl]);
   const resultsApi = useMemo(() => new ResultsApi(client), [client]);
   const authApi = useMemo(() => new AuthApi(client), [client]);
-  const [results, setResults] = useState<PatientResult[]>([]);
+
+  const [results, setResults] = useState<PatientResultListItem[]>([]);
   const [session, setSession] = useState<PatientSession | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(start.mode === "result" ? start.resultId ?? null : null);
+  const [selected, setSelected] = useState<PatientResultDetails | null>(null);
+  const [screen, setScreen] = useState<Screen>("home");
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [authMode, setAuthMode] = useState<AuthMode>("chooser");
-  const [pendingPatientId, setPendingPatientId] = useState<string>("");
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
-  const [phone, setPhone] = useState("");
-  const [code, setCode] = useState("");
 
   useEffect(() => {
     authApi
@@ -44,46 +40,69 @@ export function App(): JSX.Element {
         return resultsApi.list();
       })
       .then((items) => setResults(items))
-      .catch(() => {
-        setSession(null);
-      })
+      .catch(() => setSession(null))
       .finally(() => setLoading(false));
   }, [authApi, resultsApi]);
 
-  const selected = selectedId ? results.find((result) => result.result_id === selectedId) ?? null : null;
-
   const handleLoginSubmit = async (): Promise<void> => {
+    setBusy(true);
+    setError(null);
     try {
-      setError(null);
       const currentSession = await authApi.login(login, password);
       setSession(currentSession);
       const items = await resultsApi.list();
       setResults(items);
+      setScreen("home");
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? "Неверный логин/пароль" : "Ошибка входа");
+      if (err instanceof ApiError && err.status === 401) {
+        setError("Неверный логин или пароль");
+      } else {
+        setError("Не удалось выполнить вход. Попробуйте позже");
+      }
+    } finally {
+      setBusy(false);
     }
   };
 
-  const handlePhoneSubmit = async (): Promise<void> => {
+  const openResult = async (resultId: string): Promise<void> => {
+    setBusy(true);
+    setError(null);
     try {
-      setError(null);
-      const pending = await authApi.loginByPhone(phone);
-      setPendingPatientId(pending.patient_id);
-      setAuthMode("code");
+      const details = await resultsApi.get(resultId);
+      setSelected(details);
+      setScreen("details");
     } catch {
-      setError("Ошибка входа по телефону");
+      setError("Не удалось открыть результат.");
+    } finally {
+      setBusy(false);
     }
   };
 
-  const handleCodeSubmit = async (): Promise<void> => {
+  const openPdf = (resultId: string): void => {
+    window.open(`${baseUrl}/patient/results/${encodeURIComponent(resultId)}/pdf`, "_blank", "noopener,noreferrer");
+  };
+
+  const downloadPdf = async (resultId: string): Promise<void> => {
+    setBusy(true);
+    setError(null);
     try {
-      setError(null);
-      const currentSession = await authApi.confirmCode(pendingPatientId, code);
-      setSession(currentSession);
-      const items = await resultsApi.list();
-      setResults(items);
+      const response = await fetch(`${baseUrl}/patient/results/${encodeURIComponent(resultId)}/pdf`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("pdf_error");
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `result-${resultId}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
     } catch {
-      setError("Неверный SMS-код");
+      setError("PDF временно недоступен");
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -91,58 +110,59 @@ export function App(): JSX.Element {
     await authApi.logout();
     setSession(null);
     setResults([]);
-    setSelectedId(null);
-    setAuthMode("chooser");
+    setSelected(null);
+    setScreen("home");
   };
 
   return (
     <MaxUI>
       <main>
-        <h1>Smart Lab Results</h1>
-        {!context.isInsideMax ? <p>Режим вне MAX: используется fallback-контекст.</p> : null}
+        <h1>Smart Lab</h1>
         {loading ? <p>Загрузка...</p> : null}
         {!loading && !session ? (
           <section>
-            <h2>Вход пациента</h2>
-            {authMode === "chooser" ? (
-              <>
-                <button onClick={() => setAuthMode("login")}>Вход по логину</button>
-                <button onClick={() => setAuthMode("phone")}>Вход по телефону</button>
-              </>
-            ) : null}
-            {authMode === "login" ? (
-              <>
-                <input placeholder="Логин" value={login} onChange={(e) => setLogin(e.target.value)} />
-                <input placeholder="Пароль" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-                <button onClick={handleLoginSubmit}>Войти</button>
-              </>
-            ) : null}
-            {authMode === "phone" ? (
-              <>
-                <input placeholder="Телефон" value={phone} onChange={(e) => setPhone(e.target.value)} />
-                <button onClick={handlePhoneSubmit}>Получить код</button>
-              </>
-            ) : null}
-            {authMode === "code" ? (
-              <>
-                <input placeholder="SMS-код" value={code} onChange={(e) => setCode(e.target.value)} />
-                <button onClick={handleCodeSubmit}>Подтвердить код</button>
-              </>
-            ) : null}
+            <h2>Вход</h2>
+            <input placeholder="Логин" value={login} onChange={(e) => setLogin(e.target.value)} />
+            <input placeholder="Пароль" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <button disabled={busy} onClick={handleLoginSubmit}>Войти</button>
           </section>
         ) : null}
 
         {!loading && session ? (
           <section>
-            <p>Пациент: {session.patient_name || session.patient_number}</p>
+            <p>Здравствуйте, {session.patient_name || session.patient_number}</p>
             <button onClick={handleLogout}>Выйти</button>
-            {error ? <p>{error}</p> : null}
-            {!error && results.length === 0 ? <p>У пациента пока нет доступных результатов.</p> : null}
-            {!error && results.length > 0 && !selected ? <ResultList results={results} onOpen={setSelectedId} /> : null}
-            {!error && selected ? <ResultDetails result={selected} onBack={() => setSelectedId(null)} /> : null}
+            {screen === "home" ? (
+              <div>
+                <button onClick={() => setScreen("results")}>Результаты анализов</button>
+                <button disabled>Мои записи</button>
+                <button disabled>Профиль</button>
+              </div>
+            ) : null}
+            {screen === "results" ? (
+              results.length === 0 ? (
+                <p>Результатов пока нет.</p>
+              ) : (
+                <ResultList
+                  results={results}
+                  onOpen={openResult}
+                  onOpenPdf={openPdf}
+                  onDownloadPdf={downloadPdf}
+                />
+              )
+            ) : null}
+            {screen === "details" && selected ? (
+              <ResultDetails
+                result={selected}
+                onBack={() => setScreen("results")}
+                onOpenPdf={() => openPdf(selected.result_id)}
+                onDownloadPdf={() => downloadPdf(selected.result_id)}
+              />
+            ) : null}
           </section>
         ) : null}
 
+        {busy ? <p>Подождите...</p> : null}
         {error ? <p>{error}</p> : null}
       </main>
     </MaxUI>

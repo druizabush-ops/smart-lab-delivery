@@ -28,40 +28,31 @@ class PatientResultPdfPayloadError(RuntimeError):
 
 
 @dataclass(frozen=True, slots=True)
-class PatientLabResultDocumentDto:
-    document_id: str
-    title: str
-    url: str | None
-    readiness: str
-    mime_type: str | None
-
-
-@dataclass(frozen=True, slots=True)
 class PatientLabResultListItemDto:
     result_id: str
+    title: str
     date: str | None
-    datetime: datetime | None
-    lab_id: str | None
-    lab: str | None
-    clinic_id: str | None
-    clinic: str | None
-    services: list[str]
-    files_count: int
+    status: str
+    has_pdf: bool
+    lab_name: str | None
+    clinic_name: str | None
+    short_services_summary: str | None
 
 
 @dataclass(frozen=True, slots=True)
 class PatientLabResultDetailsDto:
     result_id: str
+    title: str
     date: str | None
-    datetime: datetime | None
-    lab_id: str | None
-    lab: str | None
-    clinic_id: str | None
-    clinic: str | None
+    status: str
+    has_pdf: bool
+    lab_name: str | None
+    clinic_name: str | None
     services: list[str]
     sections: list[dict[str, Any]]
     indicators: list[dict[str, Any]]
-    documents: list[PatientLabResultDocumentDto]
+    pdf_open_url: str | None
+    pdf_download_url: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -192,54 +183,38 @@ class PatientResultPdfUseCase:
 
 
 def _map_result_list_item(raw: dict[str, Any]) -> PatientLabResultListItemDto:
-    documents = _extract_documents(raw)
+    services = _extract_services(raw)
     return PatientLabResultListItemDto(
         result_id=_first_str(raw, "result_id", "id", "lab_result_id"),
-        date=_first_optional_str(raw, "date"),
-        datetime=_parse_datetime(_first_optional_str(raw, "datetime", "date_time", "created_at")),
-        lab_id=_first_optional_str(raw, "lab_id"),
-        lab=_first_optional_str(raw, "lab", "lab_name"),
-        clinic_id=_first_optional_str(raw, "clinic_id"),
-        clinic=_first_optional_str(raw, "clinic", "clinic_name"),
-        services=_extract_services(raw),
-        files_count=len(documents),
+        title=_resolve_title(raw, services),
+        date=_first_optional_str(raw, "date") or _format_date(_first_optional_str(raw, "datetime", "date_time", "created_at")),
+        status=_normalize_status(raw),
+        has_pdf=_has_pdf(raw),
+        lab_name=_first_optional_str(raw, "lab", "lab_name"),
+        clinic_name=_first_optional_str(raw, "clinic", "clinic_name"),
+        short_services_summary=_build_short_services_summary(services),
     )
 
 
 def _map_result_details(raw: dict[str, Any]) -> PatientLabResultDetailsDto:
-    documents = _extract_documents(raw)
+    result_id = _first_str(raw, "result_id", "id", "lab_result_id")
+    services = _extract_services(raw)
+    has_pdf = _has_pdf(raw)
+    pdf_route = f"/patient/results/{result_id}/pdf"
     return PatientLabResultDetailsDto(
-        result_id=_first_str(raw, "result_id", "id", "lab_result_id"),
-        date=_first_optional_str(raw, "date"),
-        datetime=_parse_datetime(_first_optional_str(raw, "datetime", "date_time", "created_at")),
-        lab_id=_first_optional_str(raw, "lab_id"),
-        lab=_first_optional_str(raw, "lab", "lab_name"),
-        clinic_id=_first_optional_str(raw, "clinic_id"),
-        clinic=_first_optional_str(raw, "clinic", "clinic_name"),
-        services=_extract_services(raw),
+        result_id=result_id,
+        title=_resolve_title(raw, services),
+        date=_first_optional_str(raw, "date") or _format_date(_first_optional_str(raw, "datetime", "date_time", "created_at")),
+        status=_normalize_status(raw),
+        has_pdf=has_pdf,
+        lab_name=_first_optional_str(raw, "lab", "lab_name"),
+        clinic_name=_first_optional_str(raw, "clinic", "clinic_name"),
+        services=services,
         sections=_extract_list(raw, "sections", "result_sections"),
         indicators=_extract_list(raw, "indicators", "result_indicators", "results"),
-        documents=documents,
+        pdf_open_url=pdf_route if has_pdf else None,
+        pdf_download_url=pdf_route if has_pdf else None,
     )
-
-
-def _extract_documents(raw: dict[str, Any]) -> list[PatientLabResultDocumentDto]:
-    values = _extract_list(raw, "documents", "files", "pdfs")
-    documents: list[PatientLabResultDocumentDto] = []
-    for item in values:
-        if not isinstance(item, dict):
-            continue
-        url = _first_optional_str(item, "url", "file_url", "pdf_url", "link")
-        documents.append(
-            PatientLabResultDocumentDto(
-                document_id=_first_str(item, "document_id", "id", default=f"doc-{len(documents)+1}"),
-                title=_first_str(item, "title", "name", default="Документ результата"),
-                url=url,
-                readiness="ready" if url else "pending",
-                mime_type=_first_optional_str(item, "mime_type", "content_type"),
-            )
-        )
-    return documents
 
 
 def _build_pdf_filename(result_id: str) -> str:
@@ -268,6 +243,60 @@ def _extract_list(raw: dict[str, Any], *keys: str) -> list[dict[str, Any]]:
         if isinstance(value, list):
             return [item for item in value if isinstance(item, dict)]
     return []
+
+
+def _has_pdf(raw: dict[str, Any]) -> bool:
+    files = raw.get("files")
+    if isinstance(files, list):
+        for item in files:
+            if isinstance(item, str) and item.strip():
+                return True
+            if isinstance(item, dict) and _first_optional_str(item, "url", "file_url", "pdf_url", "link"):
+                return True
+    documents = _extract_list(raw, "documents", "pdfs")
+    for doc in documents:
+        if _first_optional_str(doc, "url", "file_url", "pdf_url", "link"):
+            return True
+    return False
+
+
+def _normalize_status(raw: dict[str, Any]) -> str:
+    raw_status = (_first_optional_str(raw, "status", "result_status") or "").lower()
+    mapping = {
+        "ready": "Готов",
+        "completed": "Готов",
+        "done": "Готов",
+        "pending": "В обработке",
+        "in_progress": "В обработке",
+        "processing": "В обработке",
+    }
+    if raw_status in mapping:
+        return mapping[raw_status]
+    return "Готов" if _has_pdf(raw) else "В обработке"
+
+
+def _resolve_title(raw: dict[str, Any], services: list[str]) -> str:
+    explicit = _first_optional_str(raw, "title", "name", "result_name")
+    if explicit:
+        return explicit
+    if services:
+        return f"Результаты: {services[0]}"
+    return "Лабораторный результат"
+
+
+def _build_short_services_summary(services: list[str]) -> str | None:
+    if not services:
+        return None
+    if len(services) == 1:
+        return services[0]
+    return f"{services[0]} + ещё {len(services) - 1}"
+
+
+def _format_date(value: str | None) -> str | None:
+    dt = _parse_datetime(value)
+    if dt is None:
+        return None
+    return dt.date().isoformat()
 
 
 def _first_str(raw: dict[str, Any], *keys: str, default: str = "") -> str:

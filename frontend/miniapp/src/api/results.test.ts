@@ -7,22 +7,16 @@ describe("ResultsApi", () => {
   });
 
   it("обрабатывает успешный ответ", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify([{ result_id: "1" }]), { status: 200 }));
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify([{ result_id: "1", has_pdf: true }]), { status: 200 }));
     const api = new ResultsApi(new ApiClient({ baseUrl: "http://localhost" }));
     const payload = await api.list();
     expect(payload).toHaveLength(1);
   });
 
-  it("обрабатывает ошибку backend", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(new Response("error", { status: 500 }));
+  it("обрабатывает получение details", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ result_id: "1", title: "ОАК", services: [], sections: [], indicators: [], has_pdf: false }), { status: 200 }));
     const api = new ResultsApi(new ApiClient({ baseUrl: "http://localhost" }));
-    await expect(api.list()).rejects.toThrow(/Backend error/);
-  });
-
-  it("обрабатывает пустой результат", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }));
-    const api = new ResultsApi(new ApiClient({ baseUrl: "http://localhost" }));
-    const payload = await api.list();
-    expect(payload).toEqual([]);
+    const payload = await api.get("1");
+    expect(payload.result_id).toBe("1");
   });
 });

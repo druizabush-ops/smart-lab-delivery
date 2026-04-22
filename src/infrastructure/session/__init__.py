@@ -1,3 +1,4 @@
+from .in_memory_external_patient_binding_repository import InMemoryExternalPatientBindingRepository
 from .in_memory_patient_session_repository import InMemoryPatientSessionRepository
 
-__all__ = ["InMemoryPatientSessionRepository"]
+__all__ = ["InMemoryPatientSessionRepository", "InMemoryExternalPatientBindingRepository"]

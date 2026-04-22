@@ -110,3 +110,9 @@
 
 Пример:
 - `SLD_SMOKE_PATIENT_SESSION=<session_id> SLD_SMOKE_PATIENT_RESULT_ID=<result_id> python scripts/zapusk228.py --assume-yes --skip-update --skip-deps`
+
+15. Mini app login/results smoke через ZAPUSK228
+Для опционального smoke login/results задайте:
+- `SLD_SMOKE_PATIENT_LOGIN`
+- `SLD_SMOKE_PATIENT_PASSWORD`
+И запустите `python scripts/zapusk228.py --assume-yes --skip-update --skip-deps`.

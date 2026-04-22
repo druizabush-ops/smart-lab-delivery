@@ -1,26 +1,39 @@
 import { ApiClient } from "./client";
 
-export type PatientDocument = { title: string; url: string | null; readiness: string };
-export type PatientResult = {
+export type PatientResultListItem = {
   result_id: string;
-  patient_id: string;
+  title: string;
+  date: string | null;
   status: string;
-  channel: string;
-  created_at: string;
-  updated_at: string;
-  attempts_count: number;
-  last_error: string | null;
-  documents: PatientDocument[];
+  has_pdf: boolean;
+  lab_name: string | null;
+  clinic_name: string | null;
+  short_services_summary: string | null;
+};
+
+export type PatientResultDetails = {
+  result_id: string;
+  title: string;
+  date: string | null;
+  status: string;
+  has_pdf: boolean;
+  lab_name: string | null;
+  clinic_name: string | null;
+  services: string[];
+  sections: Array<Record<string, unknown>>;
+  indicators: Array<Record<string, unknown>>;
+  pdf_open_url: string | null;
+  pdf_download_url: string | null;
 };
 
 export class ResultsApi {
   constructor(private readonly client: ApiClient) {}
 
-  list(): Promise<PatientResult[]> {
-    return this.client.get<PatientResult[]>("/patient/results");
+  list(): Promise<PatientResultListItem[]> {
+    return this.client.get<PatientResultListItem[]>("/patient/results");
   }
 
-  get(resultId: string): Promise<PatientResult> {
-    return this.client.get<PatientResult>(`/patient/results/${encodeURIComponent(resultId)}`);
+  get(resultId: string): Promise<PatientResultDetails> {
+    return this.client.get<PatientResultDetails>(`/patient/results/${encodeURIComponent(resultId)}`);
   }
 }

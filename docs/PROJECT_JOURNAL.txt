@@ -824,3 +824,20 @@ Dependency wiring:
 Что нужно проверить:
 - `python -m pytest` должен оставаться зеленым.
 - Ручной smoke: login -> results -> details -> `/patient/results/{id}/pdf`.
+
+[Изменение]
+Дата: 2026-04-22
+Ветка: work
+Блок: Patient-facing mini app MVP (login -> results -> details -> open/download PDF) + foundation MAX binding
+Файлы: src/application/use_cases/patient_results.py; src/presentation/patient_api/schemas/results.py; src/presentation/patient_api/routers/auth.py; src/application/use_cases/patient_auth.py; src/infrastructure/session/in_memory_external_patient_binding_repository.py; src/config/container.py; src/presentation/patient_api/app.py; frontend/miniapp/src/App.tsx; frontend/miniapp/src/components/ResultList.tsx; frontend/miniapp/src/components/ResultDetails.tsx; frontend/miniapp/src/api/results.ts; scripts/zapusk228.py; docs/*.txt; tests/*
+Причина: Завершить первый пациентский MVP mini app поверх уже работающего backend-контра и зафиксировать архитектурный фундамент no-repeat-login через server-side binding.
+Что сделано:
+- Контракты `/patient/results*` нормализованы в patient-friendly DTO (title/status/has_pdf/lab_name/clinic_name + PDF actions route).
+- Реализованы UX-сценарии mini app: login, home, results list, result details, open/download PDF.
+- Добавлен серверный foundation external identity binding (`external_platform_user_id -> session_id`) без хранения credentials на клиенте.
+- `/patient/auth/me` поддерживает восстановление сессии по привязке внешнего user_id (при отсутствии cookie).
+- Добавлен `/patient/auth/unbind` для отвязки.
+- ZAPUSK228 дополнен опциональным smoke login/results (по env credentials), PDF smoke сохранён.
+Риски / ограничения:
+- Нужна верификация финального стабильного MAX user-id поля (пока используется abstraction `external_platform_user_id`/header).
+- Полноценный QR-flow не реализован, заложен как следующий архитектурный шаг.

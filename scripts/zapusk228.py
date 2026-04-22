@@ -168,9 +168,42 @@ class Zapusk228:
         self.runner.run(["curl", "-fsS", "http://127.0.0.1:8001/health/ready"])
         self.runner.run(["curl", "-fsS", "http://127.0.0.1:8002/health/live"])
         self.runner.run(["curl", "-fsS", "http://127.0.0.1:8002/health/ready"])
+        self._run_patient_login_results_smoke_if_configured()
         self._run_patient_pdf_smoke_if_configured()
         for service in ["smart-patient-api", "smart-operator-api", "smart-process-manager", "nginx"]:
             self.runner.run(["systemctl", "status", service, "--no-pager"])
+
+
+    def _run_patient_login_results_smoke_if_configured(self) -> None:
+        """Опционально выполняет smoke login->results при наличии тестовых credentials."""
+
+        login = os.getenv("SLD_SMOKE_PATIENT_LOGIN")
+        password = os.getenv("SLD_SMOKE_PATIENT_PASSWORD")
+        if not login or not password:
+            print("[ZAPUSK228] Login/results smoke пропущен (ожидаются SLD_SMOKE_PATIENT_LOGIN и SLD_SMOKE_PATIENT_PASSWORD).")
+            return
+        self.runner.run(
+            [
+                "curl",
+                "-fsS",
+                "-c",
+                "/tmp/sld_patient_smoke.cookie",
+                "-H",
+                "Content-Type: application/json",
+                "-d",
+                '{"login":"' + login + '","password":"' + password + '"}',
+                "http://127.0.0.1:8002/patient/auth/login",
+            ]
+        )
+        self.runner.run(
+            [
+                "curl",
+                "-fsS",
+                "-b",
+                "/tmp/sld_patient_smoke.cookie",
+                "http://127.0.0.1:8002/patient/results",
+            ]
+        )
 
     def _run_patient_pdf_smoke_if_configured(self) -> None:
         """Опционально проверяет PDF endpoint при наличии тестовой session cookie."""
