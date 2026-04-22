@@ -32,6 +32,21 @@ export function App(): JSX.Element {
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
 
+  const getUserMessage = (error: unknown, fallback: string): string => {
+    if (error instanceof ApiError) {
+      if (error.status === 401) {
+        return "Сессия истекла. Войдите снова.";
+      }
+      if (error.status === 404) {
+        return "Документ временно недоступен";
+      }
+      if (error.status && error.status >= 500) {
+        return "Сервис временно недоступен. Попробуйте позже.";
+      }
+    }
+    return fallback;
+  };
+
   useEffect(() => {
     authApi
       .me()
@@ -78,29 +93,44 @@ export function App(): JSX.Element {
     }
   };
 
-  const openPdf = (resultId: string): void => {
-    window.open(`${baseUrl}/patient/results/${encodeURIComponent(resultId)}/pdf`, "_blank", "noopener,noreferrer");
+  const fetchPdfBlob = async (resultId: string): Promise<Blob> => {
+    const response = await fetch(`${baseUrl}/patient/results/${encodeURIComponent(resultId)}/pdf`, {
+      credentials: "include",
+    });
+    if (!response.ok) {
+      throw new ApiError("pdf_error", response.status);
+    }
+    return response.blob();
+  };
+
+  const openPdf = async (resultId: string): Promise<void> => {
+    setBusy(true);
+    setError(null);
+    try {
+      const blob = await fetchPdfBlob(resultId);
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      window.setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (err: unknown) {
+      setError(getUserMessage(err, "Не удалось открыть документ"));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const downloadPdf = async (resultId: string): Promise<void> => {
     setBusy(true);
     setError(null);
     try {
-      const response = await fetch(`${baseUrl}/patient/results/${encodeURIComponent(resultId)}/pdf`, {
-        credentials: "include",
-      });
-      if (!response.ok) {
-        throw new Error("pdf_error");
-      }
-      const blob = await response.blob();
+      const blob = await fetchPdfBlob(resultId);
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
       link.download = `result-${resultId}.pdf`;
       link.click();
       URL.revokeObjectURL(url);
-    } catch {
-      setError("PDF временно недоступен");
+    } catch (err: unknown) {
+      setError(getUserMessage(err, "PDF временно недоступен"));
     } finally {
       setBusy(false);
     }
@@ -116,11 +146,11 @@ export function App(): JSX.Element {
 
   return (
     <MaxUI>
-      <main>
+      <main className="app-shell">
         <h1>Smart Lab</h1>
         {loading ? <p>Загрузка...</p> : null}
         {!loading && !session ? (
-          <section>
+          <section className="panel">
             <h2>Вход</h2>
             <input placeholder="Логин" value={login} onChange={(e) => setLogin(e.target.value)} />
             <input placeholder="Пароль" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
@@ -129,11 +159,11 @@ export function App(): JSX.Element {
         ) : null}
 
         {!loading && session ? (
-          <section>
+          <section className="panel">
             <p>Здравствуйте, {session.patient_name || session.patient_number}</p>
             <button onClick={handleLogout}>Выйти</button>
             {screen === "home" ? (
-              <div>
+              <div className="home-actions">
                 <button onClick={() => setScreen("results")}>Результаты анализов</button>
                 <button disabled>Мои записи</button>
                 <button disabled>Профиль</button>
@@ -146,7 +176,9 @@ export function App(): JSX.Element {
                 <ResultList
                   results={results}
                   onOpen={openResult}
-                  onOpenPdf={openPdf}
+                  onOpenPdf={(resultId) => {
+                    void openPdf(resultId);
+                  }}
                   onDownloadPdf={downloadPdf}
                 />
               )
@@ -155,7 +187,9 @@ export function App(): JSX.Element {
               <ResultDetails
                 result={selected}
                 onBack={() => setScreen("results")}
-                onOpenPdf={() => openPdf(selected.result_id)}
+                onOpenPdf={() => {
+                  void openPdf(selected.result_id);
+                }}
                 onDownloadPdf={() => downloadPdf(selected.result_id)}
               />
             ) : null}

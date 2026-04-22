@@ -58,4 +58,90 @@ describe("App patient mini app", () => {
     fireEvent.click(screen.getByText("Результаты анализов"));
     await waitFor(() => expect(screen.getByText("Открыть PDF")).toBeInTheDocument());
   });
+
+  it("скрывает активные PDF-действия если has_pdf=false", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            session_id: "s1",
+            patient_name: "Тест",
+            patient_number: "p1",
+            created_at: "2026-01-01",
+            expires_at: "2026-12-01",
+            last_refresh_at: "2026-01-01",
+            auth_type: "login",
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([
+            {
+              result_id: "r1",
+              title: "ОАК",
+              date: "2026-01-02",
+              status: "В обработке",
+              has_pdf: false,
+              lab_name: "Lab",
+              clinic_name: "Clinic",
+              short_services_summary: "ОАК",
+            },
+          ]),
+          { status: 200 },
+        ),
+      );
+
+    render(<App />);
+    await waitFor(() => expect(screen.getByText("Результаты анализов")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Результаты анализов"));
+    await waitFor(() => expect(screen.getByText("Открыть PDF")).toBeInTheDocument());
+    expect(screen.getByText("Открыть PDF")).toBeDisabled();
+    expect(screen.getByText("Скачать PDF")).toBeDisabled();
+  });
+
+  it("показывает человекочитаемую ошибку PDF вместо сырого payload", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            session_id: "s1",
+            patient_name: "Тест",
+            patient_number: "p1",
+            created_at: "2026-01-01",
+            expires_at: "2026-12-01",
+            last_refresh_at: "2026-01-01",
+            auth_type: "login",
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([
+            {
+              result_id: "r1",
+              title: "ОАК",
+              date: "2026-01-02",
+              status: "Готов",
+              has_pdf: true,
+              lab_name: "Lab",
+              clinic_name: "Clinic",
+              short_services_summary: "ОАК",
+            },
+          ]),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(new Response('{"message":"raw backend json"}', { status: 502 }));
+
+    render(<App />);
+    await waitFor(() => expect(screen.getByText("Результаты анализов")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Результаты анализов"));
+    await waitFor(() => expect(screen.getByText("Скачать PDF")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Скачать PDF"));
+    await waitFor(() => expect(screen.getByText("Сервис временно недоступен. Попробуйте позже.")).toBeInTheDocument());
+    expect(screen.queryByText(/raw backend json/i)).not.toBeInTheDocument();
+  });
 });
