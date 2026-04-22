@@ -30,6 +30,14 @@ export type MiniAppContentConfig = {
     openPdfButton: string;
     downloadPdfButton: string;
   };
+  pdfViewer: {
+    title: string;
+    backButton: string;
+    logoutButton: string;
+    saveButton: string;
+    shareButton: string;
+    sendToMaxButton: string;
+  };
   placeholders: HomePlaceholderBlock[];
 };
 
@@ -57,6 +65,14 @@ export const miniAppContentConfig: MiniAppContentConfig = {
     indicatorsEmpty: "Показатели пока недоступны.",
     openPdfButton: "Открыть PDF",
     downloadPdfButton: "Скачать PDF",
+  },
+  pdfViewer: {
+    title: "Документ",
+    backButton: "Назад",
+    logoutButton: "Выйти",
+    saveButton: "Сохранить",
+    shareButton: "Поделиться",
+    sendToMaxButton: "Отправить в MAX",
   },
   placeholders: [
     {

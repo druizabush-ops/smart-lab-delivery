@@ -444,3 +444,24 @@ DECISION: Patient session хранится server-side.
 - Строка результата стабильно строится в формате «<label>: <value> <unit>».
 - Если unit отсутствует, строка рендерится без unit.
 - Если label по services не найден, fallback остается на `parameter_name/parameter_code/code`.
+
+[ADR-029] Управляемый PDF viewer screen внутри patient mini app
+Дата: 2026-04-22
+Решение:
+- Переход по PDF из results/details переводится на внутренний экран `screen=pdf` c iframe и явным top/bottom bar.
+- В top bar добавлены действия `Назад` и `Выйти` (logout через существующий `/patient/auth/logout`).
+- В bottom bar добавлены document actions: `Сохранить`, `Поделиться`, `Отправить в MAX`.
+Причина: в MAX/webview прямое открытие PDF URL выбрасывало пользователя из mini app контекста и ломало навигацию.
+Последствия:
+- Сохранен существующий backend session-based PDF endpoint без переписывания pipeline.
+- Навигация back становится предсказуемой (возврат в details или results по source).
+
+[ADR-030] Share/Send-to-MAX policy: честный fallback без выдуманных bridge API
+Дата: 2026-04-22
+Решение:
+- Share использует `navigator.share` при наличии capability; при отсутствии — fallback на копирование session-aware ссылки в clipboard.
+- `Отправить в MAX` реализован как foundation-action: копирование ссылки + optional открытие bot-link (`VITE_MAX_BOT_NAME`), без claim о file attach API.
+Причина: в текущем блоке не подтвержден runtime bridge для прямой отправки PDF-файла в чат MAX из mini app.
+Последствия:
+- Пользователь получает рабочий сценарий ручной отправки ссылки без ложных обещаний “готовой” автопередачи файла.
+- Ограничение зафиксировано в TECH_DEBT и PROJECT_JOURNAL.

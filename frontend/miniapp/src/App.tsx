@@ -8,7 +8,12 @@ import { ResultList } from "./components/ResultList";
 import { miniAppContentConfig } from "./ui/contentConfig";
 import { getMaxContext } from "./max/context";
 
-type Screen = "home" | "results" | "details";
+type Screen = "home" | "results" | "details" | "pdf";
+type PdfViewerSource = "results" | "details";
+type PdfViewerState = {
+  resultId: string;
+  source: PdfViewerSource;
+};
 
 export function resolvePatientApiBaseUrl(): string {
   const configuredBaseUrl = import.meta.env.VITE_PATIENT_API_BASE_URL;
@@ -28,9 +33,11 @@ export function App(): JSX.Element {
   const [session, setSession] = useState<PatientSession | null>(null);
   const [selected, setSelected] = useState<PatientResultDetails | null>(null);
   const [screen, setScreen] = useState<Screen>("home");
+  const [pdfViewer, setPdfViewer] = useState<PdfViewerState | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const maxContext = useMemo(() => getMaxContext(), []);
@@ -46,15 +53,15 @@ export function App(): JSX.Element {
     return fallbackNumber;
   };
 
-  const getUserMessage = (error: unknown, fallback: string): string => {
-    if (error instanceof ApiError) {
-      if (error.status === 401) {
+  const getUserMessage = (rawError: unknown, fallback: string): string => {
+    if (rawError instanceof ApiError) {
+      if (rawError.status === 401) {
         return "Сессия истекла. Войдите снова.";
       }
-      if (error.status === 404) {
+      if (rawError.status === 404) {
         return "Документ временно недоступен";
       }
-      if (error.status && error.status >= 500) {
+      if (rawError.status && rawError.status >= 500) {
         return "Сервис временно недоступен. Попробуйте позже.";
       }
     }
@@ -96,6 +103,7 @@ export function App(): JSX.Element {
   const openResult = async (resultId: string): Promise<void> => {
     setBusy(true);
     setError(null);
+    setInfoMessage(null);
     try {
       const details = await resultsApi.get(resultId);
       setSelected(details);
@@ -111,50 +119,115 @@ export function App(): JSX.Element {
     `${baseUrl}/patient/results/${encodeURIComponent(resultId)}/pdf?disposition=${mode}`
   );
 
-  const ensurePdfAvailable = async (resultId: string): Promise<void> => {
+  const fetchPdfBlob = async (resultId: string): Promise<Blob> => {
     const response = await fetch(buildPdfUrl(resultId, "inline"), {
       credentials: "include",
     });
     if (!response.ok) {
       throw new ApiError("pdf_error", response.status);
     }
-    await response.arrayBuffer();
+    return response.blob();
   };
 
-  const openPdf = async (resultId: string): Promise<void> => {
+  const openPdfViewer = (resultId: string, source: PdfViewerSource): void => {
+    setError(null);
+    setInfoMessage(null);
+    setPdfViewer({ resultId, source });
+    setScreen("pdf");
+  };
+
+  const closePdfViewer = (): void => {
+    if (pdfViewer?.source === "details") {
+      setScreen("details");
+      return;
+    }
+    setScreen("results");
+  };
+
+  const savePdf = async (resultId: string): Promise<void> => {
     setBusy(true);
     setError(null);
+    setInfoMessage(null);
     try {
-      await ensurePdfAvailable(resultId);
-      const inlineUrl = buildPdfUrl(resultId, "inline");
-      if (maxContext.isInsideMax) {
-        window.location.assign(inlineUrl);
-      } else {
-        const popup = window.open(inlineUrl, "_blank", "noopener,noreferrer");
-        if (!popup) {
-          window.location.assign(inlineUrl);
-        }
+      const blob = await fetchPdfBlob(resultId);
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const supportsDownloadAttribute = "download" in link;
+      if (!supportsDownloadAttribute) {
+        window.location.assign(buildPdfUrl(resultId, "attachment"));
+        return;
       }
+      link.href = objectUrl;
+      link.download = `result-${resultId}.pdf`;
+      link.rel = "noopener noreferrer";
+      link.click();
+      setInfoMessage("PDF подготовлен к сохранению на устройство.");
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1_000);
     } catch (err: unknown) {
-      setError(getUserMessage(err, "Не удалось открыть PDF"));
+      setError(getUserMessage(err, "Документ временно недоступен"));
     } finally {
       setBusy(false);
     }
   };
 
-  const downloadPdf = async (resultId: string): Promise<void> => {
+  const sharePdf = async (resultId: string): Promise<void> => {
     setBusy(true);
     setError(null);
+    setInfoMessage(null);
     try {
-      await ensurePdfAvailable(resultId);
-      const url = buildPdfUrl(resultId, "attachment");
-      const link = document.createElement("a");
-      link.href = url;
-      link.target = maxContext.isInsideMax ? "_self" : "_blank";
-      link.rel = "noopener noreferrer";
-      link.click();
+      const blob = await fetchPdfBlob(resultId);
+      const file = new File([blob], `result-${resultId}.pdf`, { type: "application/pdf" });
+      const shareUrl = buildPdfUrl(resultId, "inline");
+      if (navigator.share) {
+        const canShareFiles = navigator.canShare ? navigator.canShare({ files: [file] }) : false;
+        if (canShareFiles) {
+          await navigator.share({
+            title: "Результат анализа",
+            text: "PDF с результатом анализа",
+            files: [file],
+          });
+          return;
+        }
+        await navigator.share({
+          title: "Результат анализа",
+          text: "PDF с результатом анализа",
+          url: shareUrl,
+        });
+        return;
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        setInfoMessage("Системный share недоступен. Ссылка на PDF скопирована в буфер обмена.");
+        return;
+      }
+      setInfoMessage("Системный share недоступен в текущем runtime. Откройте PDF и отправьте ссылку вручную.");
     } catch (err: unknown) {
-      setError(getUserMessage(err, "Документ временно недоступен"));
+      setError(getUserMessage(err, "Не удалось открыть share-меню для PDF"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const sendPdfToMax = async (resultId: string): Promise<void> => {
+    setBusy(true);
+    setError(null);
+    setInfoMessage(null);
+    try {
+      const shareUrl = buildPdfUrl(resultId, "inline");
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+      }
+      const botName = import.meta.env.VITE_MAX_BOT_NAME;
+      if (botName && botName.length > 0) {
+        window.open(`https://max.ru/${botName}`, "_blank", "noopener,noreferrer");
+      }
+      if (maxContext.isInsideMax) {
+        setInfoMessage("API отправки файла в чат MAX не подтверждено в runtime. Ссылка скопирована, отправьте документ вручную в чат.");
+      } else {
+        setInfoMessage("Функция прямой отправки в MAX работает как foundation: ссылка на PDF скопирована, отправьте её в MAX вручную.");
+      }
+    } catch {
+      setInfoMessage("Прямая отправка PDF в MAX пока недоступна: скопируйте ссылку и отправьте документ вручную.");
     } finally {
       setBusy(false);
     }
@@ -165,6 +238,7 @@ export function App(): JSX.Element {
     setSession(null);
     setResults([]);
     setSelected(null);
+    setPdfViewer(null);
     setScreen("home");
   };
 
@@ -187,11 +261,13 @@ export function App(): JSX.Element {
 
         {!loading && session ? (
           <section className="panel">
-            <div className="welcome-card">
-              <h2>{miniAppContentConfig.homeGreetingTitle}, {resolvePatientDisplayName(session.patient_name, session.patient_number)}!</h2>
-              <p>{miniAppContentConfig.homeGreetingSubtitle}</p>
-              <button onClick={handleLogout}>Выйти</button>
-            </div>
+            {screen !== "pdf" ? (
+              <div className="welcome-card">
+                <h2>{miniAppContentConfig.homeGreetingTitle}, {resolvePatientDisplayName(session.patient_name, session.patient_number)}!</h2>
+                <p>{miniAppContentConfig.homeGreetingSubtitle}</p>
+                <button onClick={handleLogout}>Выйти</button>
+              </div>
+            ) : null}
             {screen === "home" ? (
               <div className="home-layout">
                 <button className="home-results-cta" onClick={() => setScreen("results")}>
@@ -216,9 +292,11 @@ export function App(): JSX.Element {
                   results={results}
                   onOpen={openResult}
                   onOpenPdf={(resultId) => {
-                    void openPdf(resultId);
+                    openPdfViewer(resultId, "results");
                   }}
-                  onDownloadPdf={downloadPdf}
+                  onDownloadPdf={(resultId) => {
+                    void savePdf(resultId);
+                  }}
                 />
               )
             ) : null}
@@ -227,16 +305,46 @@ export function App(): JSX.Element {
                 result={selected}
                 onBack={() => setScreen("results")}
                 onOpenPdf={() => {
-                  void openPdf(selected.result_id);
+                  openPdfViewer(selected.result_id, "details");
                 }}
-                onDownloadPdf={() => downloadPdf(selected.result_id)}
+                onDownloadPdf={() => {
+                  void savePdf(selected.result_id);
+                }}
               />
+            ) : null}
+            {screen === "pdf" && pdfViewer ? (
+              <section className="pdf-viewer" aria-label="Экран просмотра PDF">
+                <header className="pdf-viewer__topbar">
+                  <button type="button" onClick={closePdfViewer}>{miniAppContentConfig.pdfViewer.backButton}</button>
+                  <strong>{miniAppContentConfig.pdfViewer.title}</strong>
+                  <button type="button" onClick={() => { void handleLogout(); }}>{miniAppContentConfig.pdfViewer.logoutButton}</button>
+                </header>
+                <div className="pdf-viewer__content">
+                  <iframe
+                    title="PDF документа"
+                    src={buildPdfUrl(pdfViewer.resultId, "inline")}
+                    className="pdf-viewer__frame"
+                  />
+                </div>
+                <footer className="pdf-viewer__actions">
+                  <button type="button" onClick={() => { void savePdf(pdfViewer.resultId); }}>
+                    {miniAppContentConfig.pdfViewer.saveButton}
+                  </button>
+                  <button type="button" onClick={() => { void sharePdf(pdfViewer.resultId); }}>
+                    {miniAppContentConfig.pdfViewer.shareButton}
+                  </button>
+                  <button type="button" onClick={() => { void sendPdfToMax(pdfViewer.resultId); }}>
+                    {miniAppContentConfig.pdfViewer.sendToMaxButton}
+                  </button>
+                </footer>
+              </section>
             ) : null}
           </section>
         ) : null}
 
         {busy ? <p>Подождите...</p> : null}
         {error ? <p>{error}</p> : null}
+        {infoMessage ? <p>{infoMessage}</p> : null}
       </main>
     </MaxUI>
   );

@@ -326,3 +326,19 @@ Build / smoke:
 - Обновление ZAPUSK228 не потребовалось:
   - frontend build уже входит в шаг `rebuild_frontend`;
   - smoke для patient auth/results и optional pdf уже присутствуют.
+
+19. PDF viewer UX + actions regression (обновление 2026-04-22)
+Frontend (vitest):
+- Проверка открытия внутреннего PDF viewer screen из results.
+- Проверка top bar: видимость `Назад` и `Выйти`.
+- Проверка back navigation: возврат из PDF viewer в предыдущий mini app экран.
+- Проверка bottom action bar: `Сохранить`, `Поделиться`, `Отправить в MAX`.
+- Проверка logout из PDF viewer: вызов существующего logout flow и возврат на экран входа.
+- Проверка graceful share fallback при отсутствии `navigator.share` (clipboard message вместо runtime crash).
+
+Smoke / build:
+- `cd frontend/miniapp && npm run test -- --run`
+- `cd frontend/miniapp && npm run build`
+
+ZAPUSK228:
+- Обновление не требуется: текущий operational flow уже включает frontend build и patient login/results/pdf smoke hooks.

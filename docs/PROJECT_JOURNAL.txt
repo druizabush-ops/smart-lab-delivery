@@ -912,3 +912,25 @@ Dependency wiring:
 Что нужно проверить: vitest (App + patientResults), pytest regression для patient API PDF endpoint, и frontend build в mini app контуре.
 Риски / ограничения: availability-check перед навигацией делает дополнительный сетевой запрос к PDF endpoint; это осознанный компромисс ради controlled ошибок и стабильности MAX runtime.
 Связанные блоки: patient-facing mini app contour; MAX/webview runtime интеграция; patient results/details/pdf flow.
+
+[Изменение]
+Дата: 2026-04-22
+Ветка: work
+Блок: PDF VIEWER UX + BACK/SHARE/SAVE + MAX SEND FOUNDATION
+Файлы: frontend/miniapp/src/App.tsx; frontend/miniapp/src/ui/contentConfig.ts; frontend/miniapp/src/styles.css; frontend/miniapp/src/App.test.tsx; docs/PROJECT_JOURNAL.txt; docs/DECISIONS.txt; docs/TEST_PLAN.txt; docs/TECH_DEBT.txt
+Причина: Устранить UX-проблему “выпадения” из mini app при открытии PDF и добавить управляемые document-actions в patient-facing контуре.
+Что сделано:
+- Добавлен внутренний `pdf` screen в mini app (iframe + top bar + bottom action bar) вместо прямого raw-перехода на PDF URL.
+- Реализован back-навигационный сценарий из PDF viewer с возвратом в source screen (`details` или `results`).
+- В top bar добавлен logout с вызовом существующего server-side `/patient/auth/logout` и возвратом на login screen.
+- Добавлены document actions: `Сохранить`, `Поделиться`, `Отправить в MAX`.
+- Save flow реализован через fetch blob + download fallback; Share flow через Web Share API и clipboard fallback.
+- Для `Отправить в MAX` заложен foundation: копирование ссылки + optional open bot link; неподтвержденный file-attach capability честно не заявляется как готовый.
+- Добавлены frontend regression tests на viewer routing/top bar/logout/action bar/share fallback.
+Что не менялось сознательно:
+- Backend session-based PDF endpoint и auth/results/details контуры не переписывались.
+- Operator/internal/Renovatio/operational контуры не затрагивались.
+Ограничения:
+- Прямой runtime API для attach PDF в чат MAX не подтвержден, зафиксировано как технический долг.
+ZAPUSK228:
+- Обновление не потребовалось: текущий operational flow уже покрывает frontend build и patient auth/results/pdf smoke hooks.
