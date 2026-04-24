@@ -934,3 +934,26 @@ Dependency wiring:
 - Прямой runtime API для attach PDF в чат MAX не подтвержден, зафиксировано как технический долг.
 ZAPUSK228:
 - Обновление не потребовалось: текущий operational flow уже покрывает frontend build и patient auth/results/pdf smoke hooks.
+
+[Изменение]
+Дата: 2026-04-24
+Ветка: work
+Блок: Full mini app UI redesign + managed navigation + results/pdf UX + foundation screens
+Файлы: frontend/miniapp/src/App.tsx; frontend/miniapp/src/styles.css; frontend/miniapp/src/ui/contentConfig.ts; frontend/miniapp/src/App.test.tsx; docs/PROJECT_JOURNAL.txt; docs/DECISIONS.txt; docs/TEST_PLAN.txt; docs/TECH_DEBT.txt
+Причина: Привести patient mini app к mobile-first UX медицинского приложения без изменения backend контрактов auth/session/results/details/pdf.
+Что сделано:
+- Переработан LoginScreen: крупные поля, плейсхолдеры, переключение видимости пароля, tel-ссылка клиники и human-readable ошибки.
+- Введена управляемая навигация: нижние разделы Главная/Анализы/Запись/Акции/Услуги, а также back-навигация на вложенных экранах details/pdf.
+- Пересобраны экраны Home/Results/ResultDetails/PDF, добавлены foundation экраны Appointment/Loyalty/Services.
+- Services получили live search + дерево категорий/услуг из config.
+- PDF viewer оставлен внутри mini app с fixed action bar (MAX/share/save), без прямого «потерянного» перехода.
+- Добавлен/расширен content config слой для UI-текстов, labels и foundation/mock данных.
+- Обновлены frontend тесты под новые UX-контракты.
+Что изменилось в логике: backend API и session trust boundary не менялись; изменения только во frontend presentation/config/test слое.
+Что изменилось в архитектуре: mini app UI перешел на mobile-first screen routing с явным разделением real-data (profile/results/details/pdf) и foundation-data (appointment/loyalty/services).
+Что нужно проверить: `npm run test` и `npm run build` в `frontend/miniapp`, ручной smoke login->home->results->details->pdf, навигацию bottom/back.
+Риски / ограничения:
+- Appointment/Loyalty/Services работают как foundation/mock до подтверждения backend API.
+- Отправка PDF в MAX остается fallback-сценарием через copy-link (без подтвержденного file-send API).
+- ZAPUSK228 не менялся, так как operational/admin flow, backend endpoints и deploy pipeline не затронуты.
+Связанные блоки: Patient auth/session, Patient results/details/pdf, Renovatio integration boundary, mini app MVP.

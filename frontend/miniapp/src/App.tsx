@@ -3,231 +3,134 @@ import { MaxUI } from "@maxhub/max-ui";
 import { ApiClient, ApiError } from "./api/client";
 import { PatientResultDetails, PatientResultListItem, ResultsApi } from "./api/results";
 import { AuthApi, PatientSession } from "./api/auth";
-import { ResultDetails } from "./components/ResultDetails";
-import { ResultList } from "./components/ResultList";
-import { miniAppContentConfig } from "./ui/contentConfig";
-import { getMaxContext } from "./max/context";
+import { buildPatientIndicators } from "./utils/patientResults";
+import { MainTab, miniAppContentConfig, ServiceCategory, ServiceTreeNode } from "./ui/contentConfig";
 
-type Screen = "home" | "results" | "details" | "pdf";
-type PdfViewerSource = "results" | "details";
-type PdfViewerState = {
-  resultId: string;
-  source: PdfViewerSource;
+type Route =
+  | { kind: "tab"; tab: MainTab }
+  | { kind: "result-details"; resultId: string }
+  | { kind: "pdf"; resultId: string };
+
+type ExtendedSession = PatientSession & {
+  patient_phone?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  avatar_url?: string | null;
 };
 
 export function resolvePatientApiBaseUrl(): string {
   const configuredBaseUrl = import.meta.env.VITE_PATIENT_API_BASE_URL;
-  if (configuredBaseUrl && configuredBaseUrl.trim().length > 0) {
-    return configuredBaseUrl;
+  return configuredBaseUrl && configuredBaseUrl.trim().length > 0 ? configuredBaseUrl : "/api/patient";
+}
+
+function collectMatches(node: ServiceTreeNode, query: string): ServiceTreeNode | null {
+  const lower = query.toLowerCase();
+  const selfMatched = node.name.toLowerCase().includes(lower);
+  const children = (node.children ?? [])
+    .map((child) => collectMatches(child, query))
+    .filter((child): child is ServiceTreeNode => Boolean(child));
+
+  if (selfMatched || children.length > 0) {
+    return {
+      ...node,
+      children: children.length > 0 ? children : node.children,
+    };
   }
-  return "/api/patient";
+  return null;
+}
+
+function filterCategory(category: ServiceCategory, query: string): ServiceCategory | null {
+  if (!query.trim()) {
+    return category;
+  }
+  const nextTree = category.tree
+    .map((node) => collectMatches(node, query))
+    .filter((node): node is ServiceTreeNode => Boolean(node));
+  if (category.name.toLowerCase().includes(query.toLowerCase()) || nextTree.length > 0) {
+    return { ...category, tree: nextTree.length > 0 ? nextTree : category.tree };
+  }
+  return null;
 }
 
 export function App(): JSX.Element {
   const baseUrl = resolvePatientApiBaseUrl();
   const client = useMemo(() => new ApiClient({ baseUrl }), [baseUrl]);
-  const resultsApi = useMemo(() => new ResultsApi(client), [client]);
   const authApi = useMemo(() => new AuthApi(client), [client]);
+  const resultsApi = useMemo(() => new ResultsApi(client), [client]);
 
+  const [session, setSession] = useState<ExtendedSession | null>(null);
   const [results, setResults] = useState<PatientResultListItem[]>([]);
-  const [session, setSession] = useState<PatientSession | null>(null);
   const [selected, setSelected] = useState<PatientResultDetails | null>(null);
-  const [screen, setScreen] = useState<Screen>("home");
-  const [pdfViewer, setPdfViewer] = useState<PdfViewerState | null>(null);
+  const [route, setRoute] = useState<Route>({ kind: "tab", tab: "home" });
+  const [history, setHistory] = useState<Route[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
+
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
-  const maxContext = useMemo(() => getMaxContext(), []);
+  const [passwordVisible, setPasswordVisible] = useState(false);
 
-  const resolvePatientDisplayName = (rawName: string, fallbackNumber: string): string => {
-    const parts = rawName.split(/\s+/).map((part) => part.trim()).filter(Boolean);
-    if (parts.length >= 3) {
-      return `${parts[1]} ${parts[2]}`;
-    }
-    if (parts.length >= 1) {
-      return parts[0];
-    }
-    return fallbackNumber;
-  };
-
-  const getUserMessage = (rawError: unknown, fallback: string): string => {
-    if (rawError instanceof ApiError) {
-      if (rawError.status === 401) {
-        return "Сессия истекла. Войдите снова.";
-      }
-      if (rawError.status === 404) {
-        return "Документ временно недоступен";
-      }
-      if (rawError.status && rawError.status >= 500) {
-        return "Сервис временно недоступен. Попробуйте позже.";
-      }
-    }
-    return fallback;
-  };
+  const [servicesQuery, setServicesQuery] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState(miniAppContentConfig.services.categories[0]?.id ?? "");
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     authApi
       .me()
       .then((currentSession) => {
-        setSession(currentSession);
+        setSession(currentSession as ExtendedSession);
         return resultsApi.list();
       })
-      .then((items) => setResults(items))
+      .then(setResults)
       .catch(() => setSession(null))
       .finally(() => setLoading(false));
   }, [authApi, resultsApi]);
+
+  const patientName = session?.patient_name ?? "";
+  const greetingName = patientName.split(" ").slice(1, 3).join(" ") || patientName || "пациент";
+  const phone = session?.patient_phone ?? session?.phone ?? miniAppContentConfig.clinicPhone;
+  const email = session?.email ?? "—";
+
+  const openRoute = (nextRoute: Route): void => {
+    setHistory((prev) => [...prev, route]);
+    setRoute(nextRoute);
+    setError(null);
+    setInfoMessage(null);
+  };
+
+  const openTab = (tab: MainTab): void => {
+    setRoute({ kind: "tab", tab });
+    setError(null);
+    setInfoMessage(null);
+  };
+
+  const goBack = (): void => {
+    setHistory((prev) => {
+      const copy = [...prev];
+      const previous = copy.pop();
+      if (previous) {
+        setRoute(previous);
+      }
+      return copy;
+    });
+  };
 
   const handleLoginSubmit = async (): Promise<void> => {
     setBusy(true);
     setError(null);
     try {
-      const currentSession = await authApi.login(login, password);
-      setSession(currentSession);
-      const items = await resultsApi.list();
-      setResults(items);
-      setScreen("home");
+      const nextSession = await authApi.login(login, password);
+      setSession(nextSession as ExtendedSession);
+      setResults(await resultsApi.list());
+      setRoute({ kind: "tab", tab: "home" });
     } catch (err: unknown) {
       if (err instanceof ApiError && err.status === 401) {
-        setError("Неверный логин или пароль");
+        setError(miniAppContentConfig.login.invalidCredentialsMessage);
       } else {
-        setError("Не удалось выполнить вход. Попробуйте позже");
+        setError(miniAppContentConfig.login.genericErrorMessage);
       }
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const openResult = async (resultId: string): Promise<void> => {
-    setBusy(true);
-    setError(null);
-    setInfoMessage(null);
-    try {
-      const details = await resultsApi.get(resultId);
-      setSelected(details);
-      setScreen("details");
-    } catch {
-      setError("Не удалось открыть результат.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const buildPdfUrl = (resultId: string, mode: "inline" | "attachment"): string => (
-    `${baseUrl}/patient/results/${encodeURIComponent(resultId)}/pdf?disposition=${mode}`
-  );
-
-  const fetchPdfBlob = async (resultId: string): Promise<Blob> => {
-    const response = await fetch(buildPdfUrl(resultId, "inline"), {
-      credentials: "include",
-    });
-    if (!response.ok) {
-      throw new ApiError("pdf_error", response.status);
-    }
-    return response.blob();
-  };
-
-  const openPdfViewer = (resultId: string, source: PdfViewerSource): void => {
-    setError(null);
-    setInfoMessage(null);
-    setPdfViewer({ resultId, source });
-    setScreen("pdf");
-  };
-
-  const closePdfViewer = (): void => {
-    if (pdfViewer?.source === "details") {
-      setScreen("details");
-      return;
-    }
-    setScreen("results");
-  };
-
-  const savePdf = async (resultId: string): Promise<void> => {
-    setBusy(true);
-    setError(null);
-    setInfoMessage(null);
-    try {
-      const blob = await fetchPdfBlob(resultId);
-      const objectUrl = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      const supportsDownloadAttribute = "download" in link;
-      if (!supportsDownloadAttribute) {
-        window.location.assign(buildPdfUrl(resultId, "attachment"));
-        return;
-      }
-      link.href = objectUrl;
-      link.download = `result-${resultId}.pdf`;
-      link.rel = "noopener noreferrer";
-      link.click();
-      setInfoMessage("PDF подготовлен к сохранению на устройство.");
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1_000);
-    } catch (err: unknown) {
-      setError(getUserMessage(err, "Документ временно недоступен"));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const sharePdf = async (resultId: string): Promise<void> => {
-    setBusy(true);
-    setError(null);
-    setInfoMessage(null);
-    try {
-      const blob = await fetchPdfBlob(resultId);
-      const file = new File([blob], `result-${resultId}.pdf`, { type: "application/pdf" });
-      const shareUrl = buildPdfUrl(resultId, "inline");
-      if (navigator.share) {
-        const canShareFiles = navigator.canShare ? navigator.canShare({ files: [file] }) : false;
-        if (canShareFiles) {
-          await navigator.share({
-            title: "Результат анализа",
-            text: "PDF с результатом анализа",
-            files: [file],
-          });
-          return;
-        }
-        await navigator.share({
-          title: "Результат анализа",
-          text: "PDF с результатом анализа",
-          url: shareUrl,
-        });
-        return;
-      }
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(shareUrl);
-        setInfoMessage("Системный share недоступен. Ссылка на PDF скопирована в буфер обмена.");
-        return;
-      }
-      setInfoMessage("Системный share недоступен в текущем runtime. Откройте PDF и отправьте ссылку вручную.");
-    } catch (err: unknown) {
-      setError(getUserMessage(err, "Не удалось открыть share-меню для PDF"));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const sendPdfToMax = async (resultId: string): Promise<void> => {
-    setBusy(true);
-    setError(null);
-    setInfoMessage(null);
-    try {
-      const shareUrl = buildPdfUrl(resultId, "inline");
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(shareUrl);
-      }
-      const botName = import.meta.env.VITE_MAX_BOT_NAME;
-      if (botName && botName.length > 0) {
-        window.open(`https://max.ru/${botName}`, "_blank", "noopener,noreferrer");
-      }
-      if (maxContext.isInsideMax) {
-        setInfoMessage("API отправки файла в чат MAX не подтверждено в runtime. Ссылка скопирована, отправьте документ вручную в чат.");
-      } else {
-        setInfoMessage("Функция прямой отправки в MAX работает как foundation: ссылка на PDF скопирована, отправьте её в MAX вручную.");
-      }
-    } catch {
-      setInfoMessage("Прямая отправка PDF в MAX пока недоступна: скопируйте ссылку и отправьте документ вручную.");
     } finally {
       setBusy(false);
     }
@@ -238,113 +141,317 @@ export function App(): JSX.Element {
     setSession(null);
     setResults([]);
     setSelected(null);
-    setPdfViewer(null);
-    setScreen("home");
+    setHistory([]);
+    setRoute({ kind: "tab", tab: "home" });
   };
+
+  const openResultDetails = async (resultId: string): Promise<void> => {
+    setBusy(true);
+    try {
+      const details = await resultsApi.get(resultId);
+      setSelected(details);
+      openRoute({ kind: "result-details", resultId });
+    } catch {
+      setError("Не удалось открыть результат. Попробуйте позже.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const buildPdfUrl = (resultId: string, disposition: "inline" | "attachment"): string =>
+    `${baseUrl}/patient/results/${encodeURIComponent(resultId)}/pdf?disposition=${disposition}`;
+
+  const savePdf = (resultId: string): void => {
+    window.location.assign(buildPdfUrl(resultId, "attachment"));
+  };
+
+  const copyPdfLink = async (resultId: string, message: string): Promise<void> => {
+    const link = buildPdfUrl(resultId, "inline");
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(link);
+      setInfoMessage(message);
+      return;
+    }
+    setInfoMessage("Скопируйте ссылку из адресной строки PDF вручную.");
+  };
+
+  const sharePdf = async (resultId: string): Promise<void> => {
+    const link = buildPdfUrl(resultId, "inline");
+    if (navigator.share) {
+      await navigator.share({ title: "Результат анализа", url: link });
+      return;
+    }
+    await copyPdfLink(resultId, miniAppContentConfig.pdfViewer.copiedForShare);
+  };
+
+  const renderServiceNode = (node: ServiceTreeNode, depth = 0): JSX.Element => {
+    const hasChildren = Boolean(node.children?.length);
+    const expanded = expandedNodes.has(node.id);
+
+    return (
+      <div key={node.id} className="service-node" style={{ marginLeft: `${depth * 14}px` }}>
+        <button
+          type="button"
+          className="service-node__row"
+          onClick={() => {
+            if (hasChildren) {
+              setExpandedNodes((prev) => {
+                const next = new Set(prev);
+                if (next.has(node.id)) {
+                  next.delete(node.id);
+                } else {
+                  next.add(node.id);
+                }
+                return next;
+              });
+            }
+          }}
+        >
+          <span>{node.name}</span>
+          {typeof node.priceRub === "number" ? <strong>{node.priceRub} ₽</strong> : null}
+          {hasChildren ? <span className="service-node__toggle">{expanded ? "▾" : "▸"}</span> : null}
+        </button>
+        {hasChildren && expanded ? node.children!.map((child) => renderServiceNode(child, depth + 1)) : null}
+      </div>
+    );
+  };
+
+  const filteredCategories = miniAppContentConfig.services.categories
+    .map((category) => filterCategory(category, servicesQuery))
+    .filter((category): category is ServiceCategory => Boolean(category));
+
+  const selectedCategory =
+    filteredCategories.find((category) => category.id === selectedCategoryId) ?? filteredCategories[0] ?? null;
 
   return (
     <MaxUI>
-      <main className="app-shell">
-        <header className="app-header">
-          <h1>{miniAppContentConfig.appTitle}</h1>
-          <p>{miniAppContentConfig.appSubtitle}</p>
-        </header>
-        {loading ? <p>Загрузка...</p> : null}
+      <main className="mobile-app">
+        {loading ? <p className="status">Загрузка...</p> : null}
+
         {!loading && !session ? (
-          <section className="panel">
-            <h2>Вход</h2>
-            <input placeholder="Логин" value={login} onChange={(e) => setLogin(e.target.value)} />
-            <input placeholder="Пароль" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-            <button disabled={busy} onClick={handleLoginSubmit}>Войти</button>
+          <section className="login-screen card">
+            <h1>{miniAppContentConfig.clinicTitle}</h1>
+            <p className="muted">{miniAppContentConfig.login.subtitle}</p>
+            <h2>{miniAppContentConfig.login.title}</h2>
+            <input
+              className="input"
+              placeholder={miniAppContentConfig.login.loginPlaceholder}
+              value={login}
+              onChange={(event) => setLogin(event.target.value)}
+            />
+            <div className="password-row">
+              <input
+                className="input"
+                type={passwordVisible ? "text" : "password"}
+                placeholder={miniAppContentConfig.login.passwordPlaceholder}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+              <button type="button" className="ghost" onClick={() => setPasswordVisible((prev) => !prev)}>
+                {passwordVisible ? miniAppContentConfig.login.hidePasswordLabel : miniAppContentConfig.login.showPasswordLabel}
+              </button>
+            </div>
+            <button type="button" className="primary-btn" disabled={busy} onClick={() => void handleLoginSubmit()}>
+              {miniAppContentConfig.login.submitLabel}
+            </button>
+            <p className="help-text">{miniAppContentConfig.clinicHelpText}<br />{miniAppContentConfig.clinicHours}</p>
+            <a href={`tel:${miniAppContentConfig.clinicPhone.replace(/[^\d+]/g, "")}`} className="phone-link">{miniAppContentConfig.clinicPhone}</a>
           </section>
         ) : null}
 
         {!loading && session ? (
-          <section className="panel">
-            {screen !== "pdf" ? (
-              <div className="welcome-card">
-                <h2>{miniAppContentConfig.homeGreetingTitle}, {resolvePatientDisplayName(session.patient_name, session.patient_number)}!</h2>
-                <p>{miniAppContentConfig.homeGreetingSubtitle}</p>
-                <button onClick={handleLogout}>Выйти</button>
-              </div>
+          <>
+            {route.kind !== "tab" ? (
+              <header className="top-bar">
+                <button type="button" className="back-btn" onClick={goBack} aria-label="Назад">←</button>
+                <h2>
+                  {route.kind === "result-details"
+                    ? `Исследование №${route.resultId}`
+                    : `${miniAppContentConfig.pdfViewer.titlePrefix}${route.resultId}`}
+                </h2>
+              </header>
             ) : null}
-            {screen === "home" ? (
-              <div className="home-layout">
-                <button className="home-results-cta" onClick={() => setScreen("results")}>
-                  <h3>{miniAppContentConfig.homeActions.results}</h3>
-                  <p>Откройте список результатов и подробные показатели.</p>
-                </button>
-                <div className="placeholder-grid">
-                  {miniAppContentConfig.placeholders.map((item) => (
-                    <section key={item.key} className={`placeholder-card placeholder-card--${item.tone}`}>
-                      <h3>{item.title}</h3>
-                      <p>{item.subtitle}</p>
-                    </section>
+
+            {route.kind === "tab" && route.tab === "home" ? (
+              <section>
+                <article className="card profile-card">
+                  <div className="avatar">{session.avatar_url ? <img src={session.avatar_url} alt="Аватар" /> : <span>👤</span>}</div>
+                  <div>
+                    <h2>{session.patient_name}</h2>
+                    <p><strong>Дата рождения:</strong> {session.patient_number}</p>
+                    <p><strong>Телефон:</strong> {phone}</p>
+                    <p><strong>Email:</strong> {email}</p>
+                  </div>
+                  <p className="muted">{miniAppContentConfig.home.profileHint}</p>
+                </article>
+                <h3>{miniAppContentConfig.home.greetingPrefix}, {greetingName}!</h3>
+                <div className="section-grid">
+                  {miniAppContentConfig.home.sections.map((item) => (
+                    <button key={item.id} type="button" className={`card section-card section-card--${item.tone}`} onClick={() => openTab(item.id)}>
+                      <div>
+                        <h4>{item.title}</h4>
+                        <p>{item.description}</p>
+                      </div>
+                      <span>→</span>
+                    </button>
                   ))}
                 </div>
-              </div>
-            ) : null}
-            {screen === "results" ? (
-              results.length === 0 ? (
-                <p>{miniAppContentConfig.results.emptyState}</p>
-              ) : (
-                <ResultList
-                  results={results}
-                  onOpen={openResult}
-                  onOpenPdf={(resultId) => {
-                    openPdfViewer(resultId, "results");
-                  }}
-                  onDownloadPdf={(resultId) => {
-                    void savePdf(resultId);
-                  }}
-                />
-              )
-            ) : null}
-            {screen === "details" && selected ? (
-              <ResultDetails
-                result={selected}
-                onBack={() => setScreen("results")}
-                onOpenPdf={() => {
-                  openPdfViewer(selected.result_id, "details");
-                }}
-                onDownloadPdf={() => {
-                  void savePdf(selected.result_id);
-                }}
-              />
-            ) : null}
-            {screen === "pdf" && pdfViewer ? (
-              <section className="pdf-viewer" aria-label="Экран просмотра PDF">
-                <header className="pdf-viewer__topbar">
-                  <button type="button" onClick={closePdfViewer}>{miniAppContentConfig.pdfViewer.backButton}</button>
-                  <strong>{miniAppContentConfig.pdfViewer.title}</strong>
-                  <button type="button" onClick={() => { void handleLogout(); }}>{miniAppContentConfig.pdfViewer.logoutButton}</button>
-                </header>
-                <div className="pdf-viewer__content">
-                  <iframe
-                    title="PDF документа"
-                    src={buildPdfUrl(pdfViewer.resultId, "inline")}
-                    className="pdf-viewer__frame"
-                  />
-                </div>
-                <footer className="pdf-viewer__actions">
-                  <button type="button" onClick={() => { void savePdf(pdfViewer.resultId); }}>
-                    {miniAppContentConfig.pdfViewer.saveButton}
-                  </button>
-                  <button type="button" onClick={() => { void sharePdf(pdfViewer.resultId); }}>
-                    {miniAppContentConfig.pdfViewer.shareButton}
-                  </button>
-                  <button type="button" onClick={() => { void sendPdfToMax(pdfViewer.resultId); }}>
-                    {miniAppContentConfig.pdfViewer.sendToMaxButton}
-                  </button>
-                </footer>
               </section>
             ) : null}
-          </section>
+
+            {route.kind === "tab" && route.tab === "results" ? (
+              <section>
+                <h2>{miniAppContentConfig.results.title}</h2>
+                <p className="muted">{miniAppContentConfig.results.subtitle}</p>
+                {results.length === 0 ? <p>{miniAppContentConfig.results.emptyLabel}</p> : null}
+                <div className="results-list">
+                  {results.map((item) => (
+                    <button key={item.result_id} type="button" className="card result-card" onClick={() => void openResultDetails(item.result_id)}>
+                      <div>
+                        <p className="result-title">Результат №{item.result_id}</p>
+                        <p>{item.date ?? "—"}</p>
+                        <p className="status-pill">{item.status || miniAppContentConfig.results.readyLabel}</p>
+                        {item.lab_name ? <p className="muted">{item.lab_name}</p> : null}
+                      </div>
+                      <span>›</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {route.kind === "result-details" && selected ? (
+              <section>
+                <article className="card">
+                  <p><strong>Исследование №{selected.result_id}</strong></p>
+                  <p>Дата: {selected.date ?? "—"}</p>
+                  <p>Статус: {selected.status}</p>
+                  <p>Лаборатория: {selected.lab_name ?? "—"}</p>
+                  <div className="indicator-list">
+                    {buildPatientIndicators(selected).map((indicator) => (
+                      <p key={indicator.id}>{indicator.line}</p>
+                    ))}
+                    {buildPatientIndicators(selected).length === 0 ? <p>{miniAppContentConfig.resultDetails.notAvailable}</p> : null}
+                  </div>
+                  <button
+                    type="button"
+                    className="primary-btn"
+                    disabled={!selected.has_pdf}
+                    onClick={() => openRoute({ kind: "pdf", resultId: selected.result_id })}
+                  >
+                    {miniAppContentConfig.resultDetails.openPdfLabel}
+                  </button>
+                </article>
+              </section>
+            ) : null}
+
+            {route.kind === "pdf" ? (
+              <section className="pdf-screen">
+                <div className="pdf-frame-wrap card">
+                  <iframe title="PDF документ" src={buildPdfUrl(route.resultId, "inline")} className="pdf-frame" />
+                </div>
+                <div className="pdf-actions">
+                  <button type="button" onClick={() => void copyPdfLink(route.resultId, miniAppContentConfig.pdfViewer.copiedForMax)}>
+                    {miniAppContentConfig.pdfViewer.sendToMax}
+                  </button>
+                  <button type="button" onClick={() => void sharePdf(route.resultId)}>{miniAppContentConfig.pdfViewer.share}</button>
+                  <button type="button" onClick={() => savePdf(route.resultId)}>{miniAppContentConfig.pdfViewer.save}</button>
+                </div>
+              </section>
+            ) : null}
+
+            {route.kind === "tab" && route.tab === "appointment" ? (
+              <section>
+                <h2>{miniAppContentConfig.appointment.title}</h2>
+                <p className="muted">{miniAppContentConfig.appointment.subtitle}</p>
+                <p className="foundation-note">{miniAppContentConfig.appointment.foundationNote}</p>
+                {miniAppContentConfig.appointment.doctors.map((doctor) => (
+                  <article className="card doctor-card" key={doctor.id}>
+                    <div className="doctor-avatar">🩺</div>
+                    <div>
+                      <h3>{doctor.fullName}</h3>
+                      <p>{doctor.specialty}</p>
+                      <p className="muted">{doctor.about}</p>
+                      {doctor.nextSlots.map((slots) => (
+                        <p key={slots.dayLabel}><strong>{slots.dayLabel}:</strong> {slots.times.join(" · ")}</p>
+                      ))}
+                    </div>
+                  </article>
+                ))}
+              </section>
+            ) : null}
+
+            {route.kind === "tab" && route.tab === "loyalty" ? (
+              <section>
+                <h2>{miniAppContentConfig.loyalty.title}</h2>
+                <p className="muted">{miniAppContentConfig.loyalty.subtitle}</p>
+                <p className="foundation-note">{miniAppContentConfig.loyalty.foundationNote}</p>
+                <div className="split-grid">
+                  <article className="card"><p>Бонусные рубли</p><h3>{miniAppContentConfig.loyalty.bonusRub.toLocaleString("ru-RU")} ₽</h3></article>
+                  <article className="card"><p>Текущая скидка</p><h3>{miniAppContentConfig.loyalty.discountPercent}%</h3></article>
+                </div>
+                <article className="card">
+                  <p>До следующего уровня: 10%</p>
+                  <div className="progress"><span style={{ width: `${miniAppContentConfig.loyalty.progressPercent}%` }} /></div>
+                </article>
+                <div className="split-grid">
+                  {miniAppContentConfig.loyalty.promos.map((promo) => (
+                    <article className={`card promo-card promo-card--${promo.accent}`} key={promo.id}>
+                      <p>{promo.subtitle}</p>
+                      <h3>{promo.title}</h3>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {route.kind === "tab" && route.tab === "services" ? (
+              <section>
+                <h2>{miniAppContentConfig.services.title}</h2>
+                <p className="muted">{miniAppContentConfig.services.subtitle}</p>
+                <p className="foundation-note">{miniAppContentConfig.services.foundationNote}</p>
+                <input
+                  className="input"
+                  placeholder={miniAppContentConfig.services.searchPlaceholder}
+                  value={servicesQuery}
+                  onChange={(event) => setServicesQuery(event.target.value)}
+                />
+                <p className="muted">{miniAppContentConfig.services.searchHint}</p>
+                <div className="category-grid">
+                  {filteredCategories.map((category) => (
+                    <button
+                      key={category.id}
+                      type="button"
+                      className={`card category-card ${selectedCategory?.id === category.id ? "category-card--active" : ""}`}
+                      onClick={() => setSelectedCategoryId(category.id)}
+                    >
+                      <h4>{category.name}</h4>
+                      <p>{category.servicesCount} услуг</p>
+                    </button>
+                  ))}
+                </div>
+                {selectedCategory ? <article className="card">{selectedCategory.tree.map((node) => renderServiceNode(node))}</article> : <p>Ничего не найдено.</p>}
+              </section>
+            ) : null}
+
+            <nav className="bottom-nav">
+              {miniAppContentConfig.navigation.map((item) => (
+                <button
+                  key={item.tab}
+                  type="button"
+                  className={route.kind === "tab" && route.tab === item.tab ? "active" : ""}
+                  onClick={() => openTab(item.tab)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+          </>
         ) : null}
 
-        {busy ? <p>Подождите...</p> : null}
-        {error ? <p>{error}</p> : null}
-        {infoMessage ? <p>{infoMessage}</p> : null}
+        {busy ? <p className="status">Подождите...</p> : null}
+        {error ? <p className="status status--error">{error}</p> : null}
+        {infoMessage ? <p className="status">{infoMessage}</p> : null}
       </main>
     </MaxUI>
   );
