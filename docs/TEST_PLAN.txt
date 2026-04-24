@@ -342,3 +342,33 @@ Smoke / build:
 
 ZAPUSK228:
 - Обновление не требуется: текущий operational flow уже включает frontend build и patient login/results/pdf smoke hooks.
+
+## Mini app UI redesign coverage (2026-04-24)
+Автоматизировано (frontend unit/integration через RTL + Vitest):
+- LoginScreen:
+  - крупная форма входа;
+  - placeholders `Введите сюда свой логин` / `Введите сюда свой пароль`;
+  - tel-link клиники.
+- HomeScreen:
+  - профильная карточка пациента;
+  - крупные карточки переходов.
+- Bottom navigation:
+  - разделы `Главная / Анализы / Запись / Акции / Услуги`.
+- Back navigation:
+  - возврат с вложенных экранов details/pdf.
+- ResultsListScreen:
+  - карточки результата (номер/дата/статус).
+- ResultDetailsScreen:
+  - форматирование показателей по схеме `<Название>: <значение> <единица>`.
+- PdfViewerScreen:
+  - встроенный iframe-view;
+  - нижняя action-панель `Отправить в MAX / Поделиться / Сохранить`.
+- Appointment/Loyalty:
+  - foundation-state рендер с явной mock-маркировкой.
+- Services:
+  - live-as-you-type search + фильтрация дерева.
+
+Обязательные команды проверки блока:
+- `cd frontend/miniapp && npm run test`
+- `cd frontend/miniapp && npm run build`
+- `python -m pytest` (регресс backend контуров по необходимости релизного окна)

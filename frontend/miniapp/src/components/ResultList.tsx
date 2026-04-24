@@ -26,46 +26,16 @@ export function ResultList(props: {
         >
           <p className="result-card__title">Результат №{result.result_id}</p>
           <p className="result-card__meta">{result.date ?? "—"}</p>
-          {result.lab_name ? <p className="result-card__meta">{result.lab_name}</p> : null}
-          <p className="result-status">Статус: {result.status}</p>
+          <p className="result-status">{result.status || miniAppContentConfig.results.readyLabel}</p>
           <div className="result-card__actions">
-            <button
-              type="button"
-              className="icon-action-button"
-              aria-label={miniAppContentConfig.results.openButton}
-              title={miniAppContentConfig.results.openButton}
-              onClick={(event) => {
-                event.stopPropagation();
-                props.onOpen(result.result_id);
-              }}
-            >
-              👁
+            <button type="button" className="icon-action-button" onClick={(event) => { event.stopPropagation(); props.onOpen(result.result_id); }}>
+              {miniAppContentConfig.results.openLabel}
             </button>
-            <button
-              type="button"
-              className="icon-action-button"
-              aria-label={miniAppContentConfig.results.openPdfButton}
-              title={miniAppContentConfig.results.openPdfButton}
-              disabled={!result.has_pdf}
-              onClick={(event) => {
-                event.stopPropagation();
-                props.onOpenPdf(result.result_id);
-              }}
-            >
-              📄
+            <button type="button" className="icon-action-button" disabled={!result.has_pdf} onClick={(event) => { event.stopPropagation(); props.onOpenPdf(result.result_id); }}>
+              PDF
             </button>
-            <button
-              type="button"
-              className="icon-action-button"
-              aria-label={miniAppContentConfig.results.downloadPdfButton}
-              title={miniAppContentConfig.results.downloadPdfButton}
-              disabled={!result.has_pdf}
-              onClick={(event) => {
-                event.stopPropagation();
-                props.onDownloadPdf(result.result_id);
-              }}
-            >
-              ⬇️
+            <button type="button" className="icon-action-button" disabled={!result.has_pdf} onClick={(event) => { event.stopPropagation(); props.onDownloadPdf(result.result_id); }}>
+              ↓
             </button>
           </div>
         </section>
