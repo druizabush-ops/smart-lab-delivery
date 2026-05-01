@@ -13,6 +13,7 @@ type Route =
 
 type ExtendedSession = PatientSession & {
   patient_phone?: string | null;
+  birth_date?: string | null;
   phone?: string | null;
   email?: string | null;
   avatar_url?: string | null;
@@ -161,27 +162,22 @@ export function App(): JSX.Element {
   const buildPdfUrl = (resultId: string, disposition: "inline" | "attachment"): string =>
     `${baseUrl}/patient/results/${encodeURIComponent(resultId)}/pdf?disposition=${disposition}`;
 
-  const savePdf = (resultId: string): void => {
-    window.location.assign(buildPdfUrl(resultId, "attachment"));
-  };
-
-  const copyPdfLink = async (resultId: string, message: string): Promise<void> => {
-    const link = buildPdfUrl(resultId, "inline");
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(link);
-      setInfoMessage(message);
-      return;
-    }
-    setInfoMessage("Скопируйте ссылку из адресной строки PDF вручную.");
-  };
+  const savePdf = (_resultId: string): void => {};
 
   const sharePdf = async (resultId: string): Promise<void> => {
-    const link = buildPdfUrl(resultId, "inline");
-    if (navigator.share) {
-      await navigator.share({ title: "Результат анализа", url: link });
-      return;
+    try {
+      const response = await fetch(buildPdfUrl(resultId, "attachment"), { credentials: "include" });
+      if (!response.ok) throw new Error("pdf");
+      const blob = await response.blob();
+      const file = new File([blob], `result-${resultId}.pdf`, { type: "application/pdf" });
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: `Результат №${resultId}`, text: "PDF файл результата анализа" });
+        return;
+      }
+      setInfoMessage("На этом устройстве отправка PDF-файла недоступна. Откройте PDF и используйте системное меню браузера.");
+    } catch {
+      setInfoMessage("На этом устройстве отправка PDF-файла недоступна. Откройте PDF и используйте системное меню браузера.");
     }
-    await copyPdfLink(resultId, miniAppContentConfig.pdfViewer.copiedForShare);
   };
 
   const renderServiceNode = (node: ServiceTreeNode, depth = 0): JSX.Element => {
@@ -229,7 +225,7 @@ export function App(): JSX.Element {
         {loading ? <p className="status">Загрузка...</p> : null}
 
         {!loading && !session ? (
-          <section className="login-screen card">
+          <section className="login-screen card login-screen--aligned">
             <h1>{miniAppContentConfig.clinicTitle}</h1>
             <p className="muted">{miniAppContentConfig.login.subtitle}</p>
             <h2>{miniAppContentConfig.login.title}</h2>
@@ -248,7 +244,7 @@ export function App(): JSX.Element {
                 onChange={(event) => setPassword(event.target.value)}
               />
               <button type="button" className="ghost" onClick={() => setPasswordVisible((prev) => !prev)}>
-                {passwordVisible ? miniAppContentConfig.login.hidePasswordLabel : miniAppContentConfig.login.showPasswordLabel}
+                👁
               </button>
             </div>
             <button type="button" className="primary-btn" disabled={busy} onClick={() => void handleLoginSubmit()}>
@@ -274,11 +270,11 @@ export function App(): JSX.Element {
 
             {route.kind === "tab" && route.tab === "home" ? (
               <section>
-                <article className="card profile-card">
+                <article className="card profile-card" data-testid="patient-card">
                   <div className="avatar">{session.avatar_url ? <img src={session.avatar_url} alt="Аватар" /> : <span>👤</span>}</div>
                   <div>
                     <h2>{session.patient_name}</h2>
-                    <p><strong>Дата рождения:</strong> {session.patient_number}</p>
+                    <p><strong>Дата рождения:</strong> {session.birth_date ?? "не указана"}</p>
                     <p><strong>Телефон:</strong> {phone}</p>
                     <p><strong>Email:</strong> {email}</p>
                   </div>
@@ -351,11 +347,7 @@ export function App(): JSX.Element {
                   <iframe title="PDF документ" src={buildPdfUrl(route.resultId, "inline")} className="pdf-frame" />
                 </div>
                 <div className="pdf-actions">
-                  <button type="button" onClick={() => void copyPdfLink(route.resultId, miniAppContentConfig.pdfViewer.copiedForMax)}>
-                    {miniAppContentConfig.pdfViewer.sendToMax}
-                  </button>
                   <button type="button" onClick={() => void sharePdf(route.resultId)}>{miniAppContentConfig.pdfViewer.share}</button>
-                  <button type="button" onClick={() => savePdf(route.resultId)}>{miniAppContentConfig.pdfViewer.save}</button>
                 </div>
               </section>
             ) : null}

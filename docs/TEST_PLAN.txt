@@ -372,3 +372,14 @@ ZAPUSK228:
 - `cd frontend/miniapp && npm run test`
 - `cd frontend/miniapp && npm run build`
 - `python -m pytest` (регресс backend контуров по необходимости релизного окна)
+
+## Mini app UI alignment coverage (2026-05-01)
+- Frontend unit:
+  - Login placeholders + clickable phone link + eye-toggle control.
+  - Home patient card birth date fallback (`не указана`) без подстановки patient number.
+  - Bottom nav рендерит: Главная / Анализы / Запись / Акции / Услуги.
+  - Results list карточка кликабельна целиком и показывает status/date/lab.
+  - Result details структурно отображает значения (service name + value + unit).
+  - PDF viewer: удалены `Отправить в MAX` и `Сохранить`; `Поделиться` пытается File Share API с PDF File.
+- Manual smoke:
+  - После замены файлов в `frontend/miniapp/public/assets` обязателен `npm run build` и проверка mini app экранов.

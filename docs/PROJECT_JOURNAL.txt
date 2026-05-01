@@ -957,3 +957,12 @@ ZAPUSK228:
 - Отправка PDF в MAX остается fallback-сценарием через copy-link (без подтвержденного file-send API).
 - ZAPUSK228 не менялся, так как operational/admin flow, backend endpoints и deploy pipeline не затронуты.
 Связанные блоки: Patient auth/session, Patient results/details/pdf, Renovatio integration boundary, mini app MVP.
+
+[Изменение]
+Дата: 2026-05-01
+Ветка: work
+Блок: MINI APP UI ALIGNMENT + ASSET SYSTEM + PDF SHARE FILE FIX + API DISCOVERY PREP
+Файлы: frontend/miniapp/src/App.tsx; frontend/miniapp/src/styles.css; frontend/miniapp/public/assets/*; docs/PROJECT_JOURNAL.txt; docs/DECISIONS.txt; docs/TECH_DEBT.txt; docs/TEST_PLAN.txt
+Причина: Выравнивание patient mini app UI под референс и подготовка управляемой asset замены без backend-regression.
+Что сделано: Обновлены login/home/results/details/pdf UI, добавлены asset placeholders, PDF share переведен на file-share сценарий с fallback-сообщением, зафиксированы foundation границы и discovery-требования.
+Что не менялось: backend auth/session/results/details/pdf контракты и Renovatio integration contour.

@@ -443,3 +443,20 @@ Patient Auth ограничения / техдолг:
 Какие ограничения: Нет one-tap file delivery в MAX, пользователь отправляет ссылку вручную.
 Когда пересмотреть: После подтверждения runtime API/bridge отправки вложений.
 Что будет признаком, что пора заменить решение: Доступный и документированный MAX API для отправки PDF из mini app.
+
+[Технический долг]
+Дата: 2026-05-01
+Ветка: work
+Блок: Mini app foundation modules appointment/loyalty/services
+Что временно: Экраны Запись/Акции/Услуги остаются foundation/mock через contentConfig, без real Renovatio patient API.
+Почему это временно: Нужен отдельный backend integration block с discovery контрактов по каждому направлению.
+Ограничения: Данные нельзя трактовать как production patient data.
+Когда пересмотреть: После завершения API discovery и утверждения backend контрактов.
+
+[Технический долг]
+Дата: 2026-05-01
+Ветка: work
+Блок: PDF zoom control в встроенном viewer
+Что временно: iframe/object зависит от нативного PDF viewer браузера/runtime и не дает стабильного программного zoom-контроля.
+Ограничения: Точный zoom и рендер первого листа зависят от платформы MAX/WebView.
+Когда пересмотреть: При отдельном блоке кастомного PDF renderer.

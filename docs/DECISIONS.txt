@@ -497,3 +497,11 @@ DECISION: Patient session хранится server-side.
 - Real-data контур ограничен auth/profile/results/details/pdf.
 Ограничения: Нет реального бронирования/бонусного баланса/каталога из backend.
 Что учесть позже: После подтверждения API заменить config-fallback на backend contracts без изменения UX-структуры.
+
+[Решение]
+Дата: 2026-05-01
+Ветка: work
+Тема: Asset-system mini app через public/assets и ручную замену файлов
+Контекст: Нужно стабилизировать UI-ресурсы без внедрения тяжелой CMS/admin панели.
+Решение: Зафиксирована структура frontend/miniapp/public/assets с именованными placeholder-файлами; UI использует /assets/... пути.
+Последствия: Проект-владелец может заменить ассеты без изменения кода; Admin Content Panel вынесен в future block.
