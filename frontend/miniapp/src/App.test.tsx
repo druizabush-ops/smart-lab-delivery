@@ -6,7 +6,8 @@ function mockSessionResponse(): Response {
     JSON.stringify({
       session_id: "s1",
       patient_name: "Иванов Иван Иванович",
-      patient_number: "15.05.1985",
+      birth_date: "15.05.1985",
+      patient_number: "PN-001",
       created_at: "2026-01-01",
       expires_at: "2026-12-01",
       last_refresh_at: "2026-01-01",
@@ -145,9 +146,9 @@ describe("mini app redesign", () => {
     fireEvent.click(screen.getByRole("button", { name: "Открыть в PDF" }));
 
     expect(screen.getByTitle("PDF документ")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Отправить в MAX" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Поделиться" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Сохранить" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Отправить в MAX" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Сохранить" })).not.toBeInTheDocument();
   });
 
   it("services screen поддерживает live search", async () => {
