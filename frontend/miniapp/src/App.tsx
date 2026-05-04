@@ -76,7 +76,6 @@ export function App(): JSX.Element {
   const [servicesQuery, setServicesQuery] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState(miniAppContentConfig.services.categories[0]?.id ?? "");
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
-  const [patientCardExpanded, setPatientCardExpanded] = useState(false);
 
   useEffect(() => {
     authApi
@@ -94,8 +93,6 @@ export function App(): JSX.Element {
   const greetingName = patientName.split(" ").slice(1, 3).join(" ") || patientName || "пациент";
   const phone = session?.patient_phone ?? session?.phone ?? miniAppContentConfig.clinicPhone;
   const email = session?.email ?? "—";
-  const birthDate =
-    session?.birth_date && !String(session.birth_date).toLowerCase().includes("pn-") ? session.birth_date : "не указана";
 
   const openRoute = (nextRoute: Route): void => {
     setHistory((prev) => [...prev, route]);
@@ -274,21 +271,14 @@ export function App(): JSX.Element {
             {route.kind === "tab" && route.tab === "home" ? (
               <section>
                 <article className="card profile-card" data-testid="patient-card">
-                  <button type="button" className="profile-card__header" onClick={() => setPatientCardExpanded((prev) => !prev)}>
-                    <img className="avatar" src={session.avatar_url || "/assets/avatar-placeholder.svg"} alt="Аватар пациента" />
-                    <div>
-                      <h2>{session.patient_name}</h2>
-                      <p><strong>Дата рождения:</strong> {birthDate}</p>
-                    </div>
-                    <span className="profile-card__chevron">{patientCardExpanded ? "▴" : "▾"}</span>
-                  </button>
-                  {patientCardExpanded ? (
-                    <div>
-                      <p><strong>Телефон:</strong> {phone}</p>
-                      <p><strong>Email:</strong> {email}</p>
-                      <p className="muted">{miniAppContentConfig.home.profileHint}</p>
-                    </div>
-                  ) : null}
+                  <div className="avatar">{session.avatar_url ? <img src={session.avatar_url} alt="Аватар" /> : <span>👤</span>}</div>
+                  <div>
+                    <h2>{session.patient_name}</h2>
+                    <p><strong>Дата рождения:</strong> {session.birth_date ?? "не указана"}</p>
+                    <p><strong>Телефон:</strong> {phone}</p>
+                    <p><strong>Email:</strong> {email}</p>
+                  </div>
+                  <p className="muted">{miniAppContentConfig.home.profileHint}</p>
                 </article>
                 <h3>{miniAppContentConfig.home.greetingPrefix}, {greetingName}!</h3>
                 <div className="section-grid">
@@ -298,7 +288,7 @@ export function App(): JSX.Element {
                         <h4>{item.title}</h4>
                         <p>{item.description}</p>
                       </div>
-                      <img src={`/assets/${item.iconAsset}`} className="section-icon" alt={item.title} />
+                      <span>→</span>
                     </button>
                   ))}
                 </div>

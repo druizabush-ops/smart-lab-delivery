@@ -97,9 +97,6 @@ describe("mini app redesign", () => {
     expect(screen.getByText("Запись на прием")).toBeInTheDocument();
     expect(screen.getByText("Бонусы и акции")).toBeInTheDocument();
     expect(screen.getByText("Перечень услуг")).toBeInTheDocument();
-    expect(screen.queryByText("ivanov@mail.ru")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Аватар пациента/i }));
-    expect(screen.getByText("ivanov@mail.ru")).toBeInTheDocument();
   });
 
   it("поддерживает bottom navigation и foundation screens", async () => {

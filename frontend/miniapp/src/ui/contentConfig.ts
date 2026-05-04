@@ -59,7 +59,6 @@ export type MiniAppContentConfig = {
       title: string;
       description: string;
       tone: "mint" | "blue" | "violet" | "sand";
-      iconAsset: string;
     }>;
   };
   results: {
@@ -134,10 +133,10 @@ export const miniAppContentConfig: MiniAppContentConfig = {
     greetingPrefix: "Здравствуйте",
     profileHint: "Проверьте и обновите свои данные в профиле при необходимости.",
     sections: [
-      { id: "results", title: "Результаты анализов", description: "Просмотр лабораторных исследований и PDF.", tone: "blue", iconAsset: "icon-analyses.svg" },
-      { id: "appointment", title: "Запись на прием", description: "Выберите врача и удобное время.", tone: "mint", iconAsset: "icon-appointment.svg" },
-      { id: "loyalty", title: "Бонусы и акции", description: "Текущие скидки и персональные предложения.", tone: "violet", iconAsset: "icon-promos.svg" },
-      { id: "services", title: "Перечень услуг", description: "Каталог услуг и ориентировочные цены.", tone: "sand", iconAsset: "icon-services.svg" },
+      { id: "results", title: "Результаты анализов", description: "Просмотр лабораторных исследований и PDF.", tone: "blue" },
+      { id: "appointment", title: "Запись на прием", description: "Выберите врача и удобное время.", tone: "mint" },
+      { id: "loyalty", title: "Бонусы и акции", description: "Текущие скидки и персональные предложения.", tone: "violet" },
+      { id: "services", title: "Перечень услуг", description: "Каталог услуг и ориентировочные цены.", tone: "sand" },
     ],
   },
   results: {

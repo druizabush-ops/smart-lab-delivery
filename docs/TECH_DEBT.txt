@@ -460,13 +460,3 @@ Patient Auth ограничения / техдолг:
 Что временно: iframe/object зависит от нативного PDF viewer браузера/runtime и не дает стабильного программного zoom-контроля.
 Ограничения: Точный zoom и рендер первого листа зависят от платформы MAX/WebView.
 Когда пересмотреть: При отдельном блоке кастомного PDF renderer.
-
-[Технический долг]
-Дата: 2026-05-04
-Блок: Mini app visual alignment / PDF preview limitations
-Описание:
-- Встроенный PDF preview в iframe зависит от webview/browser runtime; first-page fit может отличаться на разных устройствах.
-- Appointment/Loyalty/Services остаются foundation UI до формализации backend DTO/endpoint-ов.
-План закрытия:
-1) Зафиксировать device matrix для PDF rendering и провести runtime smoke на целевых телефонах.
-2) Согласовать API discovery и перевести foundation-экраны на реальные данные.
