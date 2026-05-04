@@ -505,3 +505,12 @@ DECISION: Patient session хранится server-side.
 Контекст: Нужно стабилизировать UI-ресурсы без внедрения тяжелой CMS/admin панели.
 Решение: Зафиксирована структура frontend/miniapp/public/assets с именованными placeholder-файлами; UI использует /assets/... пути.
 Последствия: Проект-владелец может заменить ассеты без изменения кода; Admin Content Panel вынесен в future block.
+
+[Решение]
+Дата: 2026-05-04
+Контекст: Требуется визуальное выравнивание mini app к Figma reference без риска регресса backend/session.
+Решение: Применять только presentation-only refactor в `frontend/miniapp/src` с сохранением существующих API-клиентов и маршрутов `/patient/auth/*`, `/patient/results`, `/patient/results/{id}`, `/patient/results/{id}/pdf`.
+Последствия:
+- UI обновляется безопасно и независимо от интеграций.
+- Foundation-экраны явно помечены как mock/config driven.
+- PDF share использует file-based sharing и fallback message без открытия внешних ссылок.

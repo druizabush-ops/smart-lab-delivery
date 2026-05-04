@@ -72,18 +72,18 @@ body {
 .back-btn { border: 0; background: transparent; font-size: 34px; color: var(--color-primary-dark); }
 
 .profile-card { display: grid; gap: 10px; }
+.profile-card__header { border: 0; background: transparent; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; text-align: left; padding: 0; }
+.profile-card__chevron { color: var(--color-muted); font-size: 18px; }
 .avatar {
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: #dce4f2;
-  display: grid;
-  place-items: center;
-  font-size: 34px;
+  object-fit: cover;
 }
 
 .section-grid { display: grid; gap: 10px; }
 .section-card { display: flex; justify-content: space-between; align-items: center; border: 0; text-align: left; width: 100%; }
+.section-icon { width: 32px; height: 32px; }
 .section-card--mint { background: #eafaf8; }
 .section-card--blue { background: #eaf1fe; }
 .section-card--violet { background: #f3edff; }

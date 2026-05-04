@@ -966,3 +966,14 @@ ZAPUSK228:
 Причина: Выравнивание patient mini app UI под референс и подготовка управляемой asset замены без backend-regression.
 Что сделано: Обновлены login/home/results/details/pdf UI, добавлены asset placeholders, PDF share переведен на file-share сценарий с fallback-сообщением, зафиксированы foundation границы и discovery-требования.
 Что не менялось: backend auth/session/results/details/pdf контракты и Renovatio integration contour.
+
+[Изменение]
+Дата: 2026-05-04
+Ветка: work
+Блок: Safe frontend UI alignment mini app под Figma reference
+Файлы: frontend/miniapp/src/App.tsx; frontend/miniapp/src/styles.css; frontend/miniapp/src/ui/contentConfig.ts; frontend/miniapp/src/App.test.tsx; docs/DECISIONS.txt; docs/TEST_PLAN.txt; docs/TECH_DEBT.txt; docs/RUNBOOK.txt; docs/PROJECT_JOURNAL.txt
+Причина: Подтянуть production-визуал mini app без изменения backend/API/session контуров.
+Что сделано: Добавлены UI-токены и visual refinements, раскрывающаяся patient card, иконки карточек разделов, защита отображения даты рождения (fallback "не указана"), сохранен безопасный PDF share через file API, расширены frontend-тесты на collapse/expand profile card.
+Что изменилось в логике: Контракты backend и auth/session flow не изменялись; изменения только presentation-слоя.
+Что нужно проверить: npm test и npm run build в frontend/miniapp; smoke экраны login/home/results/details/pdf/services.
+Ограничения: Appointment/Loyalty/Services остаются foundation-экранами без real backend integration.
