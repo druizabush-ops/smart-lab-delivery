@@ -514,3 +514,11 @@ DECISION: Patient session хранится server-side.
 - UI обновляется безопасно и независимо от интеграций.
 - Foundation-экраны явно помечены как mock/config driven.
 - PDF share использует file-based sharing и fallback message без открытия внешних ссылок.
+
+[Решение]
+Дата: 2026-05-04
+Ветка: work
+Тема: Hybrid-подход для LoginScreen без замены App архитектуры
+Контекст: Требуется визуально приблизить Login к Figma, не ломая production mini app.
+Решение: Разрешено переносить только visual layer (layout/colors/spacing/components) в LoginScreen, а auth/session/API/runtime остаются из существующего приложения.
+Последствия: Риск регрессии в backend flow минимальный, дальнейшая интеграция остальных экранов может идти по тому же шаблону.

@@ -392,3 +392,8 @@ ZAPUSK228:
 - Проверка Result details formatting на canonical mapping `Название: значение единица`.
 - Проверка PDF viewer + кнопка `Поделиться` (без `Отправить в MAX` и `Сохранить`).
 - Проверка Services live search without submit button.
+
+## Hybrid LoginScreen checks (2026-05-04)
+- Frontend build: `npm run build` (обязательно).
+- Frontend tests: `npm run test` (обязательно).
+- Ручная проверка: login/password inputs, eye toggle, human-readable error messages, tel-link `+7 (910) 109-39-71`, сохранение session-based login flow.

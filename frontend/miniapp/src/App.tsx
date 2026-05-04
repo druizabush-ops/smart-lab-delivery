@@ -228,33 +228,49 @@ export function App(): JSX.Element {
         {loading ? <p className="status">Загрузка...</p> : null}
 
         {!loading && !session ? (
-          <section className="login-screen card login-screen--aligned">
-            <h1>{miniAppContentConfig.clinicTitle}</h1>
-            <p className="muted">{miniAppContentConfig.login.subtitle}</p>
-            <h2>{miniAppContentConfig.login.title}</h2>
-            <input
-              className="input"
-              placeholder={miniAppContentConfig.login.loginPlaceholder}
-              value={login}
-              onChange={(event) => setLogin(event.target.value)}
-            />
-            <div className="password-row">
-              <input
-                className="input"
-                type={passwordVisible ? "text" : "password"}
-                placeholder={miniAppContentConfig.login.passwordPlaceholder}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-              <button type="button" className="ghost" onClick={() => setPasswordVisible((prev) => !prev)}>
-                👁
-              </button>
+          <section className="login-screen-wrap">
+            <div className="login-branding">
+              <img src="/assets/logo-smart.svg" alt="СМАРТ" className="login-branding__logo" />
+              <p className="login-branding__subtitle">{miniAppContentConfig.login.subtitle}</p>
             </div>
-            <button type="button" className="primary-btn" disabled={busy} onClick={() => void handleLoginSubmit()}>
-              {miniAppContentConfig.login.submitLabel}
-            </button>
-            <p className="help-text">{miniAppContentConfig.clinicHelpText}<br />{miniAppContentConfig.clinicHours}</p>
-            <a href={`tel:${miniAppContentConfig.clinicPhone.replace(/[^\d+]/g, "")}`} className="phone-link">{miniAppContentConfig.clinicPhone}</a>
+
+            <div className="login-screen card login-screen--aligned">
+              <h2>{miniAppContentConfig.login.title}</h2>
+              <input
+                className="input input--login"
+                placeholder="Введите сюда свой логин"
+                value={login}
+                onChange={(event) => setLogin(event.target.value)}
+              />
+              <div className="password-row">
+                <input
+                  className="input input--login"
+                  type={passwordVisible ? "text" : "password"}
+                  placeholder="Введите сюда свой пароль"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+                <button
+                  type="button"
+                  className="ghost ghost--icon"
+                  aria-label={passwordVisible ? "Скрыть пароль" : "Показать пароль"}
+                  onClick={() => setPasswordVisible((prev) => !prev)}
+                >
+                  {passwordVisible ? "🙈" : "👁"}
+                </button>
+              </div>
+
+              <button type="button" className="primary-btn" disabled={busy} onClick={() => void handleLoginSubmit()}>
+                {miniAppContentConfig.login.submitLabel}
+              </button>
+
+              <p className="help-text">
+                Нужна помощь?<br />Позвоните администратору<br />{miniAppContentConfig.clinicHours}
+              </p>
+              <a href={`tel:${miniAppContentConfig.clinicPhone.replace(/[^\d+]/g, "")}`} className="phone-link">
+                {miniAppContentConfig.clinicPhone}
+              </a>
+            </div>
           </section>
         ) : null}
 
