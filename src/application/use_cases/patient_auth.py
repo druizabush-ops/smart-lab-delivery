@@ -18,6 +18,10 @@ class PatientSession:
     expires_at: datetime
     last_refresh_at: datetime
     auth_type: str
+    birth_date: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    avatar_url: str | None = None
     is_active: bool = True
 
 
@@ -30,6 +34,10 @@ class PatientSessionView:
     expires_at: datetime
     last_refresh_at: datetime
     auth_type: str
+    birth_date: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    avatar_url: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -211,6 +219,10 @@ class RefreshPatientSessionUseCase:
             expires_at=now + timedelta(minutes=self._session_ttl_minutes),
             last_refresh_at=now,
             auth_type=session.auth_type,
+            birth_date=session.birth_date,
+            phone=session.phone,
+            email=session.email,
+            avatar_url=session.avatar_url,
             is_active=True,
         )
         self._session_repository.save(updated)
@@ -259,6 +271,10 @@ def _create_session(*, patient_key: str, profile_payload: dict, auth_type: str, 
         expires_at=now + timedelta(minutes=session_ttl_minutes),
         last_refresh_at=now,
         auth_type=auth_type,
+        birth_date=_first_profile_text(profile_payload, "birth_date", "birthday", "date_birth", "birthdate", "dob"),
+        phone=_first_profile_text(profile_payload, "patient_phone", "phone", "mobile_phone", "mobile", "tel"),
+        email=_first_profile_text(profile_payload, "email", "patient_email"),
+        avatar_url=_first_profile_text(profile_payload, "avatar_url", "photo_url", "image_url"),
     )
     try:
         session_repository.save(session)
@@ -282,3 +298,14 @@ def _resolve_patient_name(profile_payload: dict) -> str:
         str(profile_payload.get("third_name") or "").strip(),
     ]
     return " ".join(part for part in fio_parts if part)
+
+
+def _first_profile_text(profile_payload: dict, *keys: str) -> str | None:
+    for key in keys:
+        value = profile_payload.get(key)
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            return text
+    return None

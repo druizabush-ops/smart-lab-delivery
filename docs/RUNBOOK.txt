@@ -116,3 +116,24 @@
 - `SLD_SMOKE_PATIENT_LOGIN`
 - `SLD_SMOKE_PATIENT_PASSWORD`
 И запустите `python scripts/zapusk228.py --assume-yes --skip-update --skip-deps`.
+
+16. Ручная замена mini app assets
+Шаги:
+1) Подготовить файл с тем же именем и подходящим размером.
+2) Положить файл в `frontend/miniapp/public/assets`.
+3) Выполнить `cd frontend/miniapp && npm run build`.
+4) Задеплоить новый `dist` стандартным frontend flow или через ZAPUSK228.
+5) Проверить на телефоне login/home/results/details/pdf и bottom navigation.
+
+Текущие runtime assets:
+- `logo-smart.svg` — SVG, ориентир 300x120.
+- `avatar-placeholder.svg` — SVG, квадрат 256x256.
+- `icon-home.svg`, `icon-analyses.svg`, `icon-appointment.svg`, `icon-promos.svg`, `icon-services.svg` — SVG, viewport 24x24 или 32x32 допустим.
+- `icon-eye.svg`, `icon-eye-off.svg` — SVG для password visibility.
+- `login-bg.png` или replacement `login-bg.webp` — 1080x1600 или 1170x2532.
+- `card-analyses.png`, `card-appointment.png`, `card-promos.png`, `card-services.png` или replacement `.webp` — 600x240 / 800x320.
+
+Важно:
+- При замене PNG на WEBP обновить ссылку в `frontend/miniapp/src/App.tsx` или сохранить используемое имя.
+- Не использовать screenshot всего Figma screen как фон приложения.
+- После замены обязательно проверить, что изображения не перекрывают текст и не ломают mobile layout.

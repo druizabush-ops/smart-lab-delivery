@@ -35,6 +35,10 @@ class _SessionRepo:
                 expires_at=current.expires_at,
                 last_refresh_at=datetime.now(timezone.utc),
                 auth_type=current.auth_type,
+                birth_date=current.birth_date,
+                phone=current.phone,
+                email=current.email,
+                avatar_url=current.avatar_url,
                 is_active=False,
             )
 
@@ -58,7 +62,16 @@ class _RenovatioClientStub:
         self.calls.append(("get_patient_info", patient_key))
         if patient_key == "pk-bad-profile":
             raise IntegrationFailure(IntegrationErrorKind.BAD_RESPONSE, "bad profile")
-        return {"number": "P-100", "last_name": "Иванов", "first_name": "Иван", "third_name": "Иванович", "patient_id": "internal-id"}
+        return {
+            "number": "P-100",
+            "last_name": "Иванов",
+            "first_name": "Иван",
+            "third_name": "Иванович",
+            "birth_date": "15.05.1985",
+            "phone": "+7 (999) 123-45-67",
+            "email": "ivanov@example.ru",
+            "patient_id": "internal-id",
+        }
 
     def check_auth_code(self, patient_id: str, code: str):
         if code != "1234":
@@ -77,6 +90,9 @@ def test_login_fetches_profile_and_creates_session_from_get_patient_info() -> No
     assert session.patient_key == "pk-1"
     assert session.patient_name == "Иванов Иван Иванович"
     assert session.patient_number == "P-100"
+    assert session.birth_date == "15.05.1985"
+    assert session.phone == "+7 (999) 123-45-67"
+    assert session.email == "ivanov@example.ru"
     assert ("auth_login", "demo") in client.calls
     assert ("get_patient_info", "pk-1") in client.calls
 

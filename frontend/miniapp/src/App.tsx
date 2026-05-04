@@ -11,12 +11,24 @@ type Route =
   | { kind: "result-details"; resultId: string }
   | { kind: "pdf"; resultId: string };
 
-type ExtendedSession = PatientSession & {
-  patient_phone?: string | null;
-  birth_date?: string | null;
-  phone?: string | null;
-  email?: string | null;
-  avatar_url?: string | null;
+type ExtendedSession = PatientSession;
+
+const asset = (name: string): string => `/assets/${name}`;
+
+const tabIconById: Record<MainTab, string> = {
+  home: asset("icon-home.svg"),
+  results: asset("icon-analyses.svg"),
+  appointment: asset("icon-appointment.svg"),
+  loyalty: asset("icon-promos.svg"),
+  services: asset("icon-services.svg"),
+};
+
+const sectionAssetById: Record<MainTab, string> = {
+  home: asset("icon-home.svg"),
+  results: asset("card-analyses.png"),
+  appointment: asset("card-appointment.png"),
+  loyalty: asset("card-promos.png"),
+  services: asset("card-services.png"),
 };
 
 export function resolvePatientApiBaseUrl(): string {
@@ -53,6 +65,28 @@ function filterCategory(category: ServiceCategory, query: string): ServiceCatego
   return null;
 }
 
+function normalizeProfileField(value: string | null | undefined): string {
+  const text = value?.trim();
+  return text && text !== "—" ? text : "не указана";
+}
+
+function initials(name: string): string {
+  const letters = name
+    .split(" ")
+    .map((part) => part.trim()[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("");
+  return letters || "С";
+}
+
+function statusTone(status: string): "ready" | "processing" | "error" {
+  const lower = status.toLowerCase();
+  if (lower.includes("готов")) return "ready";
+  if (lower.includes("ошиб") || lower.includes("отмен")) return "error";
+  return "processing";
+}
+
 export function App(): JSX.Element {
   const baseUrl = resolvePatientApiBaseUrl();
   const client = useMemo(() => new ApiClient({ baseUrl }), [baseUrl]);
@@ -72,6 +106,7 @@ export function App(): JSX.Element {
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [profileExpanded, setProfileExpanded] = useState(false);
 
   const [servicesQuery, setServicesQuery] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState(miniAppContentConfig.services.categories[0]?.id ?? "");
@@ -92,7 +127,8 @@ export function App(): JSX.Element {
   const patientName = session?.patient_name ?? "";
   const greetingName = patientName.split(" ").slice(1, 3).join(" ") || patientName || "пациент";
   const phone = session?.patient_phone ?? session?.phone ?? miniAppContentConfig.clinicPhone;
-  const email = session?.email ?? "—";
+  const email = session?.email ?? null;
+  const birthDate = normalizeProfileField(session?.birth_date);
 
   const openRoute = (nextRoute: Route): void => {
     setHistory((prev) => [...prev, route]);
@@ -162,8 +198,6 @@ export function App(): JSX.Element {
   const buildPdfUrl = (resultId: string, disposition: "inline" | "attachment"): string =>
     `${baseUrl}/patient/results/${encodeURIComponent(resultId)}/pdf?disposition=${disposition}`;
 
-  const savePdf = (_resultId: string): void => {};
-
   const sharePdf = async (resultId: string): Promise<void> => {
     try {
       const response = await fetch(buildPdfUrl(resultId, "attachment"), { credentials: "include" });
@@ -178,6 +212,27 @@ export function App(): JSX.Element {
     } catch {
       setInfoMessage("На этом устройстве отправка PDF-файла недоступна. Откройте PDF и используйте системное меню браузера.");
     }
+  };
+
+  const renderIndicators = (details: PatientResultDetails): JSX.Element => {
+    const indicators = buildPatientIndicators(details);
+    if (indicators.length === 0) {
+      return <p className="muted">{miniAppContentConfig.resultDetails.notAvailable}</p>;
+    }
+    return (
+      <div className="lab-table">
+        <div className="lab-table__head">
+          <span>Показатель</span>
+          <span>Значение</span>
+        </div>
+        {indicators.map((indicator) => (
+          <div className="lab-table__row" key={indicator.id}>
+            <span>{indicator.label}</span>
+            <strong>{indicator.valueText}</strong>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   const renderServiceNode = (node: ServiceTreeNode, depth = 0): JSX.Element => {
@@ -225,33 +280,51 @@ export function App(): JSX.Element {
         {loading ? <p className="status">Загрузка...</p> : null}
 
         {!loading && !session ? (
-          <section className="login-screen card login-screen--aligned">
-            <h1>{miniAppContentConfig.clinicTitle}</h1>
-            <p className="muted">{miniAppContentConfig.login.subtitle}</p>
-            <h2>{miniAppContentConfig.login.title}</h2>
-            <input
-              className="input"
-              placeholder={miniAppContentConfig.login.loginPlaceholder}
-              value={login}
-              onChange={(event) => setLogin(event.target.value)}
-            />
-            <div className="password-row">
+          <section className="login-screen">
+            <div className="login-brand">
+              <img src={asset("logo-smart.svg")} alt="СМАРТ" />
+              <p>{miniAppContentConfig.clinicSubtitle}</p>
+            </div>
+
+            <div className="card login-card">
+              <h1>{miniAppContentConfig.login.title}</h1>
+              <p className="muted">{miniAppContentConfig.login.subtitle}</p>
               <input
                 className="input"
-                type={passwordVisible ? "text" : "password"}
-                placeholder={miniAppContentConfig.login.passwordPlaceholder}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
+                placeholder={miniAppContentConfig.login.loginPlaceholder}
+                value={login}
+                onChange={(event) => setLogin(event.target.value)}
               />
-              <button type="button" className="ghost" onClick={() => setPasswordVisible((prev) => !prev)}>
-                👁
+              <div className="password-field">
+                <input
+                  className="input"
+                  type={passwordVisible ? "text" : "password"}
+                  placeholder={miniAppContentConfig.login.passwordPlaceholder}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+                <button
+                  type="button"
+                  className="icon-btn password-field__toggle"
+                  onClick={() => setPasswordVisible((prev) => !prev)}
+                  aria-label={passwordVisible ? miniAppContentConfig.login.hidePasswordLabel : miniAppContentConfig.login.showPasswordLabel}
+                >
+                  <img src={asset(passwordVisible ? "icon-eye-off.svg" : "icon-eye.svg")} alt="" aria-hidden="true" />
+                </button>
+              </div>
+              <button type="button" className="primary-btn" disabled={busy} onClick={() => void handleLoginSubmit()}>
+                {miniAppContentConfig.login.submitLabel}
               </button>
             </div>
-            <button type="button" className="primary-btn" disabled={busy} onClick={() => void handleLoginSubmit()}>
-              {miniAppContentConfig.login.submitLabel}
-            </button>
-            <p className="help-text">{miniAppContentConfig.clinicHelpText}<br />{miniAppContentConfig.clinicHours}</p>
-            <a href={`tel:${miniAppContentConfig.clinicPhone.replace(/[^\d+]/g, "")}`} className="phone-link">{miniAppContentConfig.clinicPhone}</a>
+
+            <div className="card help-card">
+              <div>
+                <p className="help-card__eyebrow">Нужна помощь?</p>
+                <p>Позвоните администратору</p>
+                <span>{miniAppContentConfig.clinicHours}</span>
+              </div>
+              <a href={`tel:${miniAppContentConfig.clinicPhone.replace(/[^\d+]/g, "")}`} className="phone-link">{miniAppContentConfig.clinicPhone}</a>
+            </div>
           </section>
         ) : null}
 
@@ -259,7 +332,7 @@ export function App(): JSX.Element {
           <>
             {route.kind !== "tab" ? (
               <header className="top-bar">
-                <button type="button" className="back-btn" onClick={goBack} aria-label="Назад">←</button>
+                <button type="button" className="icon-btn back-btn" onClick={goBack} aria-label="Назад">‹</button>
                 <h2>
                   {route.kind === "result-details"
                     ? `Исследование №${route.resultId}`
@@ -270,25 +343,47 @@ export function App(): JSX.Element {
 
             {route.kind === "tab" && route.tab === "home" ? (
               <section>
-                <article className="card profile-card" data-testid="patient-card">
-                  <div className="avatar">{session.avatar_url ? <img src={session.avatar_url} alt="Аватар" /> : <span>👤</span>}</div>
+                <header className="home-header">
                   <div>
-                    <h2>{session.patient_name}</h2>
-                    <p><strong>Дата рождения:</strong> {session.birth_date ?? "не указана"}</p>
-                    <p><strong>Телефон:</strong> {phone}</p>
-                    <p><strong>Email:</strong> {email}</p>
+                    <p className="eyebrow">{miniAppContentConfig.home.greetingPrefix}</p>
+                    <h1>{greetingName}!</h1>
                   </div>
-                  <p className="muted">{miniAppContentConfig.home.profileHint}</p>
+                  <img src={asset("logo-smart.svg")} alt="СМАРТ" />
+                </header>
+
+                <article className={`card profile-card ${profileExpanded ? "profile-card--expanded" : ""}`} data-testid="patient-card">
+                  <button type="button" className="profile-card__summary" onClick={() => setProfileExpanded((prev) => !prev)}>
+                    <span className="avatar">
+                      {session.avatar_url ? <img src={session.avatar_url} alt="Аватар" /> : <span>{initials(session.patient_name)}</span>}
+                    </span>
+                    <span className="profile-card__identity">
+                      <strong>{session.patient_name}</strong>
+                      <small>Дата рождения: {birthDate}</small>
+                    </span>
+                    <span className="profile-card__chevron" aria-hidden="true">{profileExpanded ? "⌃" : "⌄"}</span>
+                  </button>
+                  {profileExpanded ? (
+                    <div className="profile-card__details">
+                      <dl>
+                        <div><dt>ФИО</dt><dd>{session.patient_name}</dd></div>
+                        <div><dt>Дата рождения</dt><dd>{birthDate}</dd></div>
+                        <div><dt>Телефон</dt><dd>{normalizeProfileField(phone)}</dd></div>
+                        <div><dt>Email</dt><dd>{normalizeProfileField(email)}</dd></div>
+                      </dl>
+                      <p className="muted">{miniAppContentConfig.home.profileHint}</p>
+                    </div>
+                  ) : null}
                 </article>
-                <h3>{miniAppContentConfig.home.greetingPrefix}, {greetingName}!</h3>
+
                 <div className="section-grid">
                   {miniAppContentConfig.home.sections.map((item) => (
                     <button key={item.id} type="button" className={`card section-card section-card--${item.tone}`} onClick={() => openTab(item.id)}>
+                      <img src={sectionAssetById[item.id]} alt="" aria-hidden="true" />
                       <div>
                         <h4>{item.title}</h4>
                         <p>{item.description}</p>
                       </div>
-                      <span>→</span>
+                      <span aria-hidden="true">›</span>
                     </button>
                   ))}
                 </div>
@@ -303,13 +398,14 @@ export function App(): JSX.Element {
                 <div className="results-list">
                   {results.map((item) => (
                     <button key={item.result_id} type="button" className="card result-card" onClick={() => void openResultDetails(item.result_id)}>
-                      <div>
-                        <p className="result-title">Результат №{item.result_id}</p>
-                        <p>{item.date ?? "—"}</p>
-                        <p className="status-pill">{item.status || miniAppContentConfig.results.readyLabel}</p>
-                        {item.lab_name ? <p className="muted">{item.lab_name}</p> : null}
+                      <span className="result-card__icon"><img src={asset("icon-analyses.svg")} alt="" aria-hidden="true" /></span>
+                      <div className="result-card__body">
+                        <p className="result-title">Исследование №{item.result_id}</p>
+                        <p className="result-meta">{item.date ?? "Дата не указана"}</p>
+                        {item.lab_name ? <p className="muted">{item.lab_name}</p> : <p className="muted">Лаборатория не указана</p>}
                       </div>
-                      <span>›</span>
+                      <span className={`status-pill status-pill--${statusTone(item.status)}`}>{item.status || miniAppContentConfig.results.readyLabel}</span>
+                      <span className="result-card__arrow" aria-hidden="true">›</span>
                     </button>
                   ))}
                 </div>
@@ -318,17 +414,21 @@ export function App(): JSX.Element {
 
             {route.kind === "result-details" && selected ? (
               <section>
-                <article className="card">
-                  <p><strong>Исследование №{selected.result_id}</strong></p>
-                  <p>Дата: {selected.date ?? "—"}</p>
-                  <p>Статус: {selected.status}</p>
-                  <p>Лаборатория: {selected.lab_name ?? "—"}</p>
-                  <div className="indicator-list">
-                    {buildPatientIndicators(selected).map((indicator) => (
-                      <p key={indicator.id}>{indicator.line}</p>
-                    ))}
-                    {buildPatientIndicators(selected).length === 0 ? <p>{miniAppContentConfig.resultDetails.notAvailable}</p> : null}
+                <article className="card details-summary">
+                  <div>
+                    <p className="eyebrow">Исследование</p>
+                    <h3>№{selected.result_id}</h3>
                   </div>
+                  <span className={`status-pill status-pill--${statusTone(selected.status)}`}>{selected.status}</span>
+                  <dl>
+                    <div><dt>Дата</dt><dd>{selected.date ?? "—"}</dd></div>
+                    <div><dt>Лаборатория</dt><dd>{selected.lab_name ?? "—"}</dd></div>
+                  </dl>
+                </article>
+
+                <article className="card indicators-card">
+                  <h3>Показатели</h3>
+                  {renderIndicators(selected)}
                   <button
                     type="button"
                     className="primary-btn"
@@ -347,7 +447,10 @@ export function App(): JSX.Element {
                   <iframe title="PDF документ" src={buildPdfUrl(route.resultId, "inline")} className="pdf-frame" />
                 </div>
                 <div className="pdf-actions">
-                  <button type="button" onClick={() => void sharePdf(route.resultId)}>{miniAppContentConfig.pdfViewer.share}</button>
+                  <button type="button" onClick={() => void sharePdf(route.resultId)}>
+                    <span aria-hidden="true">↗</span>
+                    {miniAppContentConfig.pdfViewer.share}
+                  </button>
                 </div>
               </section>
             ) : null}
@@ -359,7 +462,7 @@ export function App(): JSX.Element {
                 <p className="foundation-note">{miniAppContentConfig.appointment.foundationNote}</p>
                 {miniAppContentConfig.appointment.doctors.map((doctor) => (
                   <article className="card doctor-card" key={doctor.id}>
-                    <div className="doctor-avatar">🩺</div>
+                    <div className="doctor-avatar"><img src={asset("icon-appointment.svg")} alt="" aria-hidden="true" /></div>
                     <div>
                       <h3>{doctor.fullName}</h3>
                       <p>{doctor.specialty}</p>
@@ -434,7 +537,8 @@ export function App(): JSX.Element {
                   className={route.kind === "tab" && route.tab === item.tab ? "active" : ""}
                   onClick={() => openTab(item.tab)}
                 >
-                  {item.label}
+                  <img src={tabIconById[item.tab]} alt="" aria-hidden="true" />
+                  <span>{item.label}</span>
                 </button>
               ))}
             </nav>

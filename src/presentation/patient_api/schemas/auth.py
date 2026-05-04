@@ -25,6 +25,10 @@ class PatientSessionResponse(BaseModel):
     expires_at: datetime
     last_refresh_at: datetime
     auth_type: str
+    birth_date: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    avatar_url: str | None = None
 
 
 class PhoneAuthPendingResponse(BaseModel):

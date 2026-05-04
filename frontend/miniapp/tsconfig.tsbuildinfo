@@ -1,0 +1,1 @@
+{"root":["./src/app.test.tsx","./src/app.tsx","./src/main.tsx","./src/api/auth.ts","./src/api/client.ts","./src/api/results.test.ts","./src/api/results.ts","./src/components/resultdetails.tsx","./src/components/resultlist.tsx","./src/max/context.test.ts","./src/max/context.ts","./src/max/maxuishim.tsx","./src/test-utils/setup.ts","./vite-env.d.ts"],"version":"5.9.3"}

@@ -505,3 +505,42 @@ DECISION: Patient session хранится server-side.
 Контекст: Нужно стабилизировать UI-ресурсы без внедрения тяжелой CMS/admin панели.
 Решение: Зафиксирована структура frontend/miniapp/public/assets с именованными placeholder-файлами; UI использует /assets/... пути.
 Последствия: Проект-владелец может заменить ассеты без изменения кода; Admin Content Panel вынесен в future block.
+
+[Решение]
+Дата: 2026-05-04
+Ветка: work
+Тема: Figma Make как visual reference only для production mini app
+Контекст: Нужно перенести визуальный язык Figma reference в существующий patient mini app, не ломая backend/API/session/PDF/MAX контуры.
+Решение:
+- Reference-файлы из `docs/docs/ui-reference/figma-make/src/app` используются только для визуальной иерархии: mobile shell, Login card, ProfileCard, MenuTile, ResultCard, ResultDetails table, BottomNavigation.
+- Production source остается в текущей архитектуре `frontend/miniapp/src`; Figma Make code и его component/ui stack не копируются.
+- Existing backend APIs остаются source of truth для auth/profile/results/details/pdf.
+Последствия:
+- UI может визуально сближаться с Figma без риска заменить routing, session trust boundary или Renovatio integration.
+- Foundation screens остаются явно отделенными от real-data screens до появления backend contracts.
+
+[Решение]
+Дата: 2026-05-04
+Ветка: work
+Тема: Optional profile fields в patient session response
+Контекст: HomeScreen должен показывать дату рождения пациента, но запрещено подставлять patient id/number вместо даты рождения.
+Решение:
+- В server-side session и response добавлены optional fields `birth_date`, `phone`, `email`, `avatar_url`, извлекаемые только из Renovatio profile payload.
+- Если поле отсутствует или пустое, frontend показывает `не указана`.
+- `patient_number` не используется как fallback для даты рождения.
+Последствия:
+- Расширение обратно совместимо: существующие обязательные поля session response не удалялись.
+- UI получает честные profile values, не выдумывая медицинские данные.
+
+[Решение]
+Дата: 2026-05-04
+Ветка: work
+Тема: PDF share только как file-share попытка
+Контекст: В текущем блоке нужно убрать `Отправить в MAX` и `Сохранить`, а Share должен пытаться отправить именно PDF-файл.
+Решение:
+- PDF viewer содержит только кнопку `Поделиться`.
+- Share flow делает fetch session-aware PDF endpoint, создает `Blob` и `File`, затем вызывает `navigator.canShare({ files })` и `navigator.share({ files })`.
+- При отсутствии capability показывается понятное fallback-сообщение без claim о MAX file-send API.
+Последствия:
+- User-facing поведение честно отражает ограничения runtime.
+- Backend PDF endpoint и session cookie contour сохраняются без изменения.

@@ -14,3 +14,9 @@
 - Не добавлялись новые бизнес-фичи и новая delivery policy.
 - Не внедрялись Kubernetes/Terraform/Ansible deployment подсистемы.
 - Не переписывался mini app/UI beyond launch readiness checks.
+
+4. Mini app UI foundation limitations (2026-05-04)
+- Appointment/Loyalty/Services остаются foundation/config screens до появления backend API contracts.
+- Placeholder assets в `frontend/miniapp/public/assets` не являются финальным брендовым визуалом.
+- PDF viewer использует нативный iframe/browser renderer; точное отображение первого листа и zoom зависят от MAX/WebView runtime.
+- PDF Share пытается отправить именно `File` через Web Share API, но на устройствах без file-share capability показывает fallback-сообщение.

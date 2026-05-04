@@ -26,5 +26,9 @@ class InMemoryPatientSessionRepository:
             expires_at=session.expires_at,
             last_refresh_at=session.last_refresh_at,
             auth_type=session.auth_type,
+            birth_date=session.birth_date,
+            phone=session.phone,
+            email=session.email,
+            avatar_url=session.avatar_url,
             is_active=False,
         )

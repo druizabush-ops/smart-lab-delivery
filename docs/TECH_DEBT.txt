@@ -460,3 +460,33 @@ Patient Auth ограничения / техдолг:
 Что временно: iframe/object зависит от нативного PDF viewer браузера/runtime и не дает стабильного программного zoom-контроля.
 Ограничения: Точный zoom и рендер первого листа зависят от платформы MAX/WebView.
 Когда пересмотреть: При отдельном блоке кастомного PDF renderer.
+
+[Технический долг]
+Дата: 2026-05-04
+Ветка: work
+Блок: Figma reference path duplication
+Что временно: В проекте фактический путь reference UI находится в `docs/docs/ui-reference/figma-make`, хотя в постановке задачи указан `docs/ui-reference/figma-make`.
+Почему это временно: UI integration выполнен по доступному reference-коду без перемещения дерева документации, чтобы не создавать лишний churn.
+Ограничения: Новым участникам нужно знать фактический путь reference до нормализации структуры docs.
+Когда пересмотреть: При отдельной уборке документационной структуры или переносе reference в канонический `docs/ui-reference`.
+
+[Технический долг]
+Дата: 2026-05-04
+Ветка: work
+Блок: Placeholder raster assets вместо финальных брендовых изображений
+Что временно: Для card/login visuals созданы PNG placeholder assets с visual label (`login-bg.png`, `card-*.png`), а `.webp` имена сохранены как replacement targets.
+Почему это временно: Реальные экспортированные изображения из Figma/бренда не предоставлены; нужен runtime-renderable placeholder, который владелец проекта сможет заменить вручную.
+Ограничения: Placeholder-графика не является финальным medical brand art и должна быть заменена перед polished launch.
+Когда пересмотреть: После получения production logo/background/card images или внедрения Admin Content Panel.
+
+[Технический долг]
+Дата: 2026-05-04
+Ветка: work
+Блок: Appointment/Loyalty/Services API discovery pending
+Что временно: Экраны `Запись`, `Акции`, `Услуги` остаются foundation/mock через `contentConfig`.
+Discovery findings:
+- В текущем backend есть Renovatio patient auth/results/details/pdf методы: `authPatient`, `checkAuthCode`, `refreshPatientKey`, `getPatientInfo`, `getPatientLabResults`, `getPatientLabResultDetails`.
+- В текущем коде не обнаружены подтвержденные backend endpoints/DTO для врачей, слотов, booking, bonus balance, loyalty levels, promo blocks, service catalog pricing/nested folders.
+- Frontend не должен обращаться напрямую в Renovatio; будущая интеграция должна идти через backend patient API.
+Ограничения: Foundation-данные нельзя трактовать как production patient data.
+Когда пересмотреть: После утверждения backend contracts для booking, loyalty/promotions и services catalog.

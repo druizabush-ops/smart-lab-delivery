@@ -74,11 +74,7 @@ export type MiniAppContentConfig = {
   };
   pdfViewer: {
     titlePrefix: string;
-    sendToMax: string;
     share: string;
-    save: string;
-    copiedForMax: string;
-    copiedForShare: string;
   };
   appointment: {
     title: string;
@@ -152,11 +148,7 @@ export const miniAppContentConfig: MiniAppContentConfig = {
   },
   pdfViewer: {
     titlePrefix: "Исследование №",
-    sendToMax: "Отправить в MAX",
     share: "Поделиться",
-    save: "Сохранить",
-    copiedForMax: "Ссылка на PDF скопирована. Отправьте её в чат MAX.",
-    copiedForShare: "Ссылка на PDF скопирована.",
   },
   appointment: {
     title: "Запись на прием",

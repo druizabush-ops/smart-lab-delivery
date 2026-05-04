@@ -383,3 +383,49 @@ ZAPUSK228:
   - PDF viewer: удалены `Отправить в MAX` и `Сохранить`; `Поделиться` пытается File Share API с PDF File.
 - Manual smoke:
   - После замены файлов в `frontend/miniapp/public/assets` обязателен `npm run build` и проверка mini app экранов.
+
+## Figma UI integration coverage (2026-05-04)
+Frontend unit:
+- LoginScreen:
+  - logo asset отображается;
+  - поля и login button остаются одной ширины;
+  - placeholders `Введите сюда свой логин` / `Введите сюда свой пароль`;
+  - eye icon toggle меняет тип password field без текстовой кнопки показать/скрыть;
+  - tel-link `+7 (910) 109-39-71`.
+- HomeScreen:
+  - patient card collapsed показывает avatar/name/birth date/chevron;
+  - expanded state показывает ФИО, дата рождения, телефон, email и profile hint;
+  - при отсутствии `birth_date` отображается `не указана`, `patient_number` не используется как дата;
+  - большие cards `Результаты анализов / Запись на прием / Бонусы и акции / Перечень услуг` кликабельны целиком.
+- Bottom navigation:
+  - только `Главная / Анализы / Запись / Акции / Услуги`;
+  - active tab визуально выделен;
+  - icons берутся из `/assets/icon-*.svg`.
+- ResultsListScreen:
+  - карточка результата кликабельна целиком;
+  - показываются исследование №, дата, лаборатория, status;
+  - `short_services_summary` не отображается.
+- ResultDetailsScreen:
+  - summary содержит исследование №, дату, статус, лабораторию;
+  - показатели строятся по canonical mapping `services` + `indicators` по коду до `•`;
+  - строка показателя сохраняет данные `parameter_value` + `measurement_unit`.
+- PdfViewerScreen:
+  - PDF остается в iframe внутри mini app;
+  - top back button есть всегда;
+  - old actions `Отправить в MAX` и `Сохранить` отсутствуют;
+  - `Поделиться` fetch-ит PDF, создает `File` и вызывает `navigator.share({ files })` при capability.
+- ServicesScreen:
+  - live-as-you-type search без отдельной кнопки;
+  - foundation note видим.
+
+Backend targeted regression:
+- `python -m pytest tests/unit/application/test_patient_auth_use_cases.py tests/integration/test_patient_auth_api.py`
+  - optional profile fields `birth_date/phone/email/avatar_url` не ломают session flow;
+  - refresh/deactivate сохраняют optional profile fields;
+  - response не раскрывает `patient_key`.
+
+Manual smoke:
+- `cd frontend/miniapp && npm run test`
+- `cd frontend/miniapp && npm run build`
+- login -> home -> expand profile -> analyses -> details -> pdf -> share fallback/capability.
+- заменить один asset в `frontend/miniapp/public/assets`, повторить build и проверить, что новый файл попал в mini app.

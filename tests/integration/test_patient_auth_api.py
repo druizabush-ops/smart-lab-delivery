@@ -39,7 +39,16 @@ class _RenovatioStub:
 
     def get_patient_info(self, patient_key: str):
         if patient_key == "pk-1":
-            return {"number": "p-1", "last_name": "Иванов", "first_name": "Иван", "third_name": "Иванович", "patient_id": None}
+            return {
+                "number": "p-1",
+                "last_name": "Иванов",
+                "first_name": "Иван",
+                "third_name": "Иванович",
+                "birth_date": "15.05.1985",
+                "phone": "+7 (999) 123-45-67",
+                "email": "ivanov@example.ru",
+                "patient_id": None,
+            }
         if patient_key == "pk-2":
             return {"number": "p-1", "full_name": "Phone User", "patient_id": "p-1"}
         raise ValueError("unknown patient key")
@@ -80,6 +89,9 @@ def test_login_me_refresh_logout_flow() -> None:
     assert me.status_code == 200
     assert me.json()["patient_number"] == "p-1"
     assert me.json()["patient_name"] == "Иванов Иван Иванович"
+    assert me.json()["birth_date"] == "15.05.1985"
+    assert me.json()["phone"] == "+7 (999) 123-45-67"
+    assert me.json()["email"] == "ivanov@example.ru"
 
     refresh = client.post("/patient/auth/refresh")
     assert refresh.status_code == 200

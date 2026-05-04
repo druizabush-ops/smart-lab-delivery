@@ -8,6 +8,11 @@ export type PatientSession = {
   expires_at: string;
   last_refresh_at: string;
   auth_type: "login" | "phone";
+  birth_date?: string | null;
+  phone?: string | null;
+  patient_phone?: string | null;
+  email?: string | null;
+  avatar_url?: string | null;
 };
 
 export class AuthApi {

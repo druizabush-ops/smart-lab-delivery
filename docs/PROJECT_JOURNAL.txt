@@ -966,3 +966,31 @@ ZAPUSK228:
 Причина: Выравнивание patient mini app UI под референс и подготовка управляемой asset замены без backend-regression.
 Что сделано: Обновлены login/home/results/details/pdf UI, добавлены asset placeholders, PDF share переведен на file-share сценарий с fallback-сообщением, зафиксированы foundation границы и discovery-требования.
 Что не менялось: backend auth/session/results/details/pdf контракты и Renovatio integration contour.
+
+[Изменение]
+Дата: 2026-05-04
+Ветка: work
+Блок: FIGMA UI INTEGRATION + production mini app visual alignment
+Файлы: frontend/miniapp/src/App.tsx; frontend/miniapp/src/styles.css; frontend/miniapp/src/api/auth.ts; frontend/miniapp/src/ui/contentConfig.ts; frontend/miniapp/src/App.test.tsx; frontend/miniapp/public/assets/*; src/application/use_cases/patient_auth.py; src/infrastructure/session/in_memory_patient_session_repository.py; src/presentation/patient_api/schemas/auth.py; src/presentation/patient_api/routers/auth.py; tests/unit/application/test_patient_auth_use_cases.py; tests/integration/test_patient_auth_api.py; docs/PROJECT_JOURNAL.txt; docs/DECISIONS.txt; docs/TEST_PLAN.txt; docs/TECH_DEBT.txt; docs/RUNBOOK.txt; docs/GO_LIVE_CHECKLIST.txt
+Причина: Безопасно приблизить существующий production-like patient mini app к Figma reference без замены архитектуры, API layer, PDF endpoint и MAX/session контуров.
+Reference: фактический путь reference-кода в репозитории `docs/docs/ui-reference/figma-make/src/app`, использовался как visual reference only; production source не копировался.
+Что сделано:
+- Обновлена UI token-система: светлый фон, бирюзовый primary, темно-синий текст, крупные скругления, мягкие тени, consistent spacing.
+- LoginScreen приведен к production card layout: большой logo asset, одинаковые поля/кнопка, серые placeholders, eye-icon toggle, кликабельный телефон `+7 (910) 109-39-71`, подписи помощи и часы.
+- HomeScreen получил Figma-like header, раскрывающуюся patient card и большие section cards с runtime assets.
+- Patient profile mapping расширен optional-полями `birth_date`, `phone`, `email`, `avatar_url`; дата рождения не подменяется patient id/number, при отсутствии показывается `не указана`.
+- Bottom navigation оставлена только с пунктами `Главная / Анализы / Запись / Акции / Услуги`, добавлены icons, safe-area отступы и визуальные разделители.
+- ResultsList стал компактным clickable-card списком с номером исследования, датой, лабораторией и читаемым status pill; длинный services-summary не возвращался.
+- ResultDetails оформлен как medical report summary + table-like список показателей; canonical mapping `services + indicators` по коду до `•` сохранен.
+- PDF viewer оставлен внутри mini app с back navigation; action bar содержит только `Поделиться`, share пытается отправить PDF `File` через `navigator.canShare({ files })` и `navigator.share({ files })`.
+- Asset-system расширен: SVG icons/logo/avatar и PNG placeholder images с визуальными labels; `.webp` replacement target имена сохранены в assets-директории.
+- Appointment/Loyalty/Services оставлены foundation/mock через `contentConfig`, без direct Renovatio calls из frontend.
+Что не менялось:
+- Не менялись Renovatio, MAX, delivery/runtime, operator/admin и PDF pipeline контуры.
+- Не добавлялись heavy dependencies и не копировался Figma Make code как production source.
+Проверка:
+- Frontend tests/build не запускались в этом сеансе по решению пользователя; команды для ручного прогона: `cd frontend/miniapp && npm run test`, `cd frontend/miniapp && npm run build`.
+- Backend targeted regression для auth optional profile fields рекомендуется: `python -m pytest tests/unit/application/test_patient_auth_use_cases.py tests/integration/test_patient_auth_api.py`.
+ZAPUSK228:
+- Скрипт менять не требуется: текущий шаг `rebuild_frontend` уже выполняет Vite build, который включает `frontend/miniapp/public/assets` в `dist`; login/results/pdf smoke hooks уже существуют.
+- Обновлены docs checklist/runbook для ручной asset replacement проверки.

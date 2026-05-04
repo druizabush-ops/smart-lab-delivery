@@ -41,6 +41,9 @@
 - [ ] `cd frontend/miniapp && npm run build` выполняется без ошибок.
 - [ ] `VITE_PATIENT_API_BASE_URL` указывает на целевой patient API.
 - [ ] Build артефакты доступны для выкладки.
+- [ ] `frontend/miniapp/public/assets` содержит runtime assets: logo, avatar placeholder, bottom-nav icons, login background, home card images.
+- [ ] После замены assets выполнен build и ручной smoke login/home/results/details/pdf на телефоне.
+- [ ] PDF viewer внутри mini app содержит back navigation и только действие `Поделиться`.
 
 8. Integrations readiness
 - [ ] `SLD_INTEGRATION_MODE=real` для staging/prod-like запуска.

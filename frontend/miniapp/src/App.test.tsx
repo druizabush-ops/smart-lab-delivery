@@ -74,6 +74,11 @@ describe("mini app redesign", () => {
       writable: true,
       value: undefined,
     });
+    Object.defineProperty(navigator, "canShare", {
+      configurable: true,
+      writable: true,
+      value: undefined,
+    });
   });
 
   it("рендерит крупный login screen с placeholder и телефоном", async () => {
@@ -93,6 +98,12 @@ describe("mini app redesign", () => {
     render(<App />);
 
     await waitFor(() => expect(screen.getByText("Иванов Иван Иванович")).toBeInTheDocument());
+    expect(screen.getByText("Дата рождения: 15.05.1985")).toBeInTheDocument();
+    expect(screen.queryByText("+7 (999) 123-45-67")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("patient-card").querySelector("button")!);
+    expect(screen.getByText("+7 (999) 123-45-67")).toBeInTheDocument();
+    expect(screen.getByText("ivanov@mail.ru")).toBeInTheDocument();
     expect(screen.getByText("Результаты анализов")).toBeInTheDocument();
     expect(screen.getByText("Запись на прием")).toBeInTheDocument();
     expect(screen.getByText("Бонусы и акции")).toBeInTheDocument();
@@ -122,13 +133,15 @@ describe("mini app redesign", () => {
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Анализы" })).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "Анализы" }));
-    fireEvent.click(screen.getByText("Результат №125487"));
+    fireEvent.click(screen.getByText("Исследование №125487"));
 
-    await waitFor(() => expect(screen.getByText("Калий (К+): 4.2 ммоль/л")).toBeInTheDocument());
-    expect(screen.getByText("Пролактин: 53.8 ++ нг/мл")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Калий (К+)")).toBeInTheDocument());
+    expect(screen.getByText("4.2 ммоль/л")).toBeInTheDocument();
+    expect(screen.getByText("Пролактин")).toBeInTheDocument();
+    expect(screen.getByText("53.8 ++ нг/мл")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Назад" }));
-    await waitFor(() => expect(screen.getByText("Результат №125487")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Исследование №125487")).toBeInTheDocument());
   });
 
   it("рендерит pdf screen с back/top и action bar", async () => {
@@ -141,7 +154,7 @@ describe("mini app redesign", () => {
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Анализы" })).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "Анализы" }));
-    fireEvent.click(screen.getByText("Результат №125487"));
+    fireEvent.click(screen.getByText("Исследование №125487"));
     await waitFor(() => expect(screen.getByRole("button", { name: "Открыть в PDF" })).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "Открыть в PDF" }));
 
@@ -149,6 +162,41 @@ describe("mini app redesign", () => {
     expect(screen.getByRole("button", { name: "Поделиться" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Отправить в MAX" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Сохранить" })).not.toBeInTheDocument();
+  });
+
+  it("share PDF пытается отправить именно PDF File", async () => {
+    const share = vi.fn().mockResolvedValue(undefined);
+    const canShare = vi.fn().mockReturnValue(true);
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      writable: true,
+      value: share,
+    });
+    Object.defineProperty(navigator, "canShare", {
+      configurable: true,
+      writable: true,
+      value: canShare,
+    });
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(mockSessionResponse())
+      .mockResolvedValueOnce(mockResultListResponse())
+      .mockResolvedValueOnce(mockResultDetailsResponse())
+      .mockResolvedValueOnce(new Response(new Blob(["%PDF-1.4"], { type: "application/pdf" }), { status: 200 }));
+
+    render(<App />);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Анализы" })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Анализы" }));
+    fireEvent.click(screen.getByText("Исследование №125487"));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Открыть в PDF" })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Открыть в PDF" }));
+    fireEvent.click(screen.getByRole("button", { name: /Поделиться/ }));
+
+    await waitFor(() => expect(share).toHaveBeenCalled());
+    const payload = share.mock.calls[0][0] as ShareData;
+    expect(payload.files?.[0]).toBeInstanceOf(File);
+    expect(payload.files?.[0].name).toBe("result-125487.pdf");
+    expect(payload.files?.[0].type).toBe("application/pdf");
   });
 
   it("services screen поддерживает live search", async () => {
