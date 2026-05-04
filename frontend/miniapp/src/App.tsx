@@ -229,7 +229,7 @@ export function App(): JSX.Element {
 
         {!loading && !session ? (
           <section className="login-screen-wrap">
-            <div className="login-branding">
+            <div className="login-branding card">
               <img src="/assets/logo-smart.svg" alt="СМАРТ" className="login-branding__logo" />
               <p className="login-branding__subtitle">{miniAppContentConfig.login.subtitle}</p>
             </div>
@@ -256,7 +256,21 @@ export function App(): JSX.Element {
                   aria-label={passwordVisible ? "Скрыть пароль" : "Показать пароль"}
                   onClick={() => setPasswordVisible((prev) => !prev)}
                 >
-                  {passwordVisible ? "🙈" : "👁"}
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                    {passwordVisible ? (
+                      <>
+                        <path d="M3 3l18 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                        <path d="M10.6 6.7a10.9 10.9 0 0 1 1.4-.1c5.2 0 9.3 3.7 10 5.4-.2.5-.7 1.3-1.5 2.1" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M14.1 14.1a3 3 0 0 1-4.2-4.2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M6.1 9.7C4.4 11 3.3 12.7 3 13c.9 1.9 5 5.4 9 5.4 1.6 0 3-.4 4.3-1" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      </>
+                    ) : (
+                      <>
+                        <path d="M2.8 12c1-2 5-5.6 9.2-5.6s8.2 3.6 9.2 5.6c-1 2-5 5.6-9.2 5.6S3.8 14 2.8 12z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                      </>
+                    )}
+                  </svg>
                 </button>
               </div>
 
@@ -264,13 +278,18 @@ export function App(): JSX.Element {
                 {miniAppContentConfig.login.submitLabel}
               </button>
 
-              <p className="help-text">
-                Нужна помощь?<br />Позвоните администратору<br />{miniAppContentConfig.clinicHours}
-              </p>
-              <a href={`tel:${miniAppContentConfig.clinicPhone.replace(/[^\d+]/g, "")}`} className="phone-link">
-                {miniAppContentConfig.clinicPhone}
-              </a>
             </div>
+
+            <div className="support-card card">
+              <div className="support-card__icon" aria-hidden="true">📞</div>
+              <div>
+                <p className="help-text">Нужна помощь?<br />{miniAppContentConfig.clinicHours}</p>
+                <a href={`tel:${miniAppContentConfig.clinicPhone.replace(/[^\d+]/g, "")}`} className="phone-link">
+                  {miniAppContentConfig.clinicPhone}
+                </a>
+              </div>
+            </div>
+            <p className="login-footer">© 2024 Медицинский центр СМАРТ</p>
           </section>
         ) : null}
 
