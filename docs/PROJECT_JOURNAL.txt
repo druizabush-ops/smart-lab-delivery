@@ -977,3 +977,13 @@ ZAPUSK228:
 Что изменилось в логике: Контракты backend и auth/session flow не изменялись; изменения только presentation-слоя.
 Что нужно проверить: npm test и npm run build в frontend/miniapp; smoke экраны login/home/results/details/pdf/services.
 Ограничения: Appointment/Loyalty/Services остаются foundation-экранами без real backend integration.
+
+[Изменение]
+Дата: 2026-05-04
+Ветка: work
+Блок: Hybrid Figma Login integration (Phase 1)
+Файлы: frontend/miniapp/src/App.tsx; frontend/miniapp/src/styles.css; docs/PROJECT_JOURNAL.txt; docs/DECISIONS.txt; docs/TEST_PLAN.txt
+Причина: Обновить LoginScreen под Figma visual reference без изменения production auth/session flow.
+Что сделано: Перенесены visual-слои login (карточка, отступы, типографика, блок помощи, иконка toggle пароля) с сохранением текущих auth API, session и runtime маршрутизации.
+Что изменилось в логике: Бизнес-логика и API-контракты не изменялись; используется тот же handleLoginSubmit/authApi.login.
+Риски / ограничения: Это только Phase 1 для LoginScreen; остальные экраны остаются на текущем UI.
