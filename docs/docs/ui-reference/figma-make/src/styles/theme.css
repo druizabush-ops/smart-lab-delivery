@@ -1,0 +1,194 @@
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-size: 16px;
+
+  /* Medical App Color Palette */
+  --primary: #16B1AC;
+  --primary-dark: #0D8B87;
+  --primary-light: #D5F3F2;
+  --primary-foreground: #ffffff;
+
+  --navy-text: #1E3A5F;
+  --secondary-text: #64748B;
+  --muted-text: #94A3B8;
+
+  --background: #F8FAFB;
+  --card: #ffffff;
+  --card-foreground: #1E3A5F;
+
+  --border: #E2E8F0;
+  --divider: #F1F5F9;
+
+  /* Status Colors */
+  --success: #22C55E;
+  --success-light: #DCFCE7;
+  --info: #3B82F6;
+  --info-light: #DBEAFE;
+  --warning: #F59E0B;
+  --warning-light: #FEF3C7;
+  --error: #EF4444;
+  --error-light: #FEE2E2;
+  --disabled: #CBD5E1;
+
+  /* Decorative Card Backgrounds */
+  --mint-bg: #E8F8F7;
+  --lavender-bg: #F0EBFF;
+  --peach-bg: #FFE8D9;
+  --sky-bg: #E0F2FE;
+
+  /* Input */
+  --input-background: #F8FAFC;
+  --input-border: #E2E8F0;
+  --input-focus: #16B1AC;
+
+  /* Radius */
+  --radius: 1.25rem;
+  --radius-lg: 1.75rem;
+  --radius-xl: 2rem;
+  --radius-md: 1rem;
+  --radius-sm: 0.5rem;
+
+  /* Spacing */
+  --spacing-xs: 0.5rem;
+  --spacing-sm: 0.75rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.25rem;
+  --spacing-xl: 1.5rem;
+  --spacing-2xl: 2rem;
+
+  /* Font Weights */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Typography Sizes */
+  --text-2xl: 1.5rem;
+  --text-xl: 1.25rem;
+  --text-lg: 1.125rem;
+  --text-base: 1rem;
+  --text-sm: 0.875rem;
+  --text-xs: 0.75rem;
+
+  /* Legacy compatibility */
+  --foreground: #1E3A5F;
+  --popover: #ffffff;
+  --popover-foreground: #1E3A5F;
+  --secondary: #F1F5F9;
+  --secondary-foreground: #1E3A5F;
+  --muted: #F1F5F9;
+  --muted-foreground: #64748B;
+  --accent: #E8F8F7;
+  --accent-foreground: #1E3A5F;
+  --destructive: #EF4444;
+  --destructive-foreground: #ffffff;
+  --ring: #16B1AC;
+}
+
+
+@theme {
+  /* Base Colors */
+  --color-background: #F8FAFB;
+  --color-foreground: #1E3A5F;
+  --color-card: #ffffff;
+  --color-card-foreground: #1E3A5F;
+
+  /* Primary Colors */
+  --color-primary: #16B1AC;
+  --color-primary-dark: #0D8B87;
+  --color-primary-light: #D5F3F2;
+  --color-primary-foreground: #ffffff;
+
+  /* Text Colors */
+  --color-navy-text: #1E3A5F;
+  --color-secondary-text: #64748B;
+  --color-muted-text: #94A3B8;
+
+  /* Border & Divider */
+  --color-border: #E2E8F0;
+  --color-divider: #F1F5F9;
+
+  /* Status Colors */
+  --color-success: #22C55E;
+  --color-success-light: #DCFCE7;
+  --color-info: #3B82F6;
+  --color-info-light: #DBEAFE;
+  --color-warning: #F59E0B;
+  --color-warning-light: #FEF3C7;
+  --color-error: #EF4444;
+  --color-error-light: #FEE2E2;
+  --color-disabled: #CBD5E1;
+
+  /* Background Colors */
+  --color-mint-bg: #E8F8F7;
+  --color-lavender-bg: #F0EBFF;
+  --color-peach-bg: #FFE8D9;
+  --color-sky-bg: #E0F2FE;
+
+  /* Input */
+  --color-input-background: #F8FAFC;
+  --color-input-border: #E2E8F0;
+  --color-input-focus: #16B1AC;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /**
+  * Default typography styles for HTML elements (h1-h4, p, label, button, input).
+  * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
+  */
+
+  html {
+    font-size: var(--font-size);
+  }
+
+  h1 {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h2 {
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h3 {
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h4 {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  label {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  button {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  input {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-normal);
+    line-height: 1.5;
+  }
+}
