@@ -116,3 +116,17 @@
 - `SLD_SMOKE_PATIENT_LOGIN`
 - `SLD_SMOKE_PATIENT_PASSWORD`
 И запустите `python scripts/zapusk228.py --assume-yes --skip-update --skip-deps`.
+
+16. Mini app assets manual replacement (UI block)
+Шаги:
+1) Положить новый ассет в `frontend/miniapp/public/assets` с тем же именем файла.
+2) Пересобрать frontend: `cd frontend/miniapp && npm run build`.
+3) Задеплоить build-артефакты.
+4) Выполнить smoke mini app экранов login/home/results/details/pdf/services.
+
+Форматы:
+- Icons: SVG, 24x24 или 32x32 viewport.
+- Logo: SVG, ориентир ~300x120.
+- Card images: WEBP/PNG, 600x240 или 800x320.
+- Login background: WEBP, 1080x1600 или 1170x2532.
+- Avatar placeholder: SVG, 256x256.
