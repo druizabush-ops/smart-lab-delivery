@@ -176,3 +176,11 @@ body {
 .password-row{grid-template-columns:1fr 52px}
 .bottom-nav{bottom:12px;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 6px);border-radius:16px;box-shadow:0 8px 20px rgba(0,0,0,.08)}
 .bottom-nav button+button{border-left:1px solid #e6edf7}
+.login-logo{display:block;width:220px;max-width:80%;margin:4px auto 10px}
+.section-card{position:relative;overflow:hidden;min-height:118px}
+.section-cover{position:absolute;right:0;top:0;height:100%;width:42%;object-fit:cover;opacity:.23}
+.section-card h4,.section-card p{position:relative;z-index:1;max-width:72%}
+.result-meta{color:var(--color-muted);font-size:14px}
+.details-card p{margin:6px 0}.details-head{font-size:18px}.card-sub{margin-top:10px;padding-top:10px;border-top:1px solid #e8eef8}
+.nav-icon{width:20px;height:20px;display:block;margin:0 auto 4px}
+.bottom-nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}

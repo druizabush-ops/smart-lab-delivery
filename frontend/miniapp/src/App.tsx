@@ -229,6 +229,7 @@ export function App(): JSX.Element {
 
         {!loading && !session ? (
           <section className="login-screen card login-screen--aligned">
+            <img src="/assets/logo-smart.svg" alt="Смарт" className="login-logo" />
             <h1>{miniAppContentConfig.clinicTitle}</h1>
             <p className="muted">{miniAppContentConfig.login.subtitle}</p>
             <h2>{miniAppContentConfig.login.title}</h2>
@@ -294,6 +295,7 @@ export function App(): JSX.Element {
                 <div className="section-grid">
                   {miniAppContentConfig.home.sections.map((item) => (
                     <button key={item.id} type="button" className={`card section-card section-card--${item.tone}`} onClick={() => openTab(item.id)}>
+                      <img src={`/assets/card-${item.id === "loyalty" ? "promos" : item.id}.webp`} className="section-cover" alt="" aria-hidden="true" />
                       <div>
                         <h4>{item.title}</h4>
                         <p>{item.description}</p>
@@ -315,9 +317,8 @@ export function App(): JSX.Element {
                     <button key={item.result_id} type="button" className="card result-card" onClick={() => void openResultDetails(item.result_id)}>
                       <div>
                         <p className="result-title">Результат №{item.result_id}</p>
-                        <p>{item.date ?? "—"}</p>
+                        <p className="result-meta">{item.date ?? "—"} · {item.lab_name ?? "Лаборатория не указана"}</p>
                         <p className="status-pill">{item.status || miniAppContentConfig.results.readyLabel}</p>
-                        {item.lab_name ? <p className="muted">{item.lab_name}</p> : null}
                       </div>
                       <span>›</span>
                     </button>
@@ -328,12 +329,12 @@ export function App(): JSX.Element {
 
             {route.kind === "result-details" && selected ? (
               <section>
-                <article className="card">
-                  <p><strong>Исследование №{selected.result_id}</strong></p>
+                <article className="card details-card">
+                  <p className="details-head"><strong>Исследование №{selected.result_id}</strong></p>
                   <p>Дата: {selected.date ?? "—"}</p>
                   <p>Статус: {selected.status}</p>
                   <p>Лаборатория: {selected.lab_name ?? "—"}</p>
-                  <div className="indicator-list">
+                  <div className="indicator-list card-sub">
                     {buildPatientIndicators(selected).map((indicator) => (
                       <p key={indicator.id}>{indicator.line}</p>
                     ))}
@@ -444,7 +445,8 @@ export function App(): JSX.Element {
                   className={route.kind === "tab" && route.tab === item.tab ? "active" : ""}
                   onClick={() => openTab(item.tab)}
                 >
-                  {item.label}
+                  <img src={`/assets/${item.iconAsset}`} alt="" aria-hidden="true" className="nav-icon" />
+                  <span>{item.label}</span>
                 </button>
               ))}
             </nav>

@@ -392,3 +392,8 @@ ZAPUSK228:
 - Проверка Result details formatting на canonical mapping `Название: значение единица`.
 - Проверка PDF viewer + кнопка `Поделиться` (без `Отправить в MAX` и `Сохранить`).
 - Проверка Services live search without submit button.
+
+## Mini app UI alignment verification (2026-05-04)
+- `cd frontend/miniapp && npm run test -- --run` — regression проверка login/profile/results/details/pdf/services.
+- `cd frontend/miniapp && npm run build` — проверка сборки после visual alignment.
+- ZAPUSK228 update не требуется: блок затрагивает presentation/assets/test docs, без изменения operational flow.

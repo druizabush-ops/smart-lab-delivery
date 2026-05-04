@@ -84,6 +84,7 @@ describe("mini app redesign", () => {
     await waitFor(() => expect(screen.getByText("Вход в систему")).toBeInTheDocument());
     expect(screen.getByPlaceholderText("Введите сюда свой логин")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Введите сюда свой пароль")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Смарт" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "+7 (910) 109-39-71" })).toHaveAttribute("href", "tel:+79101093971");
   });
 
@@ -108,6 +109,7 @@ describe("mini app redesign", () => {
     render(<App />);
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Запись" })).toBeInTheDocument());
+    expect(screen.getAllByRole("img", { hidden: true }).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: "Запись" }));
     expect(screen.getByText("Foundation screen: данные врачей и слотов сейчас демо-конфиг.")).toBeInTheDocument();
 

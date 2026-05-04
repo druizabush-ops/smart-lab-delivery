@@ -50,7 +50,7 @@ export type MiniAppContentConfig = {
     invalidCredentialsMessage: string;
     genericErrorMessage: string;
   };
-  navigation: Array<{ tab: MainTab; label: string }>;
+  navigation: Array<{ tab: MainTab; label: string; iconAsset: string }>;
   home: {
     greetingPrefix: string;
     profileHint: string;
@@ -124,11 +124,11 @@ export const miniAppContentConfig: MiniAppContentConfig = {
     genericErrorMessage: "Не удалось войти. Попробуйте позже или позвоните администратору.",
   },
   navigation: [
-    { tab: "home", label: "Главная" },
-    { tab: "results", label: "Анализы" },
-    { tab: "appointment", label: "Запись" },
-    { tab: "loyalty", label: "Акции" },
-    { tab: "services", label: "Услуги" },
+    { tab: "home", label: "Главная", iconAsset: "icon-home.svg" },
+    { tab: "results", label: "Анализы", iconAsset: "icon-analyses.svg" },
+    { tab: "appointment", label: "Запись", iconAsset: "icon-appointment.svg" },
+    { tab: "loyalty", label: "Акции", iconAsset: "icon-promos.svg" },
+    { tab: "services", label: "Услуги", iconAsset: "icon-services.svg" },
   ],
   home: {
     greetingPrefix: "Здравствуйте",

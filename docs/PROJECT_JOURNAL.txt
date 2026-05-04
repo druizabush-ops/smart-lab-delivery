@@ -977,3 +977,15 @@ ZAPUSK228:
 Что изменилось в логике: Контракты backend и auth/session flow не изменялись; изменения только presentation-слоя.
 Что нужно проверить: npm test и npm run build в frontend/miniapp; smoke экраны login/home/results/details/pdf/services.
 Ограничения: Appointment/Loyalty/Services остаются foundation-экранами без real backend integration.
+
+[Багфикс]
+Дата: 2026-05-04
+Ветка: work
+Блок: Уточнение PDF share fallback и smoke-валидация mini app UI alignment
+Файлы: frontend/miniapp/src/App.tsx; docs/PROJECT_JOURNAL.txt; docs/TEST_PLAN.txt
+Причина: На некоторых runtime `navigator.canShare` отсутствует; требовалась гарантированная деградация без потери навигации и документирование smoke-результата.
+Что сделано:
+- Подтверждена file-first стратегия share (fetch->Blob->File->navigator.share) с единым fallback-сообщением.
+- Проведен фронтенд smoke по ключевым экранам и тестам mini app.
+- Зафиксировано, что ZAPUSK228 не требует изменения: operational/admin flow и deploy pipeline без изменений.
+Ограничения: Appointment/Loyalty/Services остаются foundation до появления backend DTO/endpoint-ов.
