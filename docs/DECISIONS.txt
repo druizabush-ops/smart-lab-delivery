@@ -522,3 +522,5 @@ DECISION: Patient session хранится server-side.
 Контекст: Требуется визуально приблизить Login к Figma, не ломая production mini app.
 Решение: Разрешено переносить только visual layer (layout/colors/spacing/components) в LoginScreen, а auth/session/API/runtime остаются из существующего приложения.
 Последствия: Риск регрессии в backend flow минимальный, дальнейшая интеграция остальных экранов может идти по тому же шаблону.
+
+- 2026-05-04: Kept hybrid architecture (Figma visual layer + production APIs/state) and avoided routing/auth/backend rewrites.

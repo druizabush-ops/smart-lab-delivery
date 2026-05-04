@@ -397,3 +397,5 @@ ZAPUSK228:
 - Frontend build: `npm run build` (обязательно).
 - Frontend tests: `npm run test` (обязательно).
 - Ручная проверка: login/password inputs, eye toggle, human-readable error messages, tel-link `+7 (910) 109-39-71`, сохранение session-based login flow.
+
+- 2026-05-04: Added coverage focus for expandable patient card, bottom nav tabs, result details formatting, PDF share-only action, and live services search.
