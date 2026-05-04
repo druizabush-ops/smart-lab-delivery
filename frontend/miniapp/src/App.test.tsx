@@ -127,8 +127,10 @@ describe("mini app redesign", () => {
     fireEvent.click(screen.getByRole("button", { name: "Анализы" }));
     fireEvent.click(screen.getByText("Результат №125487"));
 
-    await waitFor(() => expect(screen.getByText("Калий (К+): 4.2 ммоль/л")).toBeInTheDocument());
-    expect(screen.getByText("Пролактин: 53.8 ++ нг/мл")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Калий (К+)")).toBeInTheDocument());
+    expect(screen.getByText("4.2 ммоль/л")).toBeInTheDocument();
+    expect(screen.getByText("Пролактин")).toBeInTheDocument();
+    expect(screen.getByText("53.8 ++ нг/мл")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Назад" }));
     await waitFor(() => expect(screen.getByText("Результат №125487")).toBeInTheDocument());

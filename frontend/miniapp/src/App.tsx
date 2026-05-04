@@ -328,7 +328,7 @@ export function App(): JSX.Element {
                 <h3>{miniAppContentConfig.home.greetingPrefix}, {greetingName}!</h3>
                 <div className="section-grid">
                   {miniAppContentConfig.home.sections.map((item) => (
-                    <button key={item.id} type="button" className={`card section-card section-card--${item.tone}`} onClick={() => openTab(item.id)}>
+                    <button key={item.id} type="button" className={`card section-card section-card--${item.tone}`} data-testid={`home-tile-${item.id}`} onClick={() => openTab(item.id)}>
                       <div>
                         <h4>{item.title}</h4>
                         <p>{item.description}</p>
@@ -351,8 +351,8 @@ export function App(): JSX.Element {
                       <div>
                         <p className="result-title">Результат №{item.result_id}</p>
                         <p>{item.date ?? "—"}</p>
-                        <p className="status-pill">{item.status || miniAppContentConfig.results.readyLabel}</p>
                         {item.lab_name ? <p className="muted">{item.lab_name}</p> : null}
+                        <p className="status-pill">{item.status || miniAppContentConfig.results.readyLabel}</p>
                       </div>
                       <span>›</span>
                     </button>
@@ -363,14 +363,17 @@ export function App(): JSX.Element {
 
             {route.kind === "result-details" && selected ? (
               <section>
-                <article className="card">
+                <article className="card details-card">
                   <p><strong>Исследование №{selected.result_id}</strong></p>
                   <p>Дата: {selected.date ?? "—"}</p>
                   <p>Статус: {selected.status}</p>
                   <p>Лаборатория: {selected.lab_name ?? "—"}</p>
                   <div className="indicator-list">
                     {buildPatientIndicators(selected).map((indicator) => (
-                      <p key={indicator.id}>{indicator.line}</p>
+                      <div key={indicator.id} className="indicator-item">
+                        <p className="indicator-item__label">{indicator.label}</p>
+                        <p className="indicator-item__value">{indicator.valueText}</p>
+                      </div>
                     ))}
                     {buildPatientIndicators(selected).length === 0 ? <p>{miniAppContentConfig.resultDetails.notAvailable}</p> : null}
                   </div>

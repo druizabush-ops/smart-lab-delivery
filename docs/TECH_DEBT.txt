@@ -470,3 +470,5 @@ Patient Auth ограничения / техдолг:
 План закрытия:
 1) Зафиксировать device matrix для PDF rendering и провести runtime smoke на целевых телефонах.
 2) Согласовать API discovery и перевести foundation-экраны на реальные данные.
+
+- 2026-05-04: Appointment/Loyalty remain foundation-mode UI until dedicated backend DTO endpoints are connected.
