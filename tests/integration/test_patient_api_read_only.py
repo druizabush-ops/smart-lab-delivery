@@ -16,6 +16,7 @@ from src.application.use_cases.patient_auth import (
 )
 from src.application.use_cases.patient_results import PatientResultsUseCase
 from src.application.use_cases.patient_results import PatientResultPdfUseCase
+from src.application.use_cases.patient_portal_data import PatientPortalDataUseCase
 from src.config.security_settings import SecuritySettings
 from src.infrastructure.repositories import InMemoryDeliveryCardRepository
 from src.infrastructure.session import InMemoryExternalPatientBindingRepository, InMemoryPatientSessionRepository
@@ -81,6 +82,18 @@ class _RenovatioStub:
             "files": files,
         }
 
+    def get_patient_balance(self, patient_id: str):
+        return {"balance": 1000, "patient_funds": 800, "bonus_funds": 200, "patient_debt": 0, "patient_debt_company": 0}
+
+    def get_service_categories(self):
+        return [{"id": "c1", "title": "Анализы"}]
+
+    def get_services(self):
+        return [{"id": "s1", "title": "ОАК", "price": 500, "category_id": "c1"}]
+
+    def get_schedule(self, patient_id: str):
+        return [{"schedule_id": "sch1", "doctor_name": "Иванов И.И.", "date": "2026-05-10", "time_start": "10:00"}]
+
 
 class _Container:
     def __init__(self):
@@ -97,6 +110,7 @@ class _Container:
         self.get_current_patient_use_case = GetCurrentPatientUseCase(session_repo)
         self.patient_results_use_case = PatientResultsUseCase(sessions=self.get_current_patient_use_case, renovatio_client=client)
         self.patient_result_pdf_use_case = PatientResultPdfUseCase(sessions=self.get_current_patient_use_case, renovatio_client=client)
+        self.patient_portal_use_case = PatientPortalDataUseCase(sessions=self.get_current_patient_use_case, renovatio_client=client)
         bindings = InMemoryExternalPatientBindingRepository()
         self.bind_patient_session_use_case = BindPatientSessionUseCase(bindings)
         self.resolve_bound_patient_session_use_case = ResolveBoundPatientSessionUseCase(bindings)
@@ -182,3 +196,19 @@ def test_result_pdf_not_available_returns_404() -> None:
     response = client.get("/patient/results/without-pdf/pdf")
 
     assert response.status_code == 404
+
+
+def test_patient_portal_endpoints() -> None:
+    client = TestClient(create_patient_api_app(container=_Container()))
+    _login(client)
+    loyalty = client.get("/patient/loyalty")
+    categories = client.get("/patient/services/categories")
+    services = client.get("/patient/services")
+    search = client.get("/patient/services/search", params={"q": "ОАК"})
+    schedule = client.get("/patient/appointments/schedule")
+    assert loyalty.status_code == 200
+    assert loyalty.json()["balance"] == 1000
+    assert categories.status_code == 200 and categories.json()[0]["id"] == "c1"
+    assert services.status_code == 200 and services.json()[0]["service_id"] == "s1"
+    assert search.status_code == 200 and len(search.json()) == 1
+    assert schedule.status_code == 200 and schedule.json()[0]["schedule_id"] == "sch1"

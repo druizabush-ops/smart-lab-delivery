@@ -3,6 +3,7 @@
 from fastapi import HTTPException, Request
 
 from src.application.use_cases.patient_results import PatientResultPdfUseCase, PatientResultsUseCase
+from src.application.use_cases.patient_portal_data import PatientPortalDataUseCase
 
 
 def get_patient_session_id(request: Request) -> str:
@@ -20,3 +21,7 @@ def get_patient_results_use_case(request: Request) -> PatientResultsUseCase:
 
 def get_patient_result_pdf_use_case(request: Request) -> PatientResultPdfUseCase:
     return request.app.state.patient_result_pdf_use_case
+
+
+def get_patient_portal_use_case(request: Request) -> PatientPortalDataUseCase:
+    return request.app.state.patient_portal_use_case

@@ -44,6 +44,7 @@ from src.application.use_cases.patient_auth import (
     UnbindPatientSessionUseCase,
 )
 from src.application.use_cases.patient_results import PatientResultPdfUseCase, PatientResultsUseCase
+from src.application.use_cases.patient_portal_data import PatientPortalDataUseCase
 
 
 class AppContainer:
@@ -194,6 +195,10 @@ class AppContainer:
             renovatio_client=self.renovatio_client,
         )
         self.patient_result_pdf_use_case = PatientResultPdfUseCase(
+            sessions=self.get_current_patient_use_case,
+            renovatio_client=self.renovatio_client,
+        )
+        self.patient_portal_use_case = PatientPortalDataUseCase(
             sessions=self.get_current_patient_use_case,
             renovatio_client=self.renovatio_client,
         )

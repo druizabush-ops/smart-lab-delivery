@@ -5,6 +5,7 @@ import { PatientResultDetails, PatientResultListItem, ResultsApi } from "./api/r
 import { AuthApi, PatientSession } from "./api/auth";
 import { buildPatientIndicators } from "./utils/patientResults";
 import { MainTab, miniAppContentConfig, ServiceCategory, ServiceTreeNode } from "./ui/contentConfig";
+import { AppointmentSlotDto, LoyaltyDto, PortalApi, ServiceCategoryDto, ServiceDto } from "./api/portal";
 
 type Route =
   | { kind: "tab"; tab: MainTab }
@@ -58,6 +59,7 @@ export function App(): JSX.Element {
   const client = useMemo(() => new ApiClient({ baseUrl }), [baseUrl]);
   const authApi = useMemo(() => new AuthApi(client), [client]);
   const resultsApi = useMemo(() => new ResultsApi(client), [client]);
+  const portalApi = useMemo(() => new PortalApi(client), [client]);
 
   const [session, setSession] = useState<ExtendedSession | null>(null);
   const [results, setResults] = useState<PatientResultListItem[]>([]);
@@ -67,7 +69,12 @@ export function App(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resultsError, setResultsError] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  const [loyalty, setLoyalty] = useState<LoyaltyDto | null>(null);
+  const [serviceCategories, setServiceCategories] = useState<ServiceCategoryDto[]>([]);
+  const [serviceItems, setServiceItems] = useState<ServiceDto[]>([]);
+  const [scheduleSlots, setScheduleSlots] = useState<AppointmentSlotDto[]>([]);
 
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
@@ -83,9 +90,8 @@ export function App(): JSX.Element {
       .me()
       .then((currentSession) => {
         setSession(currentSession as ExtendedSession);
-        return resultsApi.list();
+        return loadResults();
       })
-      .then(setResults)
       .catch(() => setSession(null))
       .finally(() => setLoading(false));
   }, [authApi, resultsApi]);
@@ -96,6 +102,21 @@ export function App(): JSX.Element {
   const email = session?.email ?? "—";
   const birthDate =
     session?.birth_date && !String(session.birth_date).toLowerCase().includes("pn-") ? session.birth_date : "не указана";
+
+  const loadResults = async (): Promise<void> => {
+    try {
+      const items = await resultsApi.list();
+      setResults(items);
+      setResultsError(null);
+    } catch (err: unknown) {
+      setResults([]);
+      if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+        setResultsError("Сессия истекла. Войдите заново.");
+      } else {
+        setResultsError("Не удалось загрузить результаты. Попробуйте позже.");
+      }
+    }
+  };
 
   const openRoute = (nextRoute: Route): void => {
     setHistory((prev) => [...prev, route]);
@@ -108,6 +129,12 @@ export function App(): JSX.Element {
     setRoute({ kind: "tab", tab });
     setError(null);
     setInfoMessage(null);
+    if (tab === "loyalty") { void portalApi.loyalty().then(setLoyalty).catch(() => setInfoMessage("Не удалось загрузить баланс.")); }
+    if (tab === "services") {
+      void portalApi.serviceCategories().then(setServiceCategories).catch(() => setInfoMessage("Не удалось загрузить категории услуг."));
+      void portalApi.services().then(setServiceItems).catch(() => setInfoMessage("Не удалось загрузить услуги."));
+    }
+    if (tab === "appointment") { void portalApi.schedule().then(setScheduleSlots).catch(() => setInfoMessage("Не удалось загрузить расписание.")); }
   };
 
   const goBack = (): void => {
@@ -127,7 +154,8 @@ export function App(): JSX.Element {
     try {
       const nextSession = await authApi.login(login, password);
       setSession(nextSession as ExtendedSession);
-      setResults(await resultsApi.list());
+      setError(null);
+      await loadResults();
       setRoute({ kind: "tab", tab: "home" });
     } catch (err: unknown) {
       if (err instanceof ApiError && err.status === 401) {
@@ -230,7 +258,14 @@ export function App(): JSX.Element {
         {!loading && !session ? (
           <section className="login-screen-wrap">
             <div className="login-branding card">
-              <img src="/assets/logo-smart.svg" alt="СМАРТ" className="login-branding__logo" />
+              <img
+                src="/assets/logo-smart.svg"
+                alt="СМАРТ"
+                className="login-branding__logo"
+                onError={(event) => {
+                  event.currentTarget.style.display = "none";
+                }}
+              />
               <p className="login-branding__subtitle">{miniAppContentConfig.login.subtitle}</p>
             </div>
 
@@ -344,6 +379,7 @@ export function App(): JSX.Element {
               <section>
                 <h2>{miniAppContentConfig.results.title}</h2>
                 <p className="muted">{miniAppContentConfig.results.subtitle}</p>
+                {resultsError ? <p className="status status--error">{resultsError}</p> : null}
                 {results.length === 0 ? <p>{miniAppContentConfig.results.emptyLabel}</p> : null}
                 <div className="results-list">
                   {results.map((item) => (
@@ -405,16 +441,14 @@ export function App(): JSX.Element {
                 <h2>{miniAppContentConfig.appointment.title}</h2>
                 <p className="muted">{miniAppContentConfig.appointment.subtitle}</p>
                 <p className="foundation-note">{miniAppContentConfig.appointment.foundationNote}</p>
-                {miniAppContentConfig.appointment.doctors.map((doctor) => (
-                  <article className="card doctor-card" key={doctor.id}>
+                {scheduleSlots.length === 0 ? <p className="foundation-note">Нет доступных слотов.</p> : scheduleSlots.map((slot) => (
+                  <article className="card doctor-card" key={slot.schedule_id}>
                     <div className="doctor-avatar">🩺</div>
                     <div>
-                      <h3>{doctor.fullName}</h3>
-                      <p>{doctor.specialty}</p>
-                      <p className="muted">{doctor.about}</p>
-                      {doctor.nextSlots.map((slots) => (
-                        <p key={slots.dayLabel}><strong>{slots.dayLabel}:</strong> {slots.times.join(" · ")}</p>
-                      ))}
+                      <h3>{slot.doctor_name}</h3>
+                      <p>{slot.profession ?? "Специалист"}</p>
+                      <p className="muted">{slot.clinic_name ?? "Клиника"}{slot.room ? ` · Кабинет ${slot.room}` : ""}</p>
+                      <p><strong>{slot.date}:</strong> {slot.time_start}</p>
                     </div>
                   </article>
                 ))}
@@ -425,15 +459,15 @@ export function App(): JSX.Element {
               <section>
                 <h2>{miniAppContentConfig.loyalty.title}</h2>
                 <p className="muted">{miniAppContentConfig.loyalty.subtitle}</p>
-                <p className="foundation-note">{miniAppContentConfig.loyalty.foundationNote}</p>
+                {!loyalty ? <p className="foundation-note">Загрузка баланса...</p> : <>
                 <div className="split-grid">
-                  <article className="card"><p>Бонусные рубли</p><h3>{miniAppContentConfig.loyalty.bonusRub.toLocaleString("ru-RU")} ₽</h3></article>
-                  <article className="card"><p>Текущая скидка</p><h3>{miniAppContentConfig.loyalty.discountPercent}%</h3></article>
+                  <article className="card"><p>Баланс</p><h3>{loyalty.balance.toLocaleString("ru-RU")} ₽</h3></article>
+                  <article className="card"><p>Бонусные рубли</p><h3>{loyalty.bonus_funds.toLocaleString("ru-RU")} ₽</h3></article>
                 </div>
                 <article className="card">
-                  <p>До следующего уровня: 10%</p>
-                  <div className="progress"><span style={{ width: `${miniAppContentConfig.loyalty.progressPercent}%` }} /></div>
-                </article>
+                  <p>Средства пациента: {loyalty.patient_funds.toLocaleString("ru-RU")} ₽</p>
+                  <p>Задолженность: {loyalty.patient_debt.toLocaleString("ru-RU")} ₽</p>
+                </article></>}
                 <div className="split-grid">
                   {miniAppContentConfig.loyalty.promos.map((promo) => (
                     <article className={`card promo-card promo-card--${promo.accent}`} key={promo.id}>
@@ -449,7 +483,7 @@ export function App(): JSX.Element {
               <section>
                 <h2>{miniAppContentConfig.services.title}</h2>
                 <p className="muted">{miniAppContentConfig.services.subtitle}</p>
-                <p className="foundation-note">{miniAppContentConfig.services.foundationNote}</p>
+                
                 <input
                   className="input"
                   placeholder={miniAppContentConfig.services.searchPlaceholder}
@@ -458,7 +492,7 @@ export function App(): JSX.Element {
                 />
                 <p className="muted">{miniAppContentConfig.services.searchHint}</p>
                 <div className="category-grid">
-                  {filteredCategories.map((category) => (
+                  {(serviceCategories.length > 0 ? serviceCategories.map((c) => ({id:c.id,name:c.title,servicesCount:c.services_count,tree:[]} as unknown as ServiceCategory)) : filteredCategories).map((category) => (
                     <button
                       key={category.id}
                       type="button"
@@ -470,7 +504,7 @@ export function App(): JSX.Element {
                     </button>
                   ))}
                 </div>
-                {selectedCategory ? <article className="card">{selectedCategory.tree.map((node) => renderServiceNode(node))}</article> : <p>Ничего не найдено.</p>}
+                <article className="card">{(serviceItems.filter((item) => !selectedCategory || item.category_id === selectedCategory.id).filter((item)=> item.title.toLowerCase().includes(servicesQuery.toLowerCase()))).map((item) => <p key={item.service_id}>{item.title}{typeof item.price === "number" ? ` — ${item.price} ₽` : ""}</p>)}</article>
               </section>
             ) : null}
 
@@ -490,7 +524,7 @@ export function App(): JSX.Element {
         ) : null}
 
         {busy ? <p className="status">Подождите...</p> : null}
-        {error ? <p className="status status--error">{error}</p> : null}
+        {!session && error ? <p className="status status--error">{error}</p> : null}
         {infoMessage ? <p className="status">{infoMessage}</p> : null}
       </main>
     </MaxUI>
