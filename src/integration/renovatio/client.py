@@ -290,6 +290,30 @@ class RenovatioClient(LabResultProvider):
             clinic_id=clinic_id,
         )
 
+    def get_patient_balance(self, patient_id: str) -> dict[str, Any]:
+        data = self._call_api("getPatientBalance", {"patient_id": patient_id})
+        if not isinstance(data, dict):
+            raise IntegrationFailure(IntegrationErrorKind.BAD_RESPONSE, "Renovatio: getPatientBalance unexpected format.")
+        return data
+
+    def get_service_categories(self) -> list[dict[str, Any]]:
+        data = self._call_api("getServiceCategories", {})
+        if not isinstance(data, list):
+            raise IntegrationFailure(IntegrationErrorKind.BAD_RESPONSE, "Renovatio: getServiceCategories unexpected format.")
+        return data
+
+    def get_services(self) -> list[dict[str, Any]]:
+        data = self._call_api("getServices", {})
+        if not isinstance(data, list):
+            raise IntegrationFailure(IntegrationErrorKind.BAD_RESPONSE, "Renovatio: getServices unexpected format.")
+        return data
+
+    def get_schedule(self, patient_id: str) -> list[dict[str, Any]]:
+        data = self._call_api("getSchedule", {"patient_id": patient_id})
+        if not isinstance(data, list):
+            raise IntegrationFailure(IntegrationErrorKind.BAD_RESPONSE, "Renovatio: getSchedule unexpected format.")
+        return data
+
     def _ensure_patient_real_mode(self, method_name: str) -> None:
         """Ограничивает patient-facing методы real режимом как контролируемое допущение."""
 

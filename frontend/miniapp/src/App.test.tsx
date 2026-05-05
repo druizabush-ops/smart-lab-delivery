@@ -169,4 +169,26 @@ describe("mini app redesign", () => {
     expect(screen.getByText("Пролактин")).toBeInTheDocument();
     expect(screen.queryByText("Консультация кардиолога")).not.toBeInTheDocument();
   });
+
+  it("после успешного входа очищает ошибку авторизации и не показывает ее на Home", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response("unauthorized", { status: 401 }))
+      .mockResolvedValueOnce(new Response("unauthorized", { status: 401 }))
+      .mockResolvedValueOnce(mockSessionResponse())
+      .mockResolvedValueOnce(mockResultListResponse());
+
+    render(<App />);
+
+    await waitFor(() => expect(screen.getByText("Вход в систему")).toBeInTheDocument());
+    fireEvent.change(screen.getByPlaceholderText("Введите сюда свой логин"), { target: { value: "demo" } });
+    fireEvent.change(screen.getByPlaceholderText("Введите сюда свой пароль"), { target: { value: "bad" } });
+    fireEvent.click(screen.getByRole("button", { name: "Войти" }));
+    await waitFor(() => expect(screen.getByText("Неверный логин или пароль")).toBeInTheDocument());
+
+    fireEvent.change(screen.getByPlaceholderText("Введите сюда свой пароль"), { target: { value: "good" } });
+    fireEvent.click(screen.getByRole("button", { name: "Войти" }));
+    await waitFor(() => expect(screen.getByText("Иванов Иван Иванович")).toBeInTheDocument());
+    expect(screen.queryByText("Неверный логин или пароль")).not.toBeInTheDocument();
+  });
+
 });
