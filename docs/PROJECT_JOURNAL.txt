@@ -989,3 +989,19 @@ ZAPUSK228:
 Риски / ограничения: Это только Phase 1 для LoginScreen; остальные экраны остаются на текущем UI.
 
 - 2026-05-04: Hybrid Figma-like UI pass extended to Home/Results/Details/PDF/Appointments/Loyalty/Services with production routing/API/session preserved in miniapp App.tsx.
+
+[Изменение]
+Дата: 2026-05-06
+Ветка: work
+Блок: Стартовый MAX patient assistant runtime
+Файлы: bot/package.json; bot/tsconfig.json; bot/src/index.ts; docs/DECISIONS.txt
+Причина: Нужен отдельный кнопочный слой MAX-бота, не ломающий mini app и backend контур.
+Что сделано:
+- Добавлен отдельный TypeScript runtime в `bot/`.
+- Подключен `MAX_BOT_TOKEN` из ENV (без hardcode).
+- Реализовано стартовое меню `/start` и `bot_started` с кнопками: открыть mini app, профиль, анализы, последний результат, помощь.
+- Добавлены базовые callback handler'ы с patient-friendly русскими ответами.
+Ограничения:
+- Пока не подключены backend endpoints профиля/auto-login/results/pdf.
+- Нет state-machine и защищенного хранения профиля на backend в этом шаге.
+Следующий шаг: подключить backend use cases и персистентный профиль/token слой, затем расширить bot UX по полному мастер-промту.
