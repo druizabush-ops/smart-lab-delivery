@@ -524,3 +524,13 @@ DECISION: Patient session хранится server-side.
 Последствия: Риск регрессии в backend flow минимальный, дальнейшая интеграция остальных экранов может идти по тому же шаблону.
 
 - 2026-05-04: Kept hybrid architecture (Figma visual layer + production APIs/state) and avoided routing/auth/backend rewrites.
+
+[Решение]
+Дата: 2026-05-06
+Тема: Базовый runtime слой MAX patient assistant
+Контекст: Для развития patient-facing сценариев добавлен отдельный runtime слой кнопочного MAX-бота.
+Решение: Выбран отдельный каталог `bot/` как изолированный TypeScript runtime c SDK `@maxhub/max-bot-api`.
+Последствия:
+- Минимальное влияние на существующие backend/miniapp слои.
+- Запуск и build бота могут выполняться независимо от Python backend.
+- Дальнейшие шаги: подключение backend endpoint-ов профиля, auto-login token, результаты и PDF.

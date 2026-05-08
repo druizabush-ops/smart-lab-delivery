@@ -399,3 +399,11 @@ ZAPUSK228:
 - Ручная проверка: login/password inputs, eye toggle, human-readable error messages, tel-link `+7 (910) 109-39-71`, сохранение session-based login flow.
 
 - 2026-05-04: Added coverage focus for expandable patient card, bottom nav tabs, result details formatting, PDF share-only action, and live services search.
+
+[Добавлено 2026-05-06] MAX bot profile/auto-login backend smoke:
+- POST `/bot/profile/save-login` с `X-Max-User-Id`.
+- POST `/bot/profile/save-password` с `X-Max-User-Id`.
+- POST `/bot/profile/check-login` (успех/ошибка).
+- POST `/bot/miniapp-token/create`.
+- POST `/patient/auth/auto-login-token` (one-time redeem).
+- Повторный redeem того же token -> 401.

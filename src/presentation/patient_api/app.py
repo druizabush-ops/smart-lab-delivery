@@ -7,6 +7,7 @@ from src.presentation.common.errors import register_error_handlers
 from src.presentation.common.health import HealthService, build_health_router
 from src.presentation.common.middleware import CorrelationIdMiddleware, SimpleRateLimitMiddleware
 from src.presentation.patient_api.routers.auth import router as auth_router
+from src.presentation.patient_api.routers.bot_profile import router as bot_profile_router
 from src.presentation.patient_api.routers.portal import router as portal_router
 from src.presentation.patient_api.routers.results import router as results_router
 
@@ -21,7 +22,7 @@ def create_patient_api_app(container: AppContainer | None = None) -> FastAPI:
     app.state.security_settings = app_container.security_settings
     app.state.patient_results_use_case = app_container.patient_results_use_case
     app.state.patient_result_pdf_use_case = app_container.patient_result_pdf_use_case
-    app.state.patient_portal_use_case = app_container.patient_portal_use_case
+    app.state.patient_portal_use_case = getattr(app_container, "patient_portal_use_case", None)
     app.state.patient_login_use_case = app_container.patient_login_use_case
     app.state.patient_phone_login_use_case = app_container.patient_phone_login_use_case
     app.state.confirm_patient_auth_code_use_case = app_container.confirm_patient_auth_code_use_case
@@ -30,6 +31,9 @@ def create_patient_api_app(container: AppContainer | None = None) -> FastAPI:
     app.state.bind_patient_session_use_case = app_container.bind_patient_session_use_case
     app.state.resolve_bound_patient_session_use_case = app_container.resolve_bound_patient_session_use_case
     app.state.unbind_patient_session_use_case = app_container.unbind_patient_session_use_case
+    app.state.bot_profile_use_case = getattr(app_container, "bot_profile_use_case", None)
+    app.state.bot_check_login_use_case = getattr(app_container, "bot_check_login_use_case", None)
+    app.state.bot_miniapp_token_use_case = getattr(app_container, "bot_miniapp_token_use_case", None)
     app.state.patient_session_repository = app_container.patient_session_repository
     app.state.renovatio_settings = app_container.renovatio_settings
     app.add_middleware(CorrelationIdMiddleware)
@@ -41,6 +45,7 @@ def create_patient_api_app(container: AppContainer | None = None) -> FastAPI:
     register_error_handlers(app)
     app.include_router(build_health_router(HealthService(app_container)))
     app.include_router(auth_router)
+    app.include_router(bot_profile_router)
     app.include_router(results_router)
     app.include_router(portal_router)
     return app
