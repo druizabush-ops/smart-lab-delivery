@@ -478,3 +478,7 @@ Patient Auth ограничения / техдолг:
 Почему временно: этап внедрения ограничен безопасным application-контуром без новых postgres моделей/миграций.
 Риск: после restart runtime теряются bot profile/token state и невозможен production-grade lifecycle.
 План закрытия: вынести bot profiles/tokens/states в postgres таблицы + alembic migration + repository adapters.
+
+[2026-05-08] Bot profile / auto-login слой
+- Текущее хранилище bot profile и miniapp token — in-memory; при рестарте процесса state теряется.
+- Для production-устойчивости требуется персистентное хранилище (postgres) с TTL-index/cleanup для token hash.

@@ -142,3 +142,11 @@
 2) Создать token: `POST /bot/miniapp-token/create`.
 3) Выполнить redeem: `POST /patient/auth/auto-login-token`.
 4) Повторный redeem того же token должен быть отклонен.
+
+19. Auto-login token endpoint временно недоступен
+Симптом:
+- `POST /patient/auth/auto-login-token` -> `503 Auto-login временно недоступен`.
+Шаги:
+1) Проверить wiring container: должны быть подключены `bot_profile_use_case` и `bot_miniapp_token_use_case`.
+2) Проверить наличие `BOT_PROFILE_ENCRYPTION_KEY`.
+3) Перезапустить patient API после исправления env/wiring.

@@ -407,3 +407,12 @@ ZAPUSK228:
 - POST `/bot/miniapp-token/create`.
 - POST `/patient/auth/auto-login-token` (one-time redeem).
 - Повторный redeem того же token -> 401.
+
+[Обновление 2026-05-08]
+- Добавлен интеграционный сценарий one-time auto-login token в `tests/integration/test_patient_auth_api.py`:
+  1) `POST /bot/profile/save-login`
+  2) `POST /bot/profile/save-password`
+  3) `POST /bot/miniapp-token/create`
+  4) `POST /patient/auth/auto-login-token` (успех)
+  5) повторный redeem того же token -> `401`.
+- Подтвержден unit roundtrip шифрования и one-time redeem в `tests/unit/application/test_bot_patient_use_cases.py`.
