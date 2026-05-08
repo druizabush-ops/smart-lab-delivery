@@ -1005,4 +1005,3 @@ ZAPUSK228:
 - Пока не подключены backend endpoints профиля/auto-login/results/pdf.
 - Нет state-machine и защищенного хранения профиля на backend в этом шаге.
 Следующий шаг: подключить backend use cases и персистентный профиль/token слой, затем расширить bot UX по полному мастер-промту.
-

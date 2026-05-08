@@ -146,23 +146,6 @@ def get_me(
     return _session_response(session)
 
 
-@router.post("/auto-login-token", response_model=PatientSessionResponse)
-def auto_login_by_token(request: Request, http_response: Response, token_payload: dict[str, str]) -> PatientSessionResponse:
-    token = token_payload.get("auto_login_token", "").strip()
-    if not token:
-        raise HTTPException(status_code=400, detail="Токен не передан")
-    max_user_id = request.app.state.bot_miniapp_token_use_case.redeem(token)
-    if not max_user_id:
-        raise HTTPException(status_code=401, detail="Токен недействителен")
-    try:
-        login, password = request.app.state.bot_profile_use_case.get_credentials(max_user_id)
-        session: PatientSession = request.app.state.patient_login_use_case.execute(login, password)
-    except Exception as exc:
-        raise HTTPException(status_code=401, detail="Не удалось выполнить вход") from exc
-    _set_session_cookie(http_response, session.session_id)
-    return _session_response(session)
-
-
 def _set_session_cookie(response: Response, session_id: str) -> None:
     response.set_cookie(
         key="sld_patient_session",

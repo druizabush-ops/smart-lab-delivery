@@ -45,13 +45,6 @@ from src.application.use_cases.patient_auth import (
 )
 from src.application.use_cases.patient_results import PatientResultPdfUseCase, PatientResultsUseCase
 from src.application.use_cases.patient_portal_data import PatientPortalDataUseCase
-from src.application.use_cases.bot_patient import (
-    BotCheckLoginUseCase,
-    BotMiniAppTokenUseCase,
-    BotProfileUseCase,
-    InMemoryBotPatientProfileRepository,
-    build_bot_cipher_from_env,
-)
 
 
 class AppContainer:
@@ -209,14 +202,6 @@ class AppContainer:
             sessions=self.get_current_patient_use_case,
             renovatio_client=self.renovatio_client,
         )
-        self.bot_profile_repository = InMemoryBotPatientProfileRepository()
-        self.bot_profile_use_case = BotProfileUseCase(self.bot_profile_repository, build_bot_cipher_from_env())
-        self.bot_check_login_use_case = BotCheckLoginUseCase(
-            profiles=self.bot_profile_use_case,
-            patient_login_use_case=self.patient_login_use_case,
-            repository=self.bot_profile_repository,
-        )
-        self.bot_miniapp_token_use_case = BotMiniAppTokenUseCase(self.bot_profile_repository)
 
     def _build_delivery_card_repository(self):
         if self.runtime_settings.repository_mode == "postgres":

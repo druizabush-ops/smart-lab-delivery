@@ -86,16 +86,10 @@ export function App(): JSX.Element {
   const [patientCardExpanded, setPatientCardExpanded] = useState(false);
 
   useEffect(() => {
-    const autoLoginToken = new URLSearchParams(window.location.search).get("auto_login_token");
-    const resolveSession = autoLoginToken ? authApi.autoLoginByToken(autoLoginToken) : authApi.me();
-    resolveSession
+    authApi
+      .me()
       .then((currentSession) => {
         setSession(currentSession as ExtendedSession);
-        if (autoLoginToken) {
-          const nextUrl = new URL(window.location.href);
-          nextUrl.searchParams.delete("auto_login_token");
-          window.history.replaceState({}, "", nextUrl.toString());
-        }
         return loadResults();
       })
       .catch(() => setSession(null))
