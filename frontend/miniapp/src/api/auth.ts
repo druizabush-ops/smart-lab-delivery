@@ -21,6 +21,10 @@ export class AuthApi {
     return this.client.get<PatientSession>("/patient/auth/me");
   }
 
+  autoLoginByToken(autoLoginToken: string): Promise<PatientSession> {
+    return this.client.post<PatientSession>("/patient/auth/auto-login-token", { auto_login_token: autoLoginToken });
+  }
+
   logout(): Promise<{ success: boolean }> {
     return this.client.post<{ success: boolean }>("/patient/auth/logout");
   }

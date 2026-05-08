@@ -472,3 +472,9 @@ Patient Auth ограничения / техдолг:
 2) Согласовать API discovery и перевести foundation-экраны на реальные данные.
 
 - 2026-05-04: Appointment/Loyalty remain foundation-mode UI until dedicated backend DTO endpoints are connected.
+
+[Технический долг][2026-05-06]
+Тема: Bot profile encryption storage и token persistence пока in-memory.
+Почему временно: этап внедрения ограничен безопасным application-контуром без новых postgres моделей/миграций.
+Риск: после restart runtime теряются bot profile/token state и невозможен production-grade lifecycle.
+План закрытия: вынести bot profiles/tokens/states в postgres таблицы + alembic migration + repository adapters.

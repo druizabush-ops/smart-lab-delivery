@@ -989,3 +989,48 @@ ZAPUSK228:
 Риски / ограничения: Это только Phase 1 для LoginScreen; остальные экраны остаются на текущем UI.
 
 - 2026-05-04: Hybrid Figma-like UI pass extended to Home/Results/Details/PDF/Appointments/Loyalty/Services with production routing/API/session preserved in miniapp App.tsx.
+
+[Изменение]
+Дата: 2026-05-06
+Ветка: work
+Блок: Стартовый MAX patient assistant runtime
+Файлы: bot/package.json; bot/tsconfig.json; bot/src/index.ts; docs/DECISIONS.txt
+Причина: Нужен отдельный кнопочный слой MAX-бота, не ломающий mini app и backend контур.
+Что сделано:
+- Добавлен отдельный TypeScript runtime в `bot/`.
+- Подключен `MAX_BOT_TOKEN` из ENV (без hardcode).
+- Реализовано стартовое меню `/start` и `bot_started` с кнопками: открыть mini app, профиль, анализы, последний результат, помощь.
+- Добавлены базовые callback handler'ы с patient-friendly русскими ответами.
+Ограничения:
+- Пока не подключены backend endpoints профиля/auto-login/results/pdf.
+- Нет state-machine и защищенного хранения профиля на backend в этом шаге.
+Следующий шаг: подключить backend use cases и персистентный профиль/token слой, затем расширить bot UX по полному мастер-промту.
+
+[Изменение]
+Дата: 2026-05-06
+Ветка: work
+Блок: MAX BOT patient profile + mini app auto-login token (phase 2)
+Файлы: src/application/use_cases/bot_patient.py; src/presentation/patient_api/routers/bot_profile.py; src/presentation/patient_api/routers/auth.py; src/presentation/patient_api/schemas/bot_profile.py; src/presentation/patient_api/app.py; src/config/container.py; frontend/miniapp/src/api/auth.ts; frontend/miniapp/src/App.tsx; tests/unit/application/test_bot_patient_use_cases.py; docs/*
+Причина: Продолжение внедрения bot layer после мерджа стартового scaffold.
+Что сделано:
+- Добавлены backend use cases профиля бота, шифрования пароля и one-time mini app token.
+- Добавлены endpoint'ы `/bot/profile/*`, `/bot/miniapp-token/create`, `/patient/auth/auto-login-token`.
+- Добавлен mini app flow чтения `auto_login_token` из query и его redeem через backend.
+- Добавлены unit tests для шифрования и one-time token behavior.
+Ограничения:
+- Профили/токены/состояние пока in-memory (без postgres migration в этом шаге).
+- Bot runtime callbacks пока не подключены к новым backend endpoint'ам.
+
+[Багфикс]
+Дата: 2026-05-07
+Ветка: work
+Блок: Исправление MAX bot runtime сборки и SDK контрактов
+Файлы: bot/package.json; bot/tsconfig.json; bot/src/index.ts; docs/PROJECT_JOURNAL.txt
+Причина: Бот не собирался на сервере из-за невалидной версии `@maxhub/max-bot-api` и несовместимого использования SDK (`new Bot({ token })`, `ctx.answer`).
+Что сделано:
+- Обновлен bot package dependency на рабочий semver диапазон `@maxhub/max-bot-api:^0.2.2`.
+- Переведен runtime на стиль SDK: `new Bot(token)` и ответы через `ctx.reply(...)`.
+- Актуализированы callback handlers для кнопок меню и добавлен fallback чтения токена из `BOT_TOKEN` приоритетно после `MAX_BOT_TOKEN`.
+- Зафиксировано разделение SDK: `@maxhub/max-ui` используется mini app UI, `@maxhub/max-bot-api` используется runtime обычного MAX чат-бота.
+Ограничения:
+- Проверка `npm install` может зависеть от доступности private/npm-registry для `@maxhub/max-bot-api` в серверном окружении.
