@@ -16,6 +16,14 @@ from src.application.use_cases.patient_auth import (
 )
 from src.application.use_cases.patient_results import PatientResultsUseCase
 from src.application.use_cases.patient_results import PatientResultPdfUseCase
+
+from src.application.use_cases.bot_patient import (
+    BotCheckLoginUseCase,
+    BotMiniAppTokenUseCase,
+    BotProfileCipher,
+    BotProfileUseCase,
+    InMemoryBotPatientProfileRepository,
+)
 from src.config.security_settings import SecuritySettings
 from src.infrastructure.repositories import InMemoryDeliveryCardRepository
 from src.infrastructure.session import InMemoryExternalPatientBindingRepository, InMemoryPatientSessionRepository
@@ -67,6 +75,15 @@ class _Container:
         self.bind_patient_session_use_case = BindPatientSessionUseCase(bindings)
         self.resolve_bound_patient_session_use_case = ResolveBoundPatientSessionUseCase(bindings)
         self.unbind_patient_session_use_case = UnbindPatientSessionUseCase(bindings)
+        bot_repository = InMemoryBotPatientProfileRepository()
+        bot_profile = BotProfileUseCase(bot_repository, BotProfileCipher("test-encryption-key"))
+        self.bot_profile_use_case = bot_profile
+        self.bot_check_login_use_case = BotCheckLoginUseCase(
+            profiles=bot_profile,
+            patient_login_use_case=self.patient_login_use_case,
+            repository=bot_repository,
+        )
+        self.bot_miniapp_token_use_case = BotMiniAppTokenUseCase(bot_repository)
 
 
 def test_login_me_refresh_logout_flow() -> None:
@@ -126,6 +143,15 @@ def test_login_returns_controlled_error_when_profile_fetch_failed() -> None:
             self.bind_patient_session_use_case = BindPatientSessionUseCase(bindings)
             self.resolve_bound_patient_session_use_case = ResolveBoundPatientSessionUseCase(bindings)
             self.unbind_patient_session_use_case = UnbindPatientSessionUseCase(bindings)
+            bot_repository = InMemoryBotPatientProfileRepository()
+            bot_profile = BotProfileUseCase(bot_repository, BotProfileCipher("test-encryption-key"))
+            self.bot_profile_use_case = bot_profile
+            self.bot_check_login_use_case = BotCheckLoginUseCase(
+            profiles=bot_profile,
+            patient_login_use_case=self.patient_login_use_case,
+            repository=bot_repository,
+            )
+            self.bot_miniapp_token_use_case = BotMiniAppTokenUseCase(bot_repository)
 
     client = TestClient(create_patient_api_app(container=BrokenProfileContainer()))
     response = client.post("/patient/auth/login", json={"login": "demo", "password": "secret"})
@@ -166,3 +192,32 @@ def test_unbind_external_user_resets_binding() -> None:
     client.cookies.clear()
     me = client.get("/patient/auth/me", headers={"X-External-Platform-User-Id": "max-user-2"})
     assert me.status_code == 401
+
+
+def test_auto_login_token_one_time_flow() -> None:
+    client = TestClient(create_patient_api_app(container=_Container()))
+
+    save_login = client.post(
+        "/bot/profile/save-login",
+        json={"login": "demo"},
+        headers={"X-Max-User-Id": "max-user-777"},
+    )
+    assert save_login.status_code == 200
+
+    save_password = client.post(
+        "/bot/profile/save-password",
+        json={"password": "secret"},
+        headers={"X-Max-User-Id": "max-user-777"},
+    )
+    assert save_password.status_code == 200
+
+    token_response = client.post("/bot/miniapp-token/create", headers={"X-Max-User-Id": "max-user-777"})
+    assert token_response.status_code == 200
+    token = token_response.json()["auto_login_token"]
+
+    redeem = client.post("/patient/auth/auto-login-token", json={"auto_login_token": token})
+    assert redeem.status_code == 200
+    assert redeem.json()["patient_number"] == "p-1"
+
+    second_redeem = client.post("/patient/auth/auto-login-token", json={"auto_login_token": token})
+    assert second_redeem.status_code == 401

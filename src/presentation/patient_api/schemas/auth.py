@@ -35,3 +35,7 @@ class PhoneAuthPendingResponse(BaseModel):
 
 class LogoutResponse(BaseModel):
     success: bool
+
+
+class AutoLoginTokenRequest(BaseModel):
+    auto_login_token: str = Field(min_length=1)
