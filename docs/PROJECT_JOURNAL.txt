@@ -1006,3 +1006,33 @@ ZAPUSK228:
 - Нет state-machine и защищенного хранения профиля на backend в этом шаге.
 Следующий шаг: подключить backend use cases и персистентный профиль/token слой, затем расширить bot UX по полному мастер-промту.
 
+
+[Багфикс]
+Дата: 2026-05-08
+Ветка: work
+Блок: Безопасный auto-login token contract и интеграционный one-time smoke
+Файлы: src/presentation/patient_api/routers/auth.py; src/presentation/patient_api/schemas/auth.py; tests/integration/test_patient_auth_api.py; docs/PROJECT_JOURNAL.txt; docs/TEST_PLAN.txt; docs/TECH_DEBT.txt; docs/RUNBOOK.txt; docs/ENVIRONMENT_RULES.txt
+Причина: Довести контракт auto-login до типизированного request schema и безопасного fallback при частичных test-container wiring.
+Что сделано:
+- `/patient/auth/auto-login-token` переведен на явную Pydantic-схему `AutoLoginTokenRequest`.
+- Добавлен безопасный fallback: при отсутствии bot use cases endpoint возвращает controlled `503`, без trace/raw payload.
+- Добавлен integration test полного one-time сценария: save login/password -> create token -> redeem -> second redeem reject.
+Что изменилось в логике: Бизнес-логика patient results и существующие auth/results endpoint-ы не изменялись; добавлена только стабилизация контракта auto-login.
+Ограничения: profile/token persistence остается in-memory до отдельного migration-блока.
+
+[Багфикс]
+Дата: 2026-05-08
+Ветка: work
+Блок: MAX bot runtime SDK-compatible fix
+Файлы: bot/package.json; bot/src/index.ts; docs/PROJECT_JOURNAL.txt
+Причина: Исправить минимальный runtime MAX-бота под корректное SDK-использование и сборку TypeScript без изменения backend/miniapp логики.
+Что сделано:
+- Обновлен runtime-код в `bot/src/index.ts`: token из `MAX_BOT_TOKEN` с fallback на `BOT_TOKEN`, создание бота через `new Bot(token)`, ответы через `ctx.reply(...)`.
+- Приведены callback-кнопки и тексты к согласованному меню (open app/profile/results/latest/help), добавлена обработка `bot_started` и `/start`.
+- Добавлена настройка команд `/start` через `setMyCommands` (guarded вызов по фактическому наличию метода в SDK runtime).
+- В `bot/package.json` зафиксирована зависимость `@maxhub/max-bot-api` как не-`^0.0.0`, добавлен `@types/node`.
+- Подтверждено разделение контуров: `@maxhub/max-ui` (mini app UI) и `@maxhub/max-bot-api` (bot runtime SDK).
+Required ENV:
+- `MAX_BOT_TOKEN` (fallback: `BOT_TOKEN`).
+Ограничения:
+- В текущем окружении `npm install` блокируется registry policy (403), поэтому полноценный локальный smoke `npm run build`/`npm start` требует доступа к npm registry/private mirror.
