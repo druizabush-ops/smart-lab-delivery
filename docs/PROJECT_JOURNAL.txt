@@ -1006,17 +1006,3 @@ ZAPUSK228:
 - Нет state-machine и защищенного хранения профиля на backend в этом шаге.
 Следующий шаг: подключить backend use cases и персистентный профиль/token слой, затем расширить bot UX по полному мастер-промту.
 
-[Изменение]
-Дата: 2026-05-06
-Ветка: work
-Блок: MAX BOT patient profile + mini app auto-login token (phase 2)
-Файлы: src/application/use_cases/bot_patient.py; src/presentation/patient_api/routers/bot_profile.py; src/presentation/patient_api/routers/auth.py; src/presentation/patient_api/schemas/bot_profile.py; src/presentation/patient_api/app.py; src/config/container.py; frontend/miniapp/src/api/auth.ts; frontend/miniapp/src/App.tsx; tests/unit/application/test_bot_patient_use_cases.py; docs/*
-Причина: Продолжение внедрения bot layer после мерджа стартового scaffold.
-Что сделано:
-- Добавлены backend use cases профиля бота, шифрования пароля и one-time mini app token.
-- Добавлены endpoint'ы `/bot/profile/*`, `/bot/miniapp-token/create`, `/patient/auth/auto-login-token`.
-- Добавлен mini app flow чтения `auto_login_token` из query и его redeem через backend.
-- Добавлены unit tests для шифрования и one-time token behavior.
-Ограничения:
-- Профили/токены/состояние пока in-memory (без postgres migration в этом шаге).
-- Bot runtime callbacks пока не подключены к новым backend endpoint'ам.
