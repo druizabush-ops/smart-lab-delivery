@@ -22,7 +22,6 @@ from src.presentation.patient_api.schemas.auth import (
     PatientPhoneLoginRequest,
     PatientSessionResponse,
     PhoneAuthPendingResponse,
-    AutoLoginTokenRequest,
 )
 
 router = APIRouter(prefix="/patient/auth", tags=["patient-auth"])
@@ -148,20 +147,15 @@ def get_me(
 
 
 @router.post("/auto-login-token", response_model=PatientSessionResponse)
-def auto_login_by_token(request: Request, http_response: Response, token_payload: AutoLoginTokenRequest) -> PatientSessionResponse:
-    token = token_payload.auto_login_token.strip()
+def auto_login_by_token(request: Request, http_response: Response, token_payload: dict[str, str]) -> PatientSessionResponse:
+    token = token_payload.get("auto_login_token", "").strip()
     if not token:
         raise HTTPException(status_code=400, detail="Токен не передан")
-    token_use_case = getattr(request.app.state, "bot_miniapp_token_use_case", None)
-    profile_use_case = getattr(request.app.state, "bot_profile_use_case", None)
-    if token_use_case is None or profile_use_case is None:
-        raise HTTPException(status_code=503, detail="Auto-login временно недоступен")
-
-    max_user_id = token_use_case.redeem(token)
+    max_user_id = request.app.state.bot_miniapp_token_use_case.redeem(token)
     if not max_user_id:
         raise HTTPException(status_code=401, detail="Токен недействителен")
     try:
-        login, password = profile_use_case.get_credentials(max_user_id)
+        login, password = request.app.state.bot_profile_use_case.get_credentials(max_user_id)
         session: PatientSession = request.app.state.patient_login_use_case.execute(login, password)
     except Exception as exc:
         raise HTTPException(status_code=401, detail="Не удалось выполнить вход") from exc

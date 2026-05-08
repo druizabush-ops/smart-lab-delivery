@@ -135,7 +135,3 @@ Unsafe defaults (запрещены в release-like):
 - `MAX_BOT_TOKEN` — token запуска MAX bot runtime (`bot/src/index.ts`).
 - `MINIAPP_PUBLIC_URL` — public URL mini app для кнопки открытия приложения в боте.
 - `BOT_PROFILE_ENCRYPTION_KEY` — обязательный ключ шифрования пароля patient profile для backend bot endpoints.
-
-[Уточнение 2026-05-08]
-- Endpoint `POST /patient/auth/auto-login-token` зависит от `BOT_PROFILE_ENCRYPTION_KEY` и наличия bot use case wiring в container.
-- При отсутствии bot wiring backend должен возвращать controlled `503`, без утечки внутренних деталей.
