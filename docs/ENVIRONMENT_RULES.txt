@@ -130,3 +130,8 @@ Unsafe defaults (запрещены в release-like):
 - `lab_id` и `clinic_id` допускаются как optional query filters в patient-facing `/patient/results*` и валидируются на уровне API как строковые значения.
 - Контекст пациента определяется только по cookie `sld_patient_session` и server-side session repository.
 - `patient_id`/`start_param` в query допускаются только для обратной совместимости и игнорируются как trust-source.
+
+## MAX patient bot block env (2026-05-06)
+- `MAX_BOT_TOKEN` — token запуска MAX bot runtime (`bot/src/index.ts`).
+- `MINIAPP_PUBLIC_URL` — public URL mini app для кнопки открытия приложения в боте.
+- `BOT_PROFILE_ENCRYPTION_KEY` — обязательный ключ шифрования пароля patient profile для backend bot endpoints.
